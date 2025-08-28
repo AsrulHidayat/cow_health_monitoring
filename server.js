@@ -48,6 +48,11 @@ function checkApiKey(req, res, next) {
   next();
 }
 
+// ✅ Test endpoint
+app.get('/', (req, res) => {
+  res.send('🚀 IoT Backend is running!');
+});
+
 // POST /api/suhu  <-- ESP32 kirim JSON { device_id: "esp01", suhu: 30.5 }
 app.post('/api/suhu', checkApiKey, (req, res) => {
   try {
@@ -55,6 +60,8 @@ app.post('/api/suhu', checkApiKey, (req, res) => {
     if (suhu === undefined) {
       return res.status(400).json({ error: 'suhu required' });
     }
+
+    console.log(`📩 Data diterima dari ${device_id}: ${suhu}°C`);
 
     const stmt = db.prepare("INSERT INTO suhu (device_id, nilai) VALUES (?, ?)");
     stmt.run(device_id, parseFloat(suhu), function (err) {
@@ -82,6 +89,14 @@ app.post('/api/suhu', checkApiKey, (req, res) => {
 app.get('/api/suhu', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
   db.all("SELECT * FROM suhu ORDER BY waktu DESC LIMIT ?", [limit], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'db error' });
+    res.json(rows);
+  });
+});
+
+// ✅ Tambahan: GET semua data (hati-hati bisa besar)
+app.get('/api/suhu/all', (req, res) => {
+  db.all("SELECT * FROM suhu ORDER BY waktu DESC", [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'db error' });
     res.json(rows);
   });
