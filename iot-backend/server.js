@@ -1,30 +1,46 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 const http = require('http');
+const mysql = require('mysql2');
 
 const PORT = process.env.PORT || 5001;
 const API_KEY = process.env.API_KEY || "";
-const DB_FILE = process.env.DB_FILE || './data.db';
+const DB_HOST = process.env.DB_HOST || "localhost";
+const DB_USER = process.env.DB_USER || "root";
+const DB_PASS = process.env.DB_PASS || "";
+const DB_NAME = process.env.DB_NAME || "cow_health";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Setup SQLite
-const db = new sqlite3.Database(DB_FILE, (err) => {
-  if (err) return console.error("❌ DB Error:", err.message);
-  console.log('✅ Connected to SQLite database.');
+// Setup MySQL
+const db = mysql.createConnection({
+  host: DB_HOST,
+  user: DB_USER,
+  password: DB_PASS,
+  database: DB_NAME
 });
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS suhu (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    device_id TEXT,
-    nilai REAL,
-    waktu DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+db.connect(err => {
+  if (err) {
+    console.error("❌ MySQL connection error:", err.message);
+    process.exit(1);
+  }
+  console.log("✅ Connected to MySQL database.");
+});
+
+// Buat tabel jika belum ada
+db.query(`
+  CREATE TABLE IF NOT EXISTS suhu (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(50),
+    nilai FLOAT,
+    waktu TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`, err => {
+  if (err) console.error("❌ Error creating table:", err.message);
 });
 
 // HTTP server + Socket.IO
@@ -50,7 +66,7 @@ function checkApiKey(req, res, next) {
 
 // ✅ Test endpoint
 app.get('/', (req, res) => {
-  res.send('🚀 IoT Backend is running!');
+  res.send('🚀 IoT Backend with MySQL is running!');
 });
 
 // POST /api/suhu  <-- ESP32 kirim JSON { device_id: "esp01", suhu: 30.5 }
@@ -63,22 +79,22 @@ app.post('/api/suhu', checkApiKey, (req, res) => {
 
     console.log(`📩 Data diterima dari ${device_id}: ${suhu}°C`);
 
-    const stmt = db.prepare("INSERT INTO suhu (device_id, nilai) VALUES (?, ?)");
-    stmt.run(device_id, parseFloat(suhu), function (err) {
-      if (err) return res.status(500).json({ error: 'db error' });
+    const sql = "INSERT INTO suhu (device_id, nilai) VALUES (?, ?)";
+    db.query(sql, [device_id, parseFloat(suhu)], (err, result) => {
+      if (err) {
+        console.error("❌ DB Insert error:", err.message);
+        return res.status(500).json({ error: 'db error' });
+      }
 
-      const newRowId = this.lastID;
-      // ambil row yang baru dimasukkan
-      db.get("SELECT * FROM suhu WHERE id = ?", [newRowId], (err, row) => {
-        if (!err && row) {
-          // Emit realtime ke client
-          io.emit('new-suhu', row);
+      const newRowId = result.insertId;
+      db.query("SELECT * FROM suhu WHERE id = ?", [newRowId], (err, rows) => {
+        if (!err && rows.length > 0) {
+          io.emit('new-suhu', rows[0]);
         }
       });
 
       res.json({ status: 'ok', id: newRowId });
     });
-    stmt.finalize();
   } catch (e) {
     console.error("❌ Server Error:", e);
     res.status(500).json({ error: 'server error' });
@@ -88,15 +104,15 @@ app.post('/api/suhu', checkApiKey, (req, res) => {
 // GET /api/suhu?limit=50  (ambil riwayat terbaru)
 app.get('/api/suhu', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
-  db.all("SELECT * FROM suhu ORDER BY waktu DESC LIMIT ?", [limit], (err, rows) => {
+  db.query("SELECT * FROM suhu ORDER BY waktu DESC LIMIT ?", [limit], (err, rows) => {
     if (err) return res.status(500).json({ error: 'db error' });
     res.json(rows);
   });
 });
 
-// ✅ Tambahan: GET semua data (hati-hati bisa besar)
+// ✅ Tambahan: GET semua data
 app.get('/api/suhu/all', (req, res) => {
-  db.all("SELECT * FROM suhu ORDER BY waktu DESC", [], (err, rows) => {
+  db.query("SELECT * FROM suhu ORDER BY waktu DESC", (err, rows) => {
     if (err) return res.status(500).json({ error: 'db error' });
     res.json(rows);
   });
