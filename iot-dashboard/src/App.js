@@ -2,39 +2,36 @@ import React, { useEffect, useState, useRef } from "react";
 import io from "socket.io-client";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
-import "chartjs-adapter-date-fns"; // penting untuk time axis
+import "chartjs-adapter-date-fns";
 
-// Sesuaikan dengan backend
 const SOCKET_URL = "http://localhost:5001";
 const API_URL = "http://localhost:5001/api/suhu?limit=50";
+const API_AGG_URL = "http://localhost:5001/api/suhu/avg"; // tambahkan endpoint agregasi
 
 function App() {
   const [dataPoints, setDataPoints] = useState([]);
+  const [aggPoints, setAggPoints] = useState([]);
+  const [period, setPeriod] = useState("hour");
   const socketRef = useRef(null);
 
+  // === Ambil data realtime raw ===
   useEffect(() => {
-    // Ambil riwayat awal
     fetch(API_URL)
       .then((res) => res.json())
       .then((rows) => {
-        // rows default urut DESC, balik biar grafik jalan ke kanan
         const pts = rows.reverse().map((r) => ({
-          x: new Date(r.waktu), // ubah string jadi Date object
+          x: new Date(r.waktu),
           y: r.nilai,
         }));
         setDataPoints(pts);
       });
 
-    // Connect socket.io
     socketRef.current = io(SOCKET_URL);
     socketRef.current.on("connect", () => console.log("✅ socket connected"));
     socketRef.current.on("new-suhu", (row) => {
       setDataPoints((prev) => {
-        const next = [
-          ...prev,
-          { x: new Date(row.waktu), y: row.nilai }
-        ];
-        return next.slice(-100); // batasi 100 poin terakhir
+        const next = [...prev, { x: new Date(row.waktu), y: row.nilai }];
+        return next.slice(-100);
       });
     });
 
@@ -43,13 +40,38 @@ function App() {
     };
   }, []);
 
-  const chartData = {
+  // === Ambil data agregasi berdasarkan periode ===
+  useEffect(() => {
+    fetch(`${API_AGG_URL}/${period}`)
+      .then((res) => res.json())
+      .then((rows) => {
+        const pts = rows.reverse().map((r) => ({
+          x: new Date(r.periode),
+          y: r.avg_suhu,
+        }));
+        setAggPoints(pts);
+      });
+  }, [period]);
+
+  const rawChart = {
     datasets: [
       {
-        label: "Suhu (°C)",
+        label: "Suhu Realtime (°C)",
         data: dataPoints,
         tension: 0.2,
         borderColor: "blue",
+        fill: false,
+      },
+    ],
+  };
+
+  const aggChart = {
+    datasets: [
+      {
+        label: `Rata-rata (${period})`,
+        data: aggPoints,
+        tension: 0.2,
+        borderColor: "green",
         fill: false,
       },
     ],
@@ -60,28 +82,57 @@ function App() {
     scales: {
       x: {
         type: "time",
-        time: {
-          tooltipFormat: "HH:mm:ss",
-        },
-        title: {
-          display: true,
-          text: "Waktu",
-        },
+        time: { tooltipFormat: "yyyy-MM-dd HH:mm" },
+        title: { display: true, text: "Waktu" },
       },
       y: {
-        title: {
-          display: true,
-          text: "Suhu (°C)",
-        },
+        title: { display: true, text: "Suhu (°C)" },
       },
     },
   };
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Dashboard Suhu</h1>
-      <Line data={chartData} options={options} />
+      <h1>📊 Dashboard Suhu Sapi</h1>
+
+      {/* Grafik realtime */}
+      <h2>Realtime</h2>
+      <Line data={rawChart} options={options} />
       <p>Data points: {dataPoints.length}</p>
+
+      {/* Pilihan periode */}
+      <h2>Rata-rata</h2>
+      <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+        <option value="hour">Per Jam</option>
+        <option value="day">Per Hari</option>
+        <option value="3days">Per 3 Hari</option>
+        <option value="week">Per Minggu</option>
+        <option value="month">Per Bulan</option>
+      </select>
+
+      {/* Grafik rata-rata */}
+      <Line data={aggChart} options={options} />
+
+      {/* Tabel realtime */}
+      <h2>Riwayat Realtime (50 data terakhir)</h2>
+      <table border="1" cellPadding="5">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Device</th>
+            <th>Suhu (°C)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {dataPoints.slice().reverse().map((d, i) => (
+            <tr key={i}>
+              <td>{d.x.toLocaleString()}</td>
+              <td>esp32</td>
+              <td>{d.y.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

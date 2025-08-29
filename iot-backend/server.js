@@ -15,20 +15,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Setup MySQL
-const db = mysql.createConnection({
+// ✅ Setup MySQL pakai pool
+const db = mysql.createPool({
   host: DB_HOST,
   user: DB_USER,
   password: DB_PASS,
-  database: DB_NAME
+  database: DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect(err => {
+// Cek koneksi awal
+db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL connection error:", err.message);
     process.exit(1);
   }
   console.log("✅ Connected to MySQL database.");
+  connection.release();
 });
 
 // Buat tabel jika belum ada
@@ -69,7 +74,7 @@ app.get('/', (req, res) => {
   res.send('🚀 IoT Backend with MySQL is running!');
 });
 
-// POST /api/suhu  <-- ESP32 kirim JSON { device_id: "esp01", suhu: 30.5 }
+// POST /api/suhu
 app.post('/api/suhu', checkApiKey, (req, res) => {
   try {
     const { device_id = 'esp32', suhu } = req.body;
@@ -101,7 +106,7 @@ app.post('/api/suhu', checkApiKey, (req, res) => {
   }
 });
 
-// GET /api/suhu?limit=50  (ambil riwayat terbaru)
+// GET /api/suhu?limit=50
 app.get('/api/suhu', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 1000);
   db.query("SELECT * FROM suhu ORDER BY waktu DESC LIMIT ?", [limit], (err, rows) => {
@@ -110,7 +115,7 @@ app.get('/api/suhu', (req, res) => {
   });
 });
 
-// ✅ Tambahan: GET semua data
+// GET semua data
 app.get('/api/suhu/all', (req, res) => {
   db.query("SELECT * FROM suhu ORDER BY waktu DESC", (err, rows) => {
     if (err) return res.status(500).json({ error: 'db error' });

@@ -1,0 +1,31 @@
+CREATE TABLE sensor_data (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  temperature FLOAT,
+  heart_rate INT,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- tabel raw sensor
+CREATE TABLE sensor_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(50),
+    temperature FLOAT,
+    heart_rate INT,
+    accel_x FLOAT,
+    accel_y FLOAT,
+    accel_z FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- tabel agregat (opsional kalau mau simpan)
+CREATE TABLE sensor_summary (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(50),
+    avg_temp FLOAT,
+    avg_heart_rate FLOAT,
+    avg_accel_x FLOAT,
+    avg_accel_y FLOAT,
+    avg_accel_z FLOAT,
+    period ENUM('hour','day','3days','week','month'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
