@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logo from "../image/logo.png"; // p
 import { LayoutDashboard, Home, Thermometer, HeartPulse, Activity } from "lucide-react";
 
 const menus = [
@@ -17,7 +18,7 @@ export default function Sidebar({ onSelect }) {
       {/* Logo + Title */}
       <div className="flex flex-col items-center mb-10">
         <img
-          src="https://cdn-icons-png.flaticon.com/512/616/616408.png"
+          src={logo}
           alt="Home logo"
           className="w-16 h-16 mb-2"
         />

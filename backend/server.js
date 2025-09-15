@@ -1,8 +1,10 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-const mysql = require('mysql2');
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import http from "http";
+import mysql from "mysql2";
+
+dotenv.config();
 
 const PORT = process.env.PORT || 5001;
 const API_KEY = process.env.API_KEY || "";

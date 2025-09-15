@@ -15,4 +15,8 @@ export default {
     quotes: ["error", "double"],
     "import/extensions": "off",
   },
+
+  
+
 };
+

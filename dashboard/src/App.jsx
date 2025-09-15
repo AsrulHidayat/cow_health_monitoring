@@ -8,7 +8,6 @@ function App() {
     <div className="flex">
       {/* Sidebar */}
       <Sidebar onSelect={setMenu} />
-
       {/* Main Content */}
       <div className="flex-1 p-6">
         {menu === "dashboard" && <h1 className="text-2xl font-bold">📊 Dashboard</h1>}
