@@ -25,7 +25,7 @@ export default function App() {
   return (
     <div className="flex">
       <Sidebar onSelect={setPage} />
-      <div className="flex-1 p-5">{renderPage()}</div>
+      <div className="flex-1">{renderPage()}</div>
     </div>
   );
 }

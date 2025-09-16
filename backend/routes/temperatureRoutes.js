@@ -14,4 +14,8 @@ router.get("/:cowId", temperatureController.getHistoryTemperature);
 // Ambil rata-rata suhu
 router.get("/average/:cowId", temperatureController.getAverageTemperature);
 
+// Ambil status sensor
+router.get("/status/:cowId", temperatureController.getSensorStatus);
+
+
 module.exports = router;

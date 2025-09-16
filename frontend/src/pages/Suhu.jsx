@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import Dropdown from "../components/Dropdown";
 import ChartRealtime from "../components/ChartRealtime";
 import { getHistory, getAverage } from "../services/temperatureService";
+import SensorStatus from "../components/SensorStatus";
 
 // Kategori kondisi suhu sapi
 const categorizeTemperature = (temp) => {
@@ -17,20 +18,33 @@ export default function Suhu() {
   const [cowId, setCowId] = useState(1);
   const [history, setHistory] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
+  const [isSensorActive, setIsSensorActive] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      const hist = await getHistory(cowId, 20);
-      const avg = await getAverage(cowId, 60);
+      try {
+        const hist = await getHistory(cowId, 20);
+        const avg = await getAverage(cowId, 60);
 
-      // format history untuk chart
-      const formatted = hist.map((h) => ({
-        time: new Date(h.created_at).toLocaleTimeString(),
-        temperature: h.temperature,
-      }));
+        if (!hist || hist.length === 0) {
+          setIsSensorActive(false);
+          return;
+        }
 
-      setHistory(formatted.reverse()); // urut dari lama → baru
-      setAvgData(avg);
+        setIsSensorActive(true);
+
+        // format history untuk chart
+        const formatted = hist.map((h) => ({
+          time: new Date(h.created_at).toLocaleTimeString(),
+          temperature: h.temperature,
+        }));
+
+        setHistory(formatted.reverse()); // urut dari lama → baru
+        setAvgData(avg);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setIsSensorActive(false);
+      }
     };
 
     fetchData();
@@ -38,6 +52,17 @@ export default function Suhu() {
     return () => clearInterval(interval);
   }, [cowId]);
 
+  // Kalau sensor tidak aktif, tampilkan notifikasi
+  if (!isSensorActive) {
+    return (
+      <div className="flex flex-col w-full">
+        <Navbar title="Suhu" />
+        <SensorStatus status="offline" />
+      </div>
+    );
+  }
+
+  // Kalau sensor aktif, tampilkan halaman normal
   return (
     <div className="flex flex-col w-full">
       {/* Baris 1: Judul */}

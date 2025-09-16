@@ -48,3 +48,36 @@ exports.getAverageTemperature = async (req, res) => {
     res.status(500).json({ error: "internal error" });
   }
 };
+
+// GET status sensor (aktif/tidak)
+exports.getSensorStatus = async (req, res) => {
+  try {
+    const cowId = Number(req.params.cowId);
+
+    // ambil data terbaru
+    const [[row]] = await pool.query(
+      `SELECT created_at 
+       FROM temperature_data 
+       ORDER BY created_at DESC LIMIT 1`,
+      [cowId]
+    );
+
+    if (!row) {
+      return res.json({ status: "offline", message: "Belum ada data dari sensor" });
+    }
+
+    // hitung selisih menit dari data terakhir
+    const lastTime = new Date(row.created_at);
+    const now = new Date();
+    const diffMinutes = (now - lastTime) / 1000 / 60;
+
+    if (diffMinutes > 2) {
+      return res.json({ status: "offline", message: "Sensor tidak aktif / tidak terhubung" });
+    }
+
+    res.json({ status: "online", message: "Sensor aktif" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "internal error" });
+  }
+};

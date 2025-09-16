@@ -21,7 +21,6 @@ export default function Sidebar({ onSelect }) {
     } else {
       // kalau klik menu beda → pindah halaman & buka sidebar
       setActive(menuKey);
-      setIsOpen(true);
       onSelect(menuKey);
     }
   };
@@ -29,12 +28,12 @@ export default function Sidebar({ onSelect }) {
   return (
     <div
       className={`${
-        isOpen ? "w-52" : "w-20"
-      } h-screen bg-white border-2 border-gray-200 flex flex-col items-center py-4 px-2 transition-all duration-300`}
+        isOpen ? "w-56" : "w-24"
+      } h-screen bg-white border-2 border-gray-200 flex flex-col items-center py-4 px-4 transition-all duration-300`}
     >
       {/* Logo + Judul */}
-      <div className="w-full bg-green-100 flex flex-row items-center gap-3 py-2 px-2 mb-2 rounded-xl">
-        <img src={logo} alt="Logo sapi" className="w-10 h-10" />
+      <div className="w-full bg-green-100 flex flex-row items-center justify-start gap-3 py-2 pl-3 mb-4 rounded-xl">
+        <img src={logo} alt="Logo sapi" className="w-10 h-10 " />
         {isOpen && <h2 className="text-green-800 font-bold text-base">Home Health</h2>}
       </div>
 
@@ -45,7 +44,7 @@ export default function Sidebar({ onSelect }) {
             key={menu.key}
             onClick={() => handleMenuClick(menu.key)}
             className={`flex items-center ${
-              isOpen ? "gap-3 px-3" : "px-3 justify-start"
+              isOpen ? "gap-3 px-3 py-3" : "px-3 py-3 justify-start"
             } py-2 rounded-xl transition text-left
               ${
                 active === menu.key

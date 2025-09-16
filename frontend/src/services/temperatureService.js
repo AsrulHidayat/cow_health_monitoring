@@ -16,3 +16,8 @@ export const getAverage = async (cowId, minutes = 60) => {
   const res = await axios.get(`${API_URL}/average/${cowId}?minutes=${minutes}`);
   return res.data;
 };
+
+export const getSensorStatus = async (cowId) => {
+  const res = await axios.get(`${API_URL}/data/status/${cowId}`);
+  return res.data;
+};
