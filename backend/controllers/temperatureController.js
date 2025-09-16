@@ -58,6 +58,7 @@ exports.getSensorStatus = async (req, res) => {
     const [[row]] = await pool.query(
       `SELECT created_at 
        FROM temperature_data 
+       WHERE cow_id = ? 
        ORDER BY created_at DESC LIMIT 1`,
       [cowId]
     );
