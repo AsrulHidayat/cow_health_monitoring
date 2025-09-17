@@ -2,17 +2,23 @@ const temperatureModel = require("../models/temperatureModel");
 
 exports.addTemperature = async (req, res) => {
   try {
+    console.log("📩 Data masuk:", req.body); // << debug
     const { cow_id, temperature } = req.body;
+
     if (!cow_id || typeof temperature !== "number") {
       return res.status(400).json({ error: "cow_id and temperature required" });
     }
+
     const result = await temperatureModel.insert(cow_id, temperature);
+    console.log("✅ Insert berhasil:", result); // << debug
     res.json({ ok: true, insertedId: result.insertId });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error addTemperature:", err); // << debug
     res.status(500).json({ error: "internal error" });
   }
 };
+
+
 
 exports.getLatestTemperature = async (req, res) => {
   try {
@@ -40,8 +46,8 @@ exports.getHistoryTemperature = async (req, res) => {
 exports.getAverageTemperature = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
-    const minutes = Number(req.query.minutes) || 60;
-    const avgData = await temperatureModel.getAverage(cowId, minutes);
+    const limit = Number(req.query.limit) || 60;
+    const avgData = await temperatureModel.getAverage(cowId, limit);
     res.json(avgData);
   } catch (err) {
     console.error(err);
@@ -49,34 +55,21 @@ exports.getAverageTemperature = async (req, res) => {
   }
 };
 
-// GET status sensor (aktif/tidak)
 exports.getSensorStatus = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
+     console.log("Cek status sensor untuk cowId:", cowId);
+    const lastUpdate = await temperatureModel.getLastUpdateTime(cowId);
 
-    // ambil data terbaru
-    const [[row]] = await pool.query(
-      `SELECT created_at 
-       FROM temperature_data 
-       WHERE cow_id = ? 
-       ORDER BY created_at DESC LIMIT 1`,
-      [cowId]
-    );
-
-    if (!row) {
+    if (!lastUpdate) {
       return res.json({ status: "offline", message: "Belum ada data dari sensor" });
     }
 
-    // hitung selisih menit dari data terakhir
-    const lastTime = new Date(row.created_at);
-    const now = new Date();
-    const diffMinutes = (now - lastTime) / 1000 / 60;
+    const diffMinutes = (new Date() - new Date(lastUpdate)) / 1000 / 60;
+    const status = diffMinutes <= 5 ? "online" : "offline";
+    const message = status === "online" ? "Sensor aktif" : "Sensor tidak aktif / tidak terhubung";
 
-    if (diffMinutes > 2) {
-      return res.json({ status: "offline", message: "Sensor tidak aktif / tidak terhubung" });
-    }
-
-    res.json({ status: "online", message: "Sensor aktif" });
+    res.json({ status, message, last_update: lastUpdate });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "internal error" });

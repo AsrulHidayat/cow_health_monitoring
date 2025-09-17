@@ -5,7 +5,6 @@ import ChartRealtime from "../components/ChartRealtime";
 import { getHistory, getAverage } from "../services/temperatureService";
 import SensorStatus from "../components/SensorStatus";
 
-// Kategori kondisi suhu sapi
 const categorizeTemperature = (temp) => {
   if (temp < 36.5) return "Hipotermia";
   if (temp >= 36.5 && temp <= 39) return "Normal";
@@ -18,7 +17,6 @@ export default function Suhu() {
   const [cowId, setCowId] = useState(1);
   const [history, setHistory] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
-  const [isSensorActive, setIsSensorActive] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,48 +25,39 @@ export default function Suhu() {
         const avg = await getAverage(cowId, 60);
 
         if (!hist || hist.length === 0) {
-          setIsSensorActive(false);
+          setHistory([]);
+          setAvgData({ avg_temp: null });
           return;
         }
 
-        setIsSensorActive(true);
-
-        // format history untuk chart
         const formatted = hist.map((h) => ({
-          time: new Date(h.created_at).toLocaleTimeString(),
+          time: new Date(h.created_at).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
           temperature: h.temperature,
         }));
 
-        setHistory(formatted.reverse()); // urut dari lama → baru
-        setAvgData(avg);
+        setHistory(formatted.reverse());
+        setAvgData(avg && avg.avg_temp ? avg : { avg_temp: null });
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setIsSensorActive(false);
+        console.error("Gagal ambil data:", err);
+        setHistory([]);
+        setAvgData({ avg_temp: null });
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 5000); // update tiap 5 detik
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [cowId]);
 
-  // Kalau sensor tidak aktif, tampilkan notifikasi
-  if (!isSensorActive) {
-    return (
-      <div className="flex flex-col w-full">
-        <Navbar title="Suhu" />
-        <SensorStatus status="offline" />
-      </div>
-    );
-  }
-
-  // Kalau sensor aktif, tampilkan halaman normal
   return (
     <div className="flex flex-col w-full">
-      {/* Baris 1: Judul */}
       <Navbar title="Suhu" />
 
-      {/* Baris 2: Dropdown + marker status */}
+      {/* Dropdown & Status Marker */}
       <div className="flex items-center gap-6 px-6 py-4 bg-gray-50">
         <Dropdown
           value={cowId}
@@ -80,20 +69,35 @@ export default function Suhu() {
         />
 
         <div className="flex gap-4">
-          <span className="px-3 py-1 bg-green-200 rounded-lg text-sm">Normal</span>
-          <span className="px-3 py-1 bg-yellow-200 rounded-lg text-sm">Belum diperiksa</span>
-          <span className="px-3 py-1 bg-blue-200 rounded-lg text-sm">Baik-baik saja</span>
+          <span className="px-3 py-1 bg-green-200 rounded-lg text-sm">
+            Normal
+          </span>
+          <span className="px-3 py-1 bg-yellow-200 rounded-lg text-sm">
+            Belum diperiksa
+          </span>
+          <span className="px-3 py-1 bg-blue-200 rounded-lg text-sm">
+            Baik-baik saja
+          </span>
         </div>
       </div>
 
-      {/* Baris 3: Chart realtime */}
+      {/* Sensor Status */}
+      <SensorStatus cowId={cowId} />
+
+      {/* Chart Realtime */}
       <div className="px-6 py-4">
-        <ChartRealtime data={history} />
+        {history.length > 0 ? (
+          <ChartRealtime data={history} />
+        ) : (
+          <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+            Belum ada data riwayat
+          </div>
+        )}
       </div>
 
-      {/* Baris 4: 2 kolom */}
+      {/* Average & History Table */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 py-4">
-        {/* Kolom kiri: Average */}
+        {/* Average Suhu */}
         <div className="bg-white shadow rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-2">Rata-rata Suhu</h2>
           {avgData.avg_temp ? (
@@ -104,21 +108,32 @@ export default function Suhu() {
               </span>
             </p>
           ) : (
-            <p className="text-gray-400">Belum ada data</p>
+            <p className="flex justify-start py-10 text-gray-400">
+              Belum ada data
+            </p>
           )}
         </div>
 
-        {/* Kolom kanan: History */}
+        {/* History */}
         <div className="bg-white shadow rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-2">History Realtime</h2>
           <ul className="max-h-64 overflow-y-auto">
-            {history.map((h, i) => (
-              <li key={i} className="flex justify-between border-b py-2 text-sm">
-                <span>{h.time}</span>
-                <span>{h.temperature}°C</span>
-                <span>{categorizeTemperature(h.temperature)}</span>
+            {history.length > 0 ? (
+              history.map((h, i) => (
+                <li
+                  key={i}
+                  className="flex justify-between border-b py-2 text-sm"
+                >
+                  <span>{h.time}</span>
+                  <span>{h.temperature}°C</span>
+                  <span>{categorizeTemperature(h.temperature)}</span>
+                </li>
+              ))
+            ) : (
+              <li className="flex justify-start py-10 text-gray-400">
+                Belum ada data riwayat
               </li>
-            ))}
+            )}
           </ul>
         </div>
       </div>
