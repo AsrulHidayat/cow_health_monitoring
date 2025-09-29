@@ -5,6 +5,7 @@ import ChartRealtime from "../components/ChartRealtime";
 import { getHistory, getAverage } from "../services/temperatureService";
 import SensorStatus from "../components/SensorStatus";
 
+// Kategori kondisi suhu sapi
 const categorizeTemperature = (temp) => {
   if (temp < 36.5) return "Hipotermia";
   if (temp >= 36.5 && temp <= 39) return "Normal";
@@ -17,6 +18,7 @@ export default function Suhu() {
   const [cowId, setCowId] = useState(1);
   const [history, setHistory] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
+  const [sensorStatus, setSensorStatus] = useState("offline"); // default offline
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,6 +29,7 @@ export default function Suhu() {
         if (!hist || hist.length === 0) {
           setHistory([]);
           setAvgData({ avg_temp: null });
+          setSensorStatus("offline"); // kalau tidak ada data = offline
           return;
         }
 
@@ -41,10 +44,12 @@ export default function Suhu() {
 
         setHistory(formatted.reverse());
         setAvgData(avg && avg.avg_temp ? avg : { avg_temp: null });
+        setSensorStatus("online"); // ada data = online
       } catch (err) {
         console.error("Gagal ambil data:", err);
         setHistory([]);
         setAvgData({ avg_temp: null });
+        setSensorStatus("offline");
       }
     };
 
@@ -68,21 +73,24 @@ export default function Suhu() {
           ]}
         />
 
-        <div className="flex gap-4">
-          <span className="px-3 py-1 bg-green-200 rounded-lg text-sm">
-            Normal
-          </span>
-          <span className="px-3 py-1 bg-yellow-200 rounded-lg text-sm">
-            Belum diperiksa
-          </span>
-          <span className="px-3 py-1 bg-blue-200 rounded-lg text-sm">
-            Baik-baik saja
-          </span>
-        </div>
+        {/* Badge status hanya muncul kalau sensor online */}
+        {sensorStatus === "online" && (
+          <div className="flex gap-4">
+            <span className="px-3 py-1 bg-green-200 rounded-lg text-sm">
+              Normal
+            </span>
+            <span className="px-3 py-1 bg-yellow-200 rounded-lg text-sm">
+              Belum diperiksa
+            </span>
+            <span className="px-3 py-1 bg-blue-200 rounded-lg text-sm">
+              Baik-baik saja
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Sensor Status */}
-      <SensorStatus cowId={cowId} />
+      <SensorStatus sensorStatus={sensorStatus} />
 
       {/* Chart Realtime */}
       <div className="px-6 py-4">

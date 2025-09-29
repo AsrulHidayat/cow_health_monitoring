@@ -2,16 +2,19 @@ import { useEffect, useState } from "react";
 import { getSensorStatus } from "../services/temperatureService";
 
 export default function SensorStatus({ cowId }) {
-  const [status, setStatus] = useState(null);
+  const [sensorData, setSensorData] = useState(null);
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const data = await getSensorStatus(cowId);
-        setStatus(data);
+        setSensorData(data);
       } catch (err) {
         console.error("Gagal ambil status sensor:", err);
-        setStatus({ status: "offline", message: "Gagal cek status sensor" });
+        setSensorData({
+          status: "offline",
+          message: "Gagal cek status sensor",
+        });
       }
     };
 
@@ -20,28 +23,31 @@ export default function SensorStatus({ cowId }) {
     return () => clearInterval(interval);
   }, [cowId]);
 
-  if (!status) {
+  // Saat loading
+  if (!sensorData) {
     return (
-      <div className="w-full flex justify-center py-6 text-gray-500">
+      <div className="w-full m-4 shadow rounded-xl bg-white p-6 text-center text-gray-500">
         Memuat status sensor...
       </div>
     );
   }
 
-  if (status.status === "offline") {
+  // Saat sensor offline
+  if (sensorData.status === "offline") {
     return (
-      <div className="w-full flex flex-col items-center justify-center bg-red-50 text-red-700 rounded-xl shadow p-6 m-4">
+      <div className="w-full m-4 shadow rounded-xl p-6 text-center bg-red-50 text-red-700">
         <h2 className="text-xl font-bold">⚠ Sensor Tidak Aktif</h2>
-        <p className="mt-2">{status.message}</p>
+        <p className="mt-2">{sensorData.message}</p>
       </div>
     );
   }
 
-  if (status.status === "online") {
+  // Saat sensor online
+  if (sensorData.status === "online") {
     return (
-      <div className="w-full flex flex-col items-center justify-center bg-green-50 text-green-700 rounded-xl shadow p-6 m-4">
+      <div className="w-full m-4 shadow rounded-xl p-6 text-center bg-green-50 text-green-700">
         <h2 className="text-xl font-bold">✅ Sensor Aktif</h2>
-        <p className="mt-2">{status.message}</p>
+        <p className="mt-2">{sensorData.message}</p>
       </div>
     );
   }
