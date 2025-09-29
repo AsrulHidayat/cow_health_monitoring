@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+const { pool } = require("../config/db");
 
 // Insert data suhu baru
 exports.insert = async (cow_id, temperature) => {
@@ -39,4 +39,14 @@ exports.getAverage = async (cowId, minutes) => {
     [cowId, minutes]
   );
   return rows[0];
+};
+
+// Mendapatkan timestamp dari data terakhir untuk 1 sapi
+exports.getLastUpdateTime = async (cowId) => {
+  const [[row]] = await pool.query(
+    "SELECT created_at FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT 1",
+    [cowId]
+  );
+  // Mengembalikan timestamp-nya saja, atau null jika tidak ada
+  return row ? row.created_at : null; 
 };

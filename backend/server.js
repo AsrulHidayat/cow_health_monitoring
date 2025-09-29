@@ -1,3 +1,5 @@
+const { checkConnection } = require("./config/db"); // Pastikan path ini benar
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -26,4 +28,17 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`✅ API running on port ${PORT}`));
+
+// Fungsi untuk memulai server setelah koneksi DB berhasil
+const startServer = async () => {
+  try {
+    await checkConnection(); // Cek koneksi DB dulu
+    app.listen(PORT, () => console.log(`✅ API running on port ${PORT}`));
+  } catch (error) {
+    console.error("❌ Could not start server, failed to connect to database.", error);
+    process.exit(1); // Hentikan aplikasi jika tidak bisa konek ke DB
+  }
+};
+
+// Jalankan server
+startServer();
