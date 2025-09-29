@@ -44,9 +44,10 @@ exports.getAverage = async (cowId, minutes) => {
 // Mendapatkan timestamp dari data terakhir untuk 1 sapi
 exports.getLastUpdateTime = async (cowId) => {
   const [[row]] = await pool.query(
-    "SELECT created_at FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT 1",
+    // Gunakan UNIX_TIMESTAMP untuk mengubah 'created_at' menjadi angka
+    "SELECT UNIX_TIMESTAMP(created_at) as last_update_ts FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT 1",
     [cowId]
   );
-  // Mengembalikan timestamp-nya saja, atau null jika tidak ada
-  return row ? row.created_at : null; 
+  // Mengembalikan angkanya saja, atau null jika tidak ada
+  return row ? row.last_update_ts : null; 
 };

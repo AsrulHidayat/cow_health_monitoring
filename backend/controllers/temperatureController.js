@@ -65,7 +65,10 @@ exports.getSensorStatus = async (req, res) => {
       return res.json({ status: "offline", message: "Belum ada data dari sensor" });
     }
 
-    const diffMinutes = (new Date() - new Date(lastUpdate)) / 1000 / 60;
+    // lastUpdate sekarang adalah angka (detik), misal: 1672531200
+    // new Date() / 1000 juga menghasilkan detik saat ini
+    const diffSeconds = (new Date() / 1000) - lastUpdate;
+    const diffMinutes = diffSeconds / 60;
     const status = diffMinutes <= 5 ? "online" : "offline";
     const message = status === "online" ? "Sensor aktif" : "Sensor tidak aktif / tidak terhubung";
 

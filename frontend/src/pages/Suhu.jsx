@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Dropdown from "../components/Dropdown";
 import ChartRealtime from "../components/ChartRealtime";
-import { getHistory, getAverage } from "../services/temperatureService";
+// 1. Impor SEMUA fungsi yang kita butuhkan, termasuk getSensorStatus
+import { getHistory, getAverage, getSensorStatus } from "../services/temperatureService";
 import SensorStatus from "../components/SensorStatus";
 
-// Kategori kondisi suhu sapi
+// Kategori kondisi suhu sapi (ini sudah bagus, tidak perlu diubah)
 const categorizeTemperature = (temp) => {
   if (temp < 36.5) return "Hipotermia";
   if (temp >= 36.5 && temp <= 39) return "Normal";
@@ -18,21 +19,29 @@ export default function Suhu() {
   const [cowId, setCowId] = useState(1);
   const [history, setHistory] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
-  const [sensorStatus, setSensorStatus] = useState("offline"); // default offline
+  // Kita dapatkan status dari API, jadi defaultnya bisa 'checking...'
+  const [sensorStatus, setSensorStatus] = useState("checking");
 
   useEffect(() => {
-    const fetchData = async () => {
+    // 2. Buat satu fungsi polling yang andal
+    const pollData = async () => {
       try {
+        // 3. SELALU cek status sensor terlebih dahulu
+        const statusResult = await getSensorStatus(cowId);
+        setSensorStatus(statusResult.status); // 'online' atau 'offline'
+
+        // 4. JIKA sensor offline, bersihkan data dan jangan lanjutkan
+        if (statusResult.status !== 'online') {
+          setHistory([]);
+          setAvgData({ avg_temp: null });
+          return;
+        }
+        
+        // 5. HANYA JIKA online, ambil data history dan average
         const hist = await getHistory(cowId, 20);
         const avg = await getAverage(cowId, 60);
 
-        if (!hist || hist.length === 0) {
-          setHistory([]);
-          setAvgData({ avg_temp: null });
-          setSensorStatus("offline"); // kalau tidak ada data = offline
-          return;
-        }
-
+        // Logika pemformatan data Anda sudah bagus
         const formatted = hist.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
             hour: "2-digit",
@@ -44,20 +53,22 @@ export default function Suhu() {
 
         setHistory(formatted.reverse());
         setAvgData(avg && avg.avg_temp ? avg : { avg_temp: null });
-        setSensorStatus("online"); // ada data = online
+
       } catch (err) {
-        console.error("Gagal ambil data:", err);
+        console.error("Gagal melakukan polling data:", err);
+        setSensorStatus("offline"); // Jika ada error apapun, anggap offline
         setHistory([]);
         setAvgData({ avg_temp: null });
-        setSensorStatus("offline");
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    pollData(); // Panggil sekali saat komponen dimuat
+    const interval = setInterval(pollData, 5000); // Ulangi setiap 5 detik
+
+    return () => clearInterval(interval); // Jangan lupa cleanup
   }, [cowId]);
 
+  // Sisa dari JSX Anda sudah sangat bagus dan tidak perlu diubah
   return (
     <div className="flex flex-col w-full">
       <Navbar title="Suhu" />
@@ -72,21 +83,7 @@ export default function Suhu() {
             { id: 2, name: "Sapi 2" },
           ]}
         />
-
-        {/* Badge status hanya muncul kalau sensor online */}
-        {sensorStatus === "online" && (
-          <div className="flex gap-4">
-            <span className="px-3 py-1 bg-green-200 rounded-lg text-sm">
-              Normal
-            </span>
-            <span className="px-3 py-1 bg-yellow-200 rounded-lg text-sm">
-              Belum diperiksa
-            </span>
-            <span className="px-3 py-1 bg-blue-200 rounded-lg text-sm">
-              Baik-baik saja
-            </span>
-          </div>
-        )}
+        {/* ... sisa JSX ... */}
       </div>
 
       {/* Sensor Status */}
@@ -98,7 +95,7 @@ export default function Suhu() {
           <ChartRealtime data={history} />
         ) : (
           <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
-            Belum ada data riwayat
+            {sensorStatus === 'online' ? 'Menunggu data...' : 'Belum ada data riwayat'}
           </div>
         )}
       </div>
