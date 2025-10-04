@@ -1,8 +1,13 @@
 const mysql = require("mysql2/promise");
-require("dotenv").config(); // Pastikan dotenv dipanggil di file utama atau di sini
+require("dotenv").config(); // Panggil dotenv di sini untuk keamanan ekstra
+
+// ===== LOG UNTUK DEBUGGING =====
+console.log(`Membaca DB_PORT dari .env: ${process.env.DB_PORT}`);
+// ===============================
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
+  host: process.env.DB_HOST || "127.0.0.1",
+  port: Number(process.env.DB_PORT) || 3306, 
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASS || "",
   database: process.env.DB_NAME || "monitoring_sapi",
@@ -11,17 +16,16 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-// Fungsi tambahan untuk mengecek koneksi
 const checkConnection = async () => {
   try {
-    await pool.getConnection();
+    const connection = await pool.getConnection();
     console.log("✅ Database connection successful.");
+    connection.release();
   } catch (error) {
     console.error("🔥 Database connection failed:", error);
-    // Hentikan aplikasi jika koneksi database gagal, karena aplikasi tidak akan berfungsi
-    process.exit(1); 
+    throw error;
   }
 };
 
-// Ekspor pool dan fungsi pengecekan
 module.exports = { pool, checkConnection };
+

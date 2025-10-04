@@ -4,13 +4,16 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const authRoutes = require('./routes/authRoutes'); 
 const temperatureRoutes = require("./routes/temperatureRoutes");
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware logging harus di atas route
+
+// Middleware logging
 app.use((req, res, next) => {
   console.log(
     `[${new Date().toLocaleString()}] Incoming request: ${req.method} ${req.url}`
@@ -18,8 +21,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health Check
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "UP", message: "API is healthy" });
+});
+
 // Routes
+app.use('/api/auth', authRoutes); 
 app.use("/api/temperature", temperatureRoutes);
+app.use("/api/auth", require("./routes/authRoutes"));
+
+
 
 // Error handler global (supaya 500 kelihatan jelas)
 app.use((err, req, res, next) => {

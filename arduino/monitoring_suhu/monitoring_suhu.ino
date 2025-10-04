@@ -9,7 +9,7 @@ const char* ssid = "KOST_PUTRA";
 const char* password = "1sampai8";
 
 // ===== API Server =====
-const char* serverUrl = "http://.168.1.22:5001/api/temperature"; 
+const char* serverUrl = "http://192.168.1.22:5001/api/temperature"; 
 
 // ===== DS18B20 =====
 #define ONE_WIRE_BUS 4
@@ -32,7 +32,6 @@ void setup() {
     retryCount++;
     if (retryCount > 60) { // timeout 30 detik
       Serial.println("\nFailed to connect WiFi!");
-      // ESP.restart(); // Pertimbangkan untuk restart jika gagal konek
       break;
     }
   }
@@ -49,14 +48,14 @@ void loop() {
   sensors.requestTemperatures();
   float temperature = sensors.getTempCByIndex(0);
 
-  // [PERBAIKAN 1] Cek jika sensor gagal dibaca
+  // Cek jika sensor gagal dibaca
   if (temperature == DEVICE_DISCONNECTED_C) {
-    Serial.println("Error: Could not read temperature from sensor!");
+    Serial.println("Error: Temperatur suhu tidak terpasang dengan benar");
     delay(2000); // Beri jeda sebelum mencoba lagi
     return;      // Lewati sisa loop dan coba lagi
   }
 
-  // Tampilkan di Serial Monitor
+  // Tampilkan di Serial Monitor 
   Serial.print("Cow ID: "); Serial.print(cow_id);
   Serial.print(" | Temperature: "); Serial.print(temperature, 2); // Tampilkan 2 angka desimal
   Serial.println(" °C");
@@ -93,8 +92,6 @@ void loop() {
     http.end();
   } else {
     Serial.println("WiFi not connected. Cannot send data.");
-    // Coba reconnect jika perlu
-    // WiFi.begin(ssid, password);
   }
 
   Serial.println("-------------------------------");
