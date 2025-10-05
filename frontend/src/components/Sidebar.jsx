@@ -40,7 +40,7 @@ export default function Sidebar({ onSelect, onExit }) {
         {isOpen && <h2 className="text-green-800 font-bold text-base">Home Health</h2>}
       </div>
 
-      {/* Menu (dalam kotak hijau saja, tidak sampai bawah) */}
+      {/* Menu */}
       <div className="w-full flex flex-col gap-2 px-1 py-3 rounded-xl bg-green-100 transition-all duration-300">
         {menus.map((menu) => (
           <button
@@ -56,14 +56,14 @@ export default function Sidebar({ onSelect, onExit }) {
         ))}
       </div>
 
-      {/* Tombol Keluar (berada di bawah, dalam kotak merah sendiri) */}
-      <div className="w-full mt-auto px-1 py-2">
-        <div className="w-full bg-red-100 rounded-xl py-2">
+      {/* Tombol Keluar */}
+      <div className="w-full mt-auto px-1 py-4">
+        <div className="w-full bg-red-100 rounded-xl p-1">
           <button
             onClick={handleExit}
-            className={`flex items-center w-full text-red-600 transition-all duration-300 hover:bg-red-200 rounded-xl ${
-              isOpen ? "gap-3 px-3 py-3 mx-1" : "justify-start py-3 px-3 mx-1"
-            }`}
+            className={`flex items-center w-full text-red-600 transition-all duration-300 
+              rounded-lg hover:bg-red-200
+              ${isOpen ? "gap-3 px-3 py-3" : "justify-start py-3 px-3"}`}
           >
             <LogOut size={20} />
             {isOpen && <span className="text-sm font-medium">Keluar</span>}

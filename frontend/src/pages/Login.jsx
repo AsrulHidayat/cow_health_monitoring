@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { EyeIcon, EyeOffIcon } from "@heroicons/react/solid";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import authService from "../services/authService";
 
 const Login = () => {
@@ -63,7 +63,7 @@ const Login = () => {
                 className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-500"
               >
                 {showPassword ? (
-                  <EyeOffIcon className="h-5 w-5" />
+                  <EyeSlashIcon className="h-5 w-5" />
                 ) : (
                   <EyeIcon className="h-5 w-5" />
                 )}
