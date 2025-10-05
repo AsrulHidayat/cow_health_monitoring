@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Dropdown from "../components/Dropdown";
 import ChartRealtime from "../components/ChartRealtime";
-// 1. Impor SEMUA fungsi yang kita butuhkan, termasuk getSensorStatus
+
 import { getHistory, getAverage, getSensorStatus } from "../services/temperatureService";
 import SensorStatus from "../components/SensorStatus";
 
-// Kategori kondisi suhu sapi (ini sudah bagus, tidak perlu diubah)
 const categorizeTemperature = (temp) => {
   if (temp < 36.5) return "Hipotermia";
   if (temp >= 36.5 && temp <= 39) return "Normal";
@@ -23,25 +22,23 @@ export default function Suhu() {
   const [sensorStatus, setSensorStatus] = useState("checking");
 
   useEffect(() => {
-    // 2. Buat satu fungsi polling yang andal
+    //  fungsi polling 
     const pollData = async () => {
       try {
-        // 3. SELALU cek status sensor terlebih dahulu
+        // cek status sensor terlebih dahulu
         const statusResult = await getSensorStatus(cowId);
-        setSensorStatus(statusResult.status); // 'online' atau 'offline'
-
-        // 4. JIKA sensor offline, bersihkan data dan jangan lanjutkan
+        setSensorStatus(statusResult.status); 
+        // JIKA sensor offline, bersihkan data dan jangan lanjutkan
         if (statusResult.status !== 'online') {
           setHistory([]);
           setAvgData({ avg_temp: null });
           return;
         }
         
-        // 5. HANYA JIKA online, ambil data history dan average
+        // JIKA online, ambil data history dan average
         const hist = await getHistory(cowId, 20);
         const avg = await getAverage(cowId, 60);
 
-        // Logika pemformatan data Anda sudah bagus
         const formatted = hist.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
             hour: "2-digit",
@@ -62,19 +59,18 @@ export default function Suhu() {
       }
     };
 
-    pollData(); // Panggil sekali saat komponen dimuat
+    pollData(); // Panggil segera saat cowId berubah
     const interval = setInterval(pollData, 5000); // Ulangi setiap 5 detik
 
     return () => clearInterval(interval); // Jangan lupa cleanup
   }, [cowId]);
 
-  // Sisa dari JSX Anda sudah sangat bagus dan tidak perlu diubah
   return (
     <div className="flex flex-col w-full">
       <Navbar title="Suhu" />
 
       {/* Dropdown & Status Marker */}
-      <div className="flex items-center gap-6 px-6 py-4 bg-gray-50">
+      <div className="flex items-center gap-6 px-6 py-4">
         <Dropdown
           value={cowId}
           onChange={(val) => setCowId(Number(val))}
@@ -83,7 +79,6 @@ export default function Suhu() {
             { id: 2, name: "Sapi 2" },
           ]}
         />
-        {/* ... sisa JSX ... */}
       </div>
 
       {/* Sensor Status */}

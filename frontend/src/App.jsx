@@ -1,6 +1,12 @@
-// App.jsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useNavigate,
+} from "react-router-dom";
 
 // Pages
 import Login from "./pages/Login";
@@ -50,15 +56,26 @@ const MainLayout = () => {
     }
   };
 
+  const handleExit = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   return (
-    <div className="flex">
-      <Sidebar onSelect={handleSelect} />
-      <main className="flex-1 p-5">
-        <Outlet />
+    <div className="flex h-screen w-screen overflow-hidden">
+      {/* Sidebar tetap di kiri */}
+      <Sidebar onSelect={handleSelect} onExit={handleExit} />
+
+      {/* Area konten */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
+        <div className="min-h-full w-full px-4 py-4">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
 };
+
 
 /**
  * App Component
