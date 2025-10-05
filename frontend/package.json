@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@heroicons/react": "^1.0.6",
+    "@heroicons/react": "^2.2.0",
     "axios": "^1.12.2",
     "chart.js": "^4.5.0",
     "chartjs-adapter-date-fns": "^3.0.0",

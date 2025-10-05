@@ -1,7 +1,6 @@
-// frontend/src/services/authService.js
 import axios from "axios";
+const API_URL = "http://localhost:5001/api/auth/"; 
 
-const API_URL = "/api/auth/"; // backend route kamu
 
 // Register
 const register = async (name, email, password) => {

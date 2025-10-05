@@ -29,7 +29,6 @@ app.get("/api/health", (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes); 
 app.use("/api/temperature", temperatureRoutes);
-app.use("/api/auth", require("./routes/authRoutes"));
 
 
 
