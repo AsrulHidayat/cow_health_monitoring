@@ -45,7 +45,7 @@ export default function Sidebar({ onSelect, onExit }) {
         {/* Logo */}
         <div className="w-full flex items-center justify-start gap-4 py-2 pl-3 mb-4 rounded-xl bg-green-100 transition-all duration-300">
           <img src={logo} alt="Logo sapi" className="w-10 h-10" />
-          {isOpen && <h2 className="text-green-800 font-bold text-base">Home Health</h2>}
+          {isOpen && <h2 className="text-green-800 font-bold text-base">Cow Health</h2>}
         </div>
 
         {/* Menu */}

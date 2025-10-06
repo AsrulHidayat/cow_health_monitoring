@@ -25,3 +25,9 @@ export const getSensorStatus = async (cowId) => {
   const res = await axios.get(`${API_URL}/${cowId}/status`);
   return res.data;
 };
+
+// GET /api/cows
+export const getAllCows = async () => {
+  const res = await axios.get(`${API_URL}/cows`); 
+  return res.data; 
+};

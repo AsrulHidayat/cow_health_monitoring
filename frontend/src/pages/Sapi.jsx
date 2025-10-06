@@ -21,14 +21,14 @@ export default function Sapi() {
       <Navbar title="Dashboard Persapi" />
 
       <main className="flex-1 p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-124px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
           {/* ========================== */}
           {/* KOLOM 1: Tambah + Grafik */}
           {/* ========================== */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             {/* Tombol Tambah Sapi */}
             <div className="flex items-center justify-between">
-              <button className="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition">
+              <button className="flex items-center gap-2 px-4 py-3 mb-2 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition">
                 <img src={plusIcon} alt="Tambah Sapi" className="w-5 h-5" />
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
@@ -92,7 +92,7 @@ export default function Sapi() {
               <img
                 src={notifIcon}
                 alt="Notif"
-                className="w-28 h-28 opacity-70 mb-4"
+                className="w-64 h-64 opacity-70 mb-4"
               />
               <h3 className="text-green-600 font-semibold text-sm">
                 BELUM ADA NOTIF

@@ -14,6 +14,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Sapi from "./pages/Sapi";
 import Suhu from "./pages/Suhu";
+import DetakJantung from "./pages/DetakJantung";
+import Gerakan from "./pages/Gerakan";
 
 // Components
 import Sidebar from "./components/Sidebar";
@@ -101,8 +103,8 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/suhu" element={<Suhu />} />
           <Route path="/sapi" element={<Sapi />} />
-          <Route path="/detak-jantung" element={<h1>Monitoring Detak Jantung</h1>} />
-          <Route path="/gerakan" element={<h1>Monitoring Gerakan</h1>} />
+          <Route path="/detak-jantung" element={<DetakJantung />} />
+          <Route path="/gerakan" element={<Gerakan />} />
         </Route>
 
         {/* Fallback halaman tidak ditemukan */}
