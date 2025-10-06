@@ -12,6 +12,7 @@ import {
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Sapi from "./pages/Sapi";
 import Suhu from "./pages/Suhu";
 
 // Components
@@ -99,7 +100,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/suhu" element={<Suhu />} />
-          <Route path="/sapi" element={<h1>Data Sapi</h1>} />
+          <Route path="/sapi" element={<Sapi />} />
           <Route path="/detak-jantung" element={<h1>Monitoring Detak Jantung</h1>} />
           <Route path="/gerakan" element={<h1>Monitoring Gerakan</h1>} />
         </Route>

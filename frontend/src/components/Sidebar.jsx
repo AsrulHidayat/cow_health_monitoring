@@ -36,14 +36,14 @@ export default function Sidebar({ onSelect, onExit }) {
     <>
       {/* Sidebar utama */}
       <div
-        className={`h-screen sticky top-0 bg-white border-r-2 border-gray-200 flex flex-col items-center py-2 px-2 transition-all duration-300 ${
-          isOpen ? "w-56" : "w-20"
+        className={`h-screen sticky top-0 bg-white border-r-2 border-gray-200 flex flex-col items-center py-4 px-4 transition-all duration-300 ${
+          isOpen ? "w-56" : "w-24"
         }`}
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
       >
         {/* Logo */}
-        <div className="w-full flex items-center justify-start gap-3 py-2 pl-3 mb-2 rounded-xl bg-green-100 transition-all duration-300">
+        <div className="w-full flex items-center justify-start gap-4 py-2 pl-3 mb-4 rounded-xl bg-green-100 transition-all duration-300">
           <img src={logo} alt="Logo sapi" className="w-10 h-10" />
           {isOpen && <h2 className="text-green-800 font-bold text-base">Home Health</h2>}
         </div>
@@ -66,7 +66,7 @@ export default function Sidebar({ onSelect, onExit }) {
 
         {/* Tombol Keluar */}
         <div className="w-full mt-auto px-1 py-4">
-          <div className="w-full bg-red-100 rounded-xl py-2 px-1">
+          <div className="w-full bg-red-100 rounded-xl py-1 px-1">
             <button
               onClick={handleExitClick}
               className={`flex items-center w-full text-red-600 transition-all duration-300 
