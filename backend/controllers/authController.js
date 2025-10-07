@@ -18,7 +18,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @desc Register user baru
 exports.registerUser = async (req, res) => {
-  console.log("📥 Data masuk ke registerUser:", req.body); // 👈 Tambahkan baris ini di sini!
+  console.log("📥 Data masuk ke registerUser:", req.body); 
 
   const { name, email, password } = req.body;
 
