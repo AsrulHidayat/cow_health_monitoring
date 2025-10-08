@@ -4,32 +4,18 @@ import AddCowModal from "../components/AddCowModal";
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
 export default function Sapi() {
   const [cows, setCows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
   useEffect(() => {
     setTimeout(() => {
       setCows([]); // simulasi: belum ada data sapi
       setLoading(false);
     }, 800);
   }, []);
-<<<<<<< HEAD
-  const handleAddCow = (newCow) => {
-    setCows((prev) => [...prev, newCow]);
-  };
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
-      <Navbar title="Dashboard Ternak" />
-=======
 
   const handleAddCow = (newCow) => {
     setCows((prev) => [...prev, newCow]);
@@ -39,7 +25,6 @@ export default function Sapi() {
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar title="Dashboard Ternak" />
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
           {/* ========================== */}
@@ -56,10 +41,7 @@ export default function Sapi() {
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
             </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
             {/* Card Realtime Graphics */}
             <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
@@ -74,10 +56,7 @@ export default function Sapi() {
                   <option>Per Jam</option>
                 </select>
               </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
               <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50">
                 {loading ? (
                   <div className="text-gray-400">Memuat data sapi...</div>
@@ -110,10 +89,7 @@ export default function Sapi() {
               </div>
             </div>
           </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
           {/* ========================== */}
           {/* KOLOM 2: Notifikasi */}
           {/* ========================== */}
@@ -124,10 +100,7 @@ export default function Sapi() {
                 Mark as read
               </span>
             </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
             <div className="flex-1 flex flex-col items-center justify-center text-center">
               <img
                 src={notifIcon}
@@ -141,10 +114,7 @@ export default function Sapi() {
           </div>
         </div>
       </main>
-<<<<<<< HEAD
-=======
 
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139
       {showModal && (
         <AddCowModal
           onClose={() => setShowModal(false)}
@@ -154,8 +124,4 @@ export default function Sapi() {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> e7f8a75f556e8b23e247766ccd17c445896e8139

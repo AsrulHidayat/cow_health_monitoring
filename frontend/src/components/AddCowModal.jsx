@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 
 export default function AddCowModal({ onClose, onAdd, cowCount }) {
+  const [umurTahun, setUmurTahun] = useState("");
+  const [umurBulan, setUmurBulan] = useState("");
   const [umurSapi, setUmurSapi] = useState("");
   const [idSapi, setIdSapi] = useState("");
 
@@ -10,10 +12,27 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
     setIdSapi(newId);
   }, [cowCount]);
 
+  // Gabungkan input tahun dan bulan menjadi satu string umur
+  useEffect(() => {
+    if (umurTahun || umurBulan) {
+      const tahun = umurTahun ? `${umurTahun} tahun` : "";
+      const bulan = umurBulan ? `${umurBulan} bulan` : "";
+      setUmurSapi(`${tahun} ${bulan}`.trim());
+    } else {
+      setUmurSapi("");
+    }
+  }, [umurTahun, umurBulan]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!umurSapi) return;
-    onAdd({ id: idSapi, umur: umurSapi });
+
+    // Kirim data ke backend
+    onAdd({
+      id: idSapi,
+      umur: umurSapi,
+    });
+
     onClose();
   };
 
@@ -38,17 +57,47 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
             />
           </div>
 
-          {/* Umur sapi input */}
+          {/* Input umur tahun */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Umur (Tahun)
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={umurTahun}
+              onChange={(e) => setUmurTahun(e.target.value)}
+              placeholder="Contoh: 2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Input umur bulan */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Umur (Bulan)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="11"
+              value={umurBulan}
+              onChange={(e) => setUmurBulan(e.target.value)}
+              placeholder="Contoh: 3"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Umur gabungan */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Umur Sapi
             </label>
             <input
-              type="number"
+              type="text"
               value={umurSapi}
-              onChange={(e) => setUmurSapi(e.target.value)}
-              placeholder="Dalam tahun"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none"
+              readOnly
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700"
             />
           </div>
 
