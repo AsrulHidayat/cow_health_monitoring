@@ -1,5 +1,4 @@
 import axios from "axios";
-
 const API_URL = "http://localhost:5001/api/temperature";
 
 // GET /api/temperature/:cowId/latest

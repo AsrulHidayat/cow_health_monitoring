@@ -1,18 +1,33 @@
-const { pool } = require("../config/db");
+// models/userModel.js
+import { DataTypes } from "sequelize";
+import db from "../config/db.js";
 
-const User = {
-  findByEmail: async (email) => {
-    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
-    return rows[0]; // kalau ada
+const User = db.define(
+  "User",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
   },
+  {
+    tableName: "users", // nama tabel di database
+    timestamps: false,  // ubah ke true jika kamu pakai createdAt, updatedAt
+  }
+);
 
-  create: async (name, email, password) => {
-    const [result] = await pool.query(
-      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-      [name, email, password]
-    );
-    return { id: result.insertId, name, email };
-  },
-};
-
-module.exports = User;
+export default User;

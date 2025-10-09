@@ -1,80 +1,112 @@
-const temperatureModel = require("../models/temperatureModel");
+import Temperature from "../models/temperatureModel.js"; 
 
-exports.addTemperature = async (req, res) => {
+// ✅ Tambah data suhu baru
+export const addTemperature = async (req, res) => {
   try {
-    console.log("📩 Data masuk:", req.body); // << debug
+    console.log("📩 Data masuk:", req.body);
     const { cow_id, temperature } = req.body;
 
     if (!cow_id || typeof temperature !== "number") {
-      return res.status(400).json({ error: "cow_id and temperature required" });
+      return res.status(400).json({ error: "cow_id dan temperature wajib diisi" });
     }
 
-    const result = await temperatureModel.insert(cow_id, temperature);
-    console.log("✅ Insert berhasil:", result); // << debug
-    res.json({ ok: true, insertedId: result.insertId });
+    const newTemp = await Temperature.create({
+      cow_id,
+      temperature,
+      created_at: new Date(), // otomatis timestamp
+    });
+
+    console.log("✅ Insert berhasil:", newTemp.toJSON());
+    res.status(201).json({ ok: true, insertedId: newTemp.id });
   } catch (err) {
-    console.error("❌ Error addTemperature:", err); // << debug
+    console.error("❌ Error addTemperature:", err);
     res.status(500).json({ error: "internal error" });
   }
 };
 
-
-
-exports.getLatestTemperature = async (req, res) => {
+// ✅ Ambil data suhu terbaru
+export const getLatestTemperature = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
-    const row = await temperatureModel.getLatest(cowId);
-    res.json(row || null);
+    const latest = await Temperature.findOne({
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+    });
+
+    res.json(latest || null);
   } catch (err) {
-    console.error(err);
+    console.error("❌ getLatestTemperature error:", err);
     res.status(500).json({ error: "internal error" });
   }
 };
 
-exports.getHistoryTemperature = async (req, res) => {
+// ✅ Ambil riwayat suhu
+export const getHistoryTemperature = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
     const limit = Math.min(500, Number(req.query.limit) || 50);
-    const rows = await temperatureModel.getHistory(cowId, limit);
-    res.json(rows);
+
+    const history = await Temperature.findAll({
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+      limit,
+    });
+
+    res.json(history);
   } catch (err) {
-    console.error(err);
+    console.error("❌ getHistoryTemperature error:", err);
     res.status(500).json({ error: "internal error" });
   }
 };
 
-exports.getAverageTemperature = async (req, res) => {
+// ✅ Hitung rata-rata suhu (misal dari N data terakhir)
+export const getAverageTemperature = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
     const limit = Number(req.query.limit) || 60;
-    const avgData = await temperatureModel.getAverage(cowId, limit);
-    res.json(avgData);
+
+    const temps = await Temperature.findAll({
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+      limit,
+    });
+
+    if (temps.length === 0) return res.json({ average: null });
+
+    const avg =
+      temps.reduce((sum, t) => sum + t.temperature, 0) / temps.length;
+
+    res.json({ cow_id: cowId, average: avg });
   } catch (err) {
-    console.error(err);
+    console.error("❌ getAverageTemperature error:", err);
     res.status(500).json({ error: "internal error" });
   }
 };
 
-exports.getSensorStatus = async (req, res) => {
+// ✅ Cek status sensor (online/offline)
+export const getSensorStatus = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
-     console.log("Cek status sensor untuk cowId:", cowId);
-    const lastUpdate = await temperatureModel.getLastUpdateTime(cowId);
+    console.log("Cek status sensor untuk cowId:", cowId);
 
-    if (!lastUpdate) {
+    const lastData = await Temperature.findOne({
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (!lastData) {
       return res.json({ status: "offline", message: "Belum ada data dari sensor" });
     }
 
-    // lastUpdate sekarang adalah angka (detik), misal: 1672531200
-    // new Date() / 1000 juga menghasilkan detik saat ini
-    const diffSeconds = (new Date() / 1000) - lastUpdate;
-    const diffMinutes = diffSeconds / 60;
+    const lastUpdate = new Date(lastData.created_at);
+    const diffMinutes = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+
     const status = diffMinutes <= 5 ? "online" : "offline";
     const message = status === "online" ? "Sensor aktif" : "Sensor tidak aktif / tidak terhubung";
 
     res.json({ status, message, last_update: lastUpdate });
   } catch (err) {
-    console.error(err);
+    console.error("❌ getSensorStatus error:", err);
     res.status(500).json({ error: "internal error" });
   }
 };

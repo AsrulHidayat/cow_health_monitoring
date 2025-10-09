@@ -27,14 +27,17 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
     e.preventDefault();
     if (!umurSapi) return;
 
-    // Kirim data ke backend
+    const userId = localStorage.getItem("user_id");
+
+    // Kirim data lengkap ke backend
     onAdd({
-      id: idSapi,
+      tag: idSapi,
       umur: umurSapi,
+      user_id: userId, // tambahkan ini
     });
 
     onClose();
-  };
+  };  
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

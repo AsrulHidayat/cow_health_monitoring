@@ -1,9 +1,13 @@
-const express = require("express");
-const router = express.Router();
-const { registerUser, loginUser } = require("../controllers/authController");
+import express from "express";
+import { registerUser, loginUser } from "../controllers/authController.js";
 
-// Rute untuk register & login
+const router = express.Router();
+
+// Rute untuk autentikasi pengguna
+// POST /api/auth/register → daftar pengguna baru
 router.post("/register", registerUser);
+
+// POST /api/auth/login → masuk dan dapatkan token JWT
 router.post("/login", loginUser);
 
-module.exports = router;
+export default router;

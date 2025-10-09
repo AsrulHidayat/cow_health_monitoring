@@ -1,8 +1,8 @@
-const User = require('../models/userModel');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/userModel.js"; // Model Sequelize
 
-// Fungsi untuk generate token
+// 🔐 Fungsi untuk generate JWT token
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined in .env");
@@ -13,12 +13,9 @@ const generateToken = (id) => {
   });
 };
 
-
-// @desc    Register user baru
-// @route   POST /api/auth/register
-// @desc Register user baru
-exports.registerUser = async (req, res) => {
-  console.log("📥 Data masuk ke registerUser:", req.body); 
+// 🧩 REGISTER USER BARU
+export const registerUser = async (req, res) => {
+  console.log("📥 Data masuk ke registerUser:", req.body);
 
   const { name, email, password } = req.body;
 
@@ -28,19 +25,24 @@ exports.registerUser = async (req, res) => {
   }
 
   try {
-    const userExists = await User.findByEmail(email);
-    console.log("🔍 Hasil cek email:", userExists);
-
+    // 🔍 Cek apakah user sudah terdaftar
+    const userExists = await User.findOne({ where: { email } });
     if (userExists) {
       console.log("⚠️ Email sudah terdaftar");
       return res.status(400).json({ message: "Email sudah terdaftar" });
     }
 
+    // 🔐 Enkripsi password
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("🔐 Password di-hash:", hashedPassword);
 
-    const newUser = await User.create(name, email, hashedPassword);
-    console.log("✅ User berhasil dibuat:", newUser);
+    // 🆕 Buat user baru
+    const newUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    console.log("✅ User berhasil dibuat:", newUser.dataValues);
 
     res.status(201).json({
       _id: newUser.id,
@@ -54,13 +56,13 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// @desc    Auth user & get token (login)
-// @route   POST /api/auth/login
-exports.loginUser = async (req, res) => {
+// 🔑 LOGIN USER
+export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findByEmail(email);
+    // 🔍 Cek user berdasarkan email
+    const user = await User.findOne({ where: { email } });
 
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
@@ -70,11 +72,10 @@ exports.loginUser = async (req, res) => {
         token: generateToken(user.id),
       });
     } else {
-      res.status(401).json({ message: 'Email atau password salah' });
+      res.status(401).json({ message: "Email atau password salah" });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
-

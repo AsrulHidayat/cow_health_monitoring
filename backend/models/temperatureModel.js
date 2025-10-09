@@ -1,53 +1,37 @@
-const { pool } = require("../config/db");
+import { DataTypes } from "sequelize";
+import db from "../config/db.js";
 
-// Insert data suhu baru
-exports.insert = async (cow_id, temperature) => {
-  const [result] = await pool.query(
-    "INSERT INTO temperature_data (cow_id, temperature) VALUES (?, ?)",
-    [cow_id, temperature]
-  );
-  return result;
-};
+// Definisi model Temperature
+const Temperature = db.define(
+  "Temperature",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    cow_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "cows", // nama tabel relasi
+        key: "id",
+      },
+    },
+    temperature: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    tableName: "temperature_data", // nama tabel di MySQL
+    timestamps: false, // kita pakai kolom created_at manual
+  }
+);
 
-// Data terbaru untuk 1 sapi
-exports.getLatest = async (cowId) => {
-  const [[row]] = await pool.query(
-    "SELECT * FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT 1",
-    [cowId]
-  );
-  return row;
-};
-
-// History data suhu
-exports.getHistory = async (cowId, limit) => {
-  const [rows] = await pool.query(
-    "SELECT id, temperature, created_at FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT ?",
-    [cowId, limit]
-  );
-  return rows;
-};
-
-// Rata-rata, min, max dalam window waktu
-exports.getAverage = async (cowId, minutes) => {
-  const [rows] = await pool.query(
-    `SELECT 
-        AVG(temperature) as avg_temp,
-        MIN(temperature) as min_temp,
-        MAX(temperature) as max_temp
-     FROM temperature_data
-     WHERE cow_id = ? AND created_at >= (NOW() - INTERVAL ? MINUTE)`,
-    [cowId, minutes]
-  );
-  return rows[0];
-};
-
-// Mendapatkan timestamp dari data terakhir untuk 1 sapi
-exports.getLastUpdateTime = async (cowId) => {
-  const [[row]] = await pool.query(
-    // Gunakan UNIX_TIMESTAMP untuk mengubah 'created_at' menjadi angka
-    "SELECT UNIX_TIMESTAMP(created_at) as last_update_ts FROM temperature_data WHERE cow_id = ? ORDER BY created_at DESC LIMIT 1",
-    [cowId]
-  );
-  // Mengembalikan angkanya saja, atau null jika tidak ada
-  return row ? row.last_update_ts : null; 
-};
+export default Temperature;
