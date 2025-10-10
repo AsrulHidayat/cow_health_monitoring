@@ -30,28 +30,45 @@ export default function Sapi() {
     fetchCows();
   }, []);
 
-    // ✅ Kirim data sapi baru ke backend
+  // ✅ Kirim data sapi baru ke backend - PERBAIKAN
   const handleAddCow = async (newCow) => {
     try {
       const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("user_id"); // asumsi user_id disimpan saat login
+      const user = JSON.parse(localStorage.getItem("user")); // Ambil data user yang tersimpan
+      
+      // Pastikan user_id ada
+      if (!user || !user._id) {
+        alert("User tidak terautentikasi. Silakan login kembali.");
+        return;
+      }
 
+      // Format data yang benar untuk dikirim
+      const payload = { 
+        tag: newCow.tag,
+        umur: newCow.umur,
+        user_id: user._id // Gunakan _id dari user yang login
+      };
+
+      console.log("📤 Data yang akan dikirim:", payload);
+
+      // Kirim dengan format yang benar
       const res = await axios.post(
-        "http://localhost:5001/api/cows", newCow,
-        { ...newCow, user_id: userId }, 
-        { headers: { 
-          Authorization: `Bearer ${token}` 
-        } }
+        "http://localhost:5001/api/cows",
+        payload, // Data dikirim sebagai body request
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
-
-      const payload = { ...newCow, user_id: userId };
-      console.log("📤 Data yang dikirim ke backend:", payload);
 
       setCows((prev) => [...prev, res.data]);
       console.log("✅ Sapi berhasil ditambahkan:", res.data);
+      alert("Sapi berhasil ditambahkan!");
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
-      alert("Gagal menambahkan sapi. Coba lagi.");
+      alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
   };
 
