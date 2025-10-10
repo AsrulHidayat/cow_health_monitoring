@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { getHistory, getAverage, getSensorStatus, getAllCows } from "../services/temperatureService";
+
 import Navbar from "../components/Navbar";
 import Dropdown from "../components/Dropdown";
 import ChartRealtime from "../components/ChartRealtime";
 import SensorStatus from "../components/SensorStatus";
-
-import { getHistory, getAverage, getSensorStatus, getAllCows } from "../services/temperatureService";
 import cowIcon from "../assets/cow.png";
 import plusIcon from "../assets/plus-icon.svg";
 

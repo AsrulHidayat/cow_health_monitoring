@@ -6,7 +6,7 @@ export const getCows = async (req, res) => {
     const user_id = req.user.id; // dari middleware verifyToken
     const cows = await Cow.findAll({ 
       where: { user_id },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json(cows);
   } catch (error) {

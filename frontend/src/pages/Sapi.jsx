@@ -2,24 +2,37 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
+import DashboardPerSapi from "../components/DashboardPerSapi"; 
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
+import SensorStatus from "../components/SensorStatus"; 
+
 
 export default function Sapi() {
   const [cows, setCows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [selectedCow, setSelectedCow] = useState(null);
+  const [sensorStatus, setSensorStatus] = useState("loading");
+
 
   // ✅ Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
     const fetchCows = async () => {
       try {
-        const token = localStorage.getItem("token"); // ambil token user
+        const token = localStorage.getItem("token");
         const res = await axios.get("http://localhost:5001/api/cows", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setCows(res.data); // isi dengan data dari DB
+        console.log("🐮 Data sapi dari backend:", res.data);
+        if (res.data.length > 0) {
+          setCows(res.data);
+          setSelectedCow(res.data[0]); // otomatis pilih sapi pertama
+        } else {
+          setCows([]);
+          setSelectedCow(null);
+        }
       } catch (error) {
         console.error("❌ Gagal memuat data sapi:", error);
       } finally {
@@ -30,52 +43,75 @@ export default function Sapi() {
     fetchCows();
   }, []);
 
-  // ✅ Kirim data sapi baru ke backend - PERBAIKAN
+  // ✅ Tambah sapi baru
   const handleAddCow = async (newCow) => {
     try {
       const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user")); // Ambil data user yang tersimpan
-      
-      // Pastikan user_id ada
+      const user = JSON.parse(localStorage.getItem("user"));
+
       if (!user || !user._id) {
         alert("User tidak terautentikasi. Silakan login kembali.");
         return;
       }
 
-      // Format data yang benar untuk dikirim
-      const payload = { 
+      const payload = {
         tag: newCow.tag,
         umur: newCow.umur,
-        user_id: user._id // Gunakan _id dari user yang login
+        user_id: user._id,
       };
 
-      console.log("📤 Data yang akan dikirim:", payload);
+      const res = await axios.post("http://localhost:5001/api/cows", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Kirim dengan format yang benar
-      const res = await axios.post(
-        "http://localhost:5001/api/cows",
-        payload, // Data dikirim sebagai body request
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          } 
-        }
-      );
-
-      setCows((prev) => [...prev, res.data]);
-      console.log("✅ Sapi berhasil ditambahkan:", res.data);
-      alert("Sapi berhasil ditambahkan!");
+      const addedCow = res.data;
+      setCows((prev) => [...prev, addedCow]);
+      setSelectedCow(addedCow); // langsung tampilkan sapi baru
+      alert("✅ Sapi berhasil ditambahkan!");
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
       alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
   };
 
+  useEffect(() => {
+    if (!selectedCow) return;
+
+    const checkSensorStatus = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const [temp, heart, act] = await Promise.all([
+          axios.get(`http://localhost:5001/api/temperature/${selectedCow.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`http://localhost:5001/api/heartbeat/${selectedCow.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`http://localhost:5001/api/activity/${selectedCow.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const hasData =
+          temp.data.length > 0 || heart.data.length > 0 || act.data.length > 0;
+        setSensorStatus(hasData ? "online" : "offline");
+      } catch (err) {
+        console.error("⚠️ Gagal memeriksa status sensor:", err);
+        setSensorStatus("offline");
+      }
+    };
+
+    checkSensorStatus();
+  }, [selectedCow]);
+
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar title="Dashboard Persapi" />
-
+      
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
           {/* ========================== */}
@@ -90,9 +126,32 @@ export default function Sapi() {
                 <img src={plusIcon} alt="Tambah Sapi" className="w-5 h-5" />
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
-            </div>
 
-            {/* Card Realtime Graphics */}
+              {/* Dropdown Pilih Sapi */}
+              {cows.length > 0 && (
+                <select
+                  value={selectedCow?.id || ""}
+                  onChange={(e) => {
+                    const cow = cows.find((c) => c.id === Number(e.target.value));
+                    setSelectedCow(cow);
+                  }}
+                  className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
+                >
+                  {cows.map((cow) => (
+                    <option key={cow.id} value={cow.id}>
+                      {cow.tag}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            
+            {/* Status Sensor */}
+            <SensorStatus sensorStatus={sensorStatus} />
+
+            {/* ========================== */}
+            {/* CARD REALTIME GRAPHICS */}
+            {/* ========================== */}
             <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
                 <div className="flex items-center gap-2">
@@ -117,15 +176,7 @@ export default function Sapi() {
                     </p>
                   </div>
                 ) : (
-                  <div className="p-6 text-gray-600">
-                    {cows.map((cow, index) => (
-                      <div key={index} className="mb-2">
-                        <p>
-                          <strong>{cow.id}</strong> - Umur: {cow.umur}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <DashboardPerSapi cow={selectedCow} />
                 )}
               </div>
             </div>
