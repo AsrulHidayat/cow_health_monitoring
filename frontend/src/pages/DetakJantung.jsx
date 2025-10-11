@@ -101,7 +101,7 @@ export default function Suhu() {
           <Dropdown
             value={cowId}
             onChange={(val) => setCowId(Number(val))}
-            options={cows.map((c) => ({ id: c.id, name: c.name }))}
+            options={cows.map((c) => ({ id: c.id, name: c.tag }))}
           />
         </div>
       )}
