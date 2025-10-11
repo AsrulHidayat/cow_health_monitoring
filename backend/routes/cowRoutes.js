@@ -3,11 +3,23 @@ import {
   getCows, 
   addCow, 
   getCowById, 
-  deleteCow 
+  deleteCow,
+  getAllCowsPublic,
+  getDashboardStats,
+  getNotifications
 } from "../controllers/cowController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+
+// 🔹 Public route untuk dropdown (tanpa auth untuk IoT device)
+router.get("/public", getAllCowsPublic);
+
+// 🔹 Dashboard stats
+router.get("/dashboard/stats", verifyToken, getDashboardStats);
+
+// 🔹 Dashboard notifications
+router.get("/dashboard/notifications", verifyToken, getNotifications);
 
 // 🔹 Ambil semua sapi milik user yang login
 router.get("/", verifyToken, getCows);
