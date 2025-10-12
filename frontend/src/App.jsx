@@ -25,10 +25,7 @@ import Sidebar from "./components/Sidebar";
  */
 const ProtectedRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 /**
@@ -38,25 +35,14 @@ const MainLayout = () => {
   const navigate = useNavigate();
 
   const handleSelect = (menuKey) => {
-    switch (menuKey) {
-      case "dashboard":
-        navigate("/dashboard");
-        break;
-      case "sapi":
-        navigate("/sapi");
-        break;
-      case "suhu":
-        navigate("/suhu");
-        break;
-      case "detak":
-        navigate("/detak-jantung");
-        break;
-      case "gerakan":
-        navigate("/gerakan");
-        break;
-      default:
-        navigate("/dashboard");
-    }
+    const routes = {
+      dashboard: "/dashboard",
+      sapi: "/sapi",
+      suhu: "/suhu",
+      detak: "/detak-jantung",
+      gerakan: "/gerakan",
+    };
+    navigate(routes[menuKey] || "/dashboard");
   };
 
   const handleExit = () => {
@@ -66,10 +52,10 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      {/* Sidebar tetap di kiri */}
+      {/* Sidebar */}
       <Sidebar onSelect={handleSelect} onExit={handleExit} />
 
-      {/* Area konten */}
+      {/* Konten utama */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
         <div className="min-h-full w-full">
           <Outlet />
@@ -78,7 +64,6 @@ const MainLayout = () => {
     </div>
   );
 };
-
 
 /**
  * App Component
@@ -99,7 +84,7 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/suhu" element={<Suhu />} />
           <Route path="/sapi" element={<Sapi />} />
@@ -107,8 +92,8 @@ export default function App() {
           <Route path="/gerakan" element={<Gerakan />} />
         </Route>
 
-        {/* Fallback halaman tidak ditemukan */}
-        <Route path="*" element={<h1>404: Halaman Tidak Ditemukan</h1>} />
+        {/* Fallback */}
+        <Route path="*" element={<h1 className="text-center mt-20 text-2xl font-semibold">404 | Halaman Tidak Ditemukan</h1>} />
       </Routes>
     </Router>
   );
