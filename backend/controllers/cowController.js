@@ -224,7 +224,6 @@ export const getNotifications = async (req, res) => {
             message: `Parameter gerakan dan detak jantung bermasalah, segera periksa kondisi sapi`,
             timestamp: latestTemp.created_at
           });
-        }
       }
     }
     
@@ -234,7 +233,7 @@ export const getNotifications = async (req, res) => {
     // Limit to 5 latest notifications
     res.json(notifications.slice(0, 5));
     
-  } catch (error) {
+  }} catch (error) {
     console.error("❌ Gagal mengambil notifikasi:", error);
     res.status(500).json({ message: "Database error", error: error.message });
   }

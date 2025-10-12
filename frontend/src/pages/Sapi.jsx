@@ -7,10 +7,13 @@ import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
 import SensorStatus from "../components/SensorStatus"; 
+import Dropdown from "../components/Dropdown";
+
 
 
 export default function Sapi() {
   const [cows, setCows] = useState([]);
+  const [cowId, setCowId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedCow, setSelectedCow] = useState(null);
@@ -69,7 +72,7 @@ export default function Sapi() {
 
       const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
-      setSelectedCow(addedCow); // langsung tampilkan sapi baru
+      setSelectedCow(addedCow); 
       alert("✅ Sapi berhasil ditambahkan!");
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
@@ -127,23 +130,17 @@ export default function Sapi() {
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
 
-              {/* Dropdown Pilih Sapi */}
-              {cows.length > 0 && (
-                <select
-                  value={selectedCow?.id || ""}
-                  onChange={(e) => {
-                    const cow = cows.find((c) => c.id === Number(e.target.value));
-                    setSelectedCow(cow);
-                  }}
-                  className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
-                >
-                  {cows.map((cow) => (
-                    <option key={cow.id} value={cow.id}>
-                      {cow.tag}
-                    </option>
-                  ))}
-                </select>
-              )}
+              {/* Dropdown hanya tampil jika ada sapi */}
+                {cows.length > 0 && (
+                  <div className="flex items-center gap-6 px-6 py-4" >
+                    <Dropdown
+                      value={cowId}
+                      onChange={(val) => setCowId(Number(val))}
+                      options={cows.map((c) => ({ id: c.id, name: c.tag }))}
+                    />
+                  </div>
+                )}
+
             </div>
             
             {/* Status Sensor */}

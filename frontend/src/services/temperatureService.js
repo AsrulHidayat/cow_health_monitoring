@@ -61,6 +61,12 @@ export const getDashboardStats = async () => {
   }
 };
 
+// Ambil semua sapi tanpa login (public)
+export const getAllCowsPublic = async () => {
+  const res = await axios.get(`${API_URL}/cows/public`);
+  return res.data;
+};
+
 export const getNotifications = async () => {
   try {
     const token = localStorage.getItem("token");
@@ -72,4 +78,6 @@ export const getNotifications = async () => {
     console.error("Error fetching notifications:", error);
     return [];
   }
+
+  
 };
