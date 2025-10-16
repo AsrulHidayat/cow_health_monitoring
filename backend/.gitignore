@@ -1,2 +1,5 @@
 # Environment variables
 .env
+node_modules/
+.gitignore
+*.local

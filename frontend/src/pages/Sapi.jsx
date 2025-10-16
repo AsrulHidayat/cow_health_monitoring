@@ -22,29 +22,50 @@ export default function Sapi() {
 
   // ✅ Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchCows = async () => {
+      setLoading(true);
       try {
         const token = localStorage.getItem("token");
+        if (!token) {
+          setCows([]);
+          setSelectedCow(null);
+          setLoading(false);
+          return;
+        }
+
         const res = await axios.get("http://localhost:5001/api/cows", {
+          signal: controller.signal,
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("🐮 Data sapi dari backend:", res.data);
-        if (res.data.length > 0) {
-          setCows(res.data);
-          setSelectedCow(res.data[0]); // otomatis pilih sapi pertama
+
+        const data = res.data;
+        if (Array.isArray(data) && data.length > 0) {
+          setCows(data);
+          setSelectedCow(data[0]);
         } else {
           setCows([]);
           setSelectedCow(null);
         }
       } catch (error) {
-        console.error("❌ Gagal memuat data sapi:", error);
+        if (error.name === "CanceledError" || axios.isCancel?.(error)) {
+          console.log("fetchCows canceled");
+        } else {
+          console.error("❌ Gagal memuat data sapi:", error.response?.data || error.message);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchCows();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
+
 
   // ✅ Tambah sapi baru
   const handleAddCow = async (newCow) => {
@@ -74,14 +95,20 @@ export default function Sapi() {
       setCows((prev) => [...prev, addedCow]);
       setSelectedCow(addedCow); 
       alert("✅ Sapi berhasil ditambahkan!");
+
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
       alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
   };
-
+  
+  // Cek Status Sensor
   useEffect(() => {
-    if (!selectedCow) return;
+    // Jika belum ada sapi yang dipilih → anggap sensor offline
+    if (!selectedCow) {
+      setSensorStatus("offline");
+      return;
+    }
 
     const checkSensorStatus = async () => {
       try {
@@ -109,6 +136,7 @@ export default function Sapi() {
 
     checkSensorStatus();
   }, [selectedCow]);
+
 
 
   return (
@@ -144,7 +172,11 @@ export default function Sapi() {
             </div>
             
             {/* Status Sensor */}
-            <SensorStatus sensorStatus={sensorStatus} />
+            {cows.length > 0 && (
+              <div className="px-6">
+                <SensorStatus sensorStatus={sensorStatus} />
+              </div>
+            )}
 
             {/* ========================== */}
             {/* CARD REALTIME GRAPHICS */}
