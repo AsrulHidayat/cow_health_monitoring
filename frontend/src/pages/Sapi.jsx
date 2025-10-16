@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
-import DashboardPerSapi from "../components/DashboardPerSapi"; 
+import DashboardPerSapi from "../components/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
-import SensorStatus from "../components/SensorStatus"; 
-import Dropdown from "../components/Dropdown";
+import SensorStatus from "../components/SensorStatus";
+import CowDropdown from "../components/Dropdown";
+import "flowbite";
 
 
 
@@ -43,6 +44,7 @@ export default function Sapi() {
         const data = res.data;
         if (Array.isArray(data) && data.length > 0) {
           setCows(data);
+          console.log(cows);
           setSelectedCow(data[0]);
         } else {
           setCows([]);
@@ -68,7 +70,7 @@ export default function Sapi() {
 
 
   // ✅ Tambah sapi baru
-  const handleAddCow = async (newCow) => {
+  async function handleAddCow(newCow) {
     try {
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user"));
@@ -93,15 +95,15 @@ export default function Sapi() {
 
       const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
-      setSelectedCow(addedCow); 
+      setSelectedCow(addedCow);
       alert("✅ Sapi berhasil ditambahkan!");
 
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
       alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
-  };
-  
+  }
+
   // Cek Status Sensor
   useEffect(() => {
     // Jika belum ada sapi yang dipilih → anggap sensor offline
@@ -142,7 +144,7 @@ export default function Sapi() {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar title="Dashboard Persapi" />
-      
+
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
           {/* ========================== */}
@@ -159,21 +161,22 @@ export default function Sapi() {
               </button>
 
               {/* Dropdown hanya tampil jika ada sapi */}
-                {cows.length > 0 && (
-                  <div className="flex items-center gap-6 px-6 py-4" >
-                    <Dropdown
-                      value={cowId}
-                      onChange={(val) => setCowId(Number(val))}
-                      options={cows.map((c) => ({ id: c.id, name: c.tag }))}
-                    />
-                  </div>
-                )}
+              {/* {cows.length > 0 && ( */}
+                <div className="flex items-center gap-6 px-6 py-4" >
+                  <CowDropdown
+                    value={cowId}
+                    onChange={(val) => setCowId(Number(val))}
+                    options={cows.map((c) => ({ id: c.id, name: c.tag }))}
+                  />
+
+                </div>
+              
 
             </div>
-            
+
             {/* Status Sensor */}
             {cows.length > 0 && (
-              <div className="px-6">
+              <div>
                 <SensorStatus sensorStatus={sensorStatus} />
               </div>
             )}
