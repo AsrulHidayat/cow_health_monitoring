@@ -91,15 +91,35 @@ export default function Sapi() {
         alert("Umur sapi harus diisi!");
         return;
       }
+      // 🔢 Cari ID yang kosong (gap filling)
+      // Ambil semua nomor ID yang sudah ada
+      const existingNumbers = cows
+        .map(cow => {
+          const match = cow.tag.match(/SAPI-(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        })
+        .sort((a, b) => a - b);
+
+      // Cari nomor terkecil yang belum terpakai
+      let nextNumber = 1;
+      for (const num of existingNumbers) {
+        if (num === nextNumber) {
+          nextNumber++;
+        } else if (num > nextNumber) {
+          break;
+        }
+      }
+
+      const newTag = `SAPI-${String(nextNumber).padStart(3, "0")}`;
 
       console.log("📤 Data yang akan dikirim:", {
-        tag: newCow.tag,
+        tag: newTag,
         umur: newCow.umur,
         user_id: user._id
       });
 
       const payload = {
-        tag: newCow.tag,
+        tag: newTag,
         umur: newCow.umur,
         user_id: user._id,
       };
@@ -246,7 +266,7 @@ export default function Sapi() {
         <AddCowModal
           onClose={() => setShowModal(false)}
           onAdd={handleAddCow}
-          cowCount={cows.length}
+          cows={cows}
         />
       )}
     </div>
