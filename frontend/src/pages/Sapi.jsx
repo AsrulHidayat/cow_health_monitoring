@@ -12,8 +12,6 @@ import SensorStatus from "../components/SensorStatus";
 import CowDropdown from "../components/Dropdown";
 import "flowbite";
 
-
-
 export default function Sapi() {
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
@@ -21,7 +19,6 @@ export default function Sapi() {
   const [showModal, setShowModal] = useState(false);
   const [selectedCow, setSelectedCow] = useState(null);
   const [sensorStatus, setSensorStatus] = useState("loading");
-
 
   // ✅ Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
@@ -47,9 +44,11 @@ export default function Sapi() {
         if (Array.isArray(data) && data.length > 0) {
           setCows(data);
           setSelectedCow(data[0]);
+          setCowId(data[0].id);
         } else {
           setCows([]);
           setSelectedCow(null);
+          setCowId(null);
         }
       } catch (error) {
         if (error.name === "CanceledError" || axios.isCancel?.(error)) {
@@ -64,8 +63,17 @@ export default function Sapi() {
 
     fetchCows();
     return () => controller.abort();
-  }, []); // ✅ hanya dijalankan sekali
+  }, []);
 
+  // ✅ Update selected cow ketika cowId berubah dari dropdown
+  useEffect(() => {
+    if (cowId && cows.length > 0) {
+      const cow = cows.find(c => c.id === cowId);
+      if (cow) {
+        setSelectedCow(cow);
+      }
+    }
+  }, [cowId, cows]);
 
   // ✅ Tambah sapi baru
   async function handleAddCow(newCow) {
@@ -75,16 +83,6 @@ export default function Sapi() {
 
       if (!user || !user._id) {
         alert("User tidak terautentikasi. Silakan login kembali.");
-        return;
-      }
-
-      // 🚫 Validasi umur
-      if (newCow.umur.tahun === 0 && newCow.umur.bulan === 0) {
-        alert("Bulan dan tahun tidak boleh 0 secara bersamaan!");
-        return;
-      }
-      if (newCow.umur.tahun === 0 && newCow.umur.bulan === 0) {
-        alert("Bulan tidak boleh 0 jika tahun juga 0!");
         return;
       }
 
@@ -114,10 +112,12 @@ export default function Sapi() {
       const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
       setSelectedCow(addedCow);
+      setCowId(addedCow.id);
 
       // 🌡️ Setelah sapi ditambahkan, langsung cek status sensor
       try {
         const sensorResult = await getSensorStatus(addedCow.id);
+        setSensorStatus(sensorResult.status);
         if (sensorResult.status === "online") {
           console.log(`✅ Sensor untuk ${addedCow.tag} aktif`);
         } else {
@@ -125,18 +125,17 @@ export default function Sapi() {
         }
       } catch (err) {
         console.error("❌ Gagal cek status sensor:", err);
+        setSensorStatus("offline");
       }
 
       alert("✅ Sapi berhasil ditambahkan!");
-
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
       alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
   }
 
-
-  // Cek Status Sensor
+  // ✅ Cek Status Sensor - menggunakan endpoint temperature/status
   useEffect(() => {
     // Jika belum ada sapi yang dipilih → anggap sensor offline
     if (!selectedCow) {
@@ -146,32 +145,22 @@ export default function Sapi() {
 
     const checkSensorStatus = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const [temp, heart, act] = await Promise.all([
-          axios.get(`http://localhost:5001/api/temperature/${selectedCow.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`http://localhost:5001/api/heartbeat/${selectedCow.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`http://localhost:5001/api/activity/${selectedCow.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        const hasData =
-          temp.data.length > 0 || heart.data.length > 0 || act.data.length > 0;
-        setSensorStatus(hasData ? "online" : "offline");
+        const statusResult = await getSensorStatus(selectedCow.id);
+        setSensorStatus(statusResult.status);
       } catch (err) {
         console.error("⚠️ Gagal memeriksa status sensor:", err);
         setSensorStatus("offline");
       }
     };
 
+    // Cek status pertama kali
     checkSensorStatus();
+    
+    // Polling setiap 5 detik untuk update status sensor
+    const interval = setInterval(checkSensorStatus, 5000);
+    
+    return () => clearInterval(interval);
   }, [selectedCow]);
-
-
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -193,17 +182,15 @@ export default function Sapi() {
               </button>
 
               {/* Dropdown hanya tampil jika ada sapi */}
-              {/* {cows.length > 0 && ( */}
-              <div className="flex items-center gap-6 px-6 py-4" >
-                <CowDropdown
-                  value={cowId}
-                  onChange={(val) => setCowId(Number(val))}
-                  options={cows.map((c) => ({ id: c.id, name: c.tag }))}
-                />
-
-              </div>
-
-
+              {cows.length > 0 && (
+                <div className="flex items-center gap-6">
+                  <CowDropdown
+                    value={cowId}
+                    onChange={(val) => setCowId(Number(val))}
+                    options={cows.map((c) => ({ id: c.id, name: c.tag }))}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Status Sensor */}
