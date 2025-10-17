@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { getSensorStatus } from "../services/temperatureService";
+
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
@@ -76,11 +78,14 @@ export default function Sapi() {
         return;
       }
 
-      // 🧩 Validasi umur
-      const { tahun = 0, bulan = 0 } = newCow.umur || {};
-        if (tahun === 0 && bulan === 0) {
-          alert("❌ Tidak bisa menambahkan sapi dengan tahun dan bulan sama-sama 0!");
-          return;
+      // 🚫 Validasi umur
+      if (newCow.umur.tahun === 0 && newCow.umur.bulan === 0) {
+        alert("Bulan dan tahun tidak boleh 0 secara bersamaan!");
+        return;
+      }
+      if (newCow.umur.tahun === 0 && newCow.umur.bulan === 0) {
+        alert("Bulan tidak boleh 0 jika tahun juga 0!");
+        return;
       }
 
       // Penambahan id sapi melalui tag otomatis
@@ -109,6 +114,19 @@ export default function Sapi() {
       const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
       setSelectedCow(addedCow);
+
+      // 🌡️ Setelah sapi ditambahkan, langsung cek status sensor
+      try {
+        const sensorResult = await getSensorStatus(addedCow.id);
+        if (sensorResult.status === "online") {
+          console.log(`✅ Sensor untuk ${addedCow.tag} aktif`);
+        } else {
+          console.warn(`⚠️ Sensor untuk ${addedCow.tag} offline`);
+        }
+      } catch (err) {
+        console.error("❌ Gagal cek status sensor:", err);
+      }
+
       alert("✅ Sapi berhasil ditambahkan!");
 
     } catch (error) {
@@ -116,6 +134,7 @@ export default function Sapi() {
       alert(error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.");
     }
   }
+
 
   // Cek Status Sensor
   useEffect(() => {
