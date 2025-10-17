@@ -5,6 +5,7 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
   const [umurBulan, setUmurBulan] = useState("");
   const [umurSapi, setUmurSapi] = useState("");
   const [idSapi, setIdSapi] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     // ID sapi otomatis berdasarkan jumlah sapi yang sudah ada
@@ -25,19 +26,31 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!umurSapi) return;
+    setError("");
 
-    const userId = localStorage.getItem("user_id");
+    // Validasi: tahun dan bulan tidak boleh 0 bersamaan
+    const tahun = parseInt(umurTahun) || 0;
+    const bulan = parseInt(umurBulan) || 0;
 
-    // Kirim data lengkap ke backend
+    if (tahun === 0 && bulan === 0) {
+      setError("Umur sapi harus diisi! Minimal isi tahun atau bulan.");
+      return;
+    }
+
+    // Validasi: minimal salah satu harus diisi
+    if (!umurSapi || umurSapi.trim() === "") {
+      setError("Umur sapi tidak boleh kosong!");
+      return;
+    }
+
+    // Kirim data ke parent component
     onAdd({
       tag: idSapi,
       umur: umurSapi,
-      user_id: userId, // tambahkan ini
     });
 
     onClose();
-  };  
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -103,6 +116,13 @@ export default function AddCowModal({ onClose, onAdd, cowCount }) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700"
             />
           </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"

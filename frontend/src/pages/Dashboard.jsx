@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
 import cowIcon from "../assets/cow.png";
@@ -14,11 +15,11 @@ export default function Dashboard() {
     const fetchCows = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5001/api/cows", {
+        const res = await axios.get("http://localhost:5001/api/cows", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
         
+        const data = res.data;
         console.log("🐮 Data sapi dari backend:", data);
         
         // Pastikan data adalah array
@@ -49,31 +50,40 @@ export default function Dashboard() {
         return;
       }
 
+      // Validasi umur
+      if (!newCow.umur || newCow.umur.trim() === "") {
+        alert("Umur sapi harus diisi!");
+        return;
+      }
+
+      console.log("📤 Data yang akan dikirim:", {
+        tag: newCow.tag,
+        umur: newCow.umur,
+        user_id: user._id
+      });
+
       const payload = {
         tag: newCow.tag,
         umur: newCow.umur,
         user_id: user._id,
       };
 
-      const res = await fetch("http://localhost:5001/api/cows", {
-        method: "POST",
+      const res = await axios.post("http://localhost:5001/api/cows", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error("Gagal menambahkan sapi");
-      }
+      console.log("✅ Response dari server:", res.data);
 
-      const addedCow = await res.json();
+      const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
       alert("✅ Sapi berhasil ditambahkan!");
     } catch (error) {
-      console.error("❌ Gagal menambahkan sapi:", error);
-      alert("Gagal menambahkan sapi. Coba lagi.");
+      console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
+      const errorMsg = error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.";
+      alert(errorMsg);
     }
   };
 
@@ -136,14 +146,22 @@ export default function Dashboard() {
                     </p>
                   </div>
                 ) : (
-                  <div className="p-6 text-gray-600">
-                    {Array.isArray(cows) && cows.map((cow, index) => (
-                      <div key={index} className="mb-2">
-                        <p>
-                          <strong>{cow.tag}</strong> - Umur: {cow.umur}
-                        </p>
-                      </div>
-                    ))}
+                  <div className="p-6 text-gray-600 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Array.isArray(cows) && cows.map((cow, index) => (
+                        <div key={index} className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-gray-800">{cow.tag}</p>
+                              <p className="text-sm text-gray-500">Umur: {cow.umur}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-2xl">🐄</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
