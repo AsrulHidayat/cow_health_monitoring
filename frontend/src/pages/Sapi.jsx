@@ -44,7 +44,6 @@ export default function Sapi() {
         const data = res.data;
         if (Array.isArray(data) && data.length > 0) {
           setCows(data);
-          console.log(cows);
           setSelectedCow(data[0]);
         } else {
           setCows([]);
@@ -62,11 +61,8 @@ export default function Sapi() {
     };
 
     fetchCows();
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
+    return () => controller.abort();
+  }, []); // ✅ hanya dijalankan sekali
 
 
   // ✅ Tambah sapi baru
@@ -80,8 +76,25 @@ export default function Sapi() {
         return;
       }
 
+      // 🧩 Validasi umur
+      const { tahun = 0, bulan = 0 } = newCow.umur || {};
+        if (tahun === 0 && bulan === 0) {
+          alert("❌ Tidak bisa menambahkan sapi dengan tahun dan bulan sama-sama 0!");
+          return;
+      }
+
+      // Penambahan id sapi melalui tag otomatis
+      const lastCow = cows[cows.length - 1];
+      let newTag = "SAPI-001";
+
+      if (lastCow && lastCow.tag) {
+        const lastNumber = parseInt(lastCow.tag.split("-")[1]);
+        const nextNumber = lastNumber + 1;
+        newTag = `SAPI-${String(nextNumber).padStart(3, "0")}`;
+      }
+
       const payload = {
-        tag: newCow.tag,
+        tag: newTag,
         umur: newCow.umur,
         user_id: user._id,
       };
@@ -162,15 +175,15 @@ export default function Sapi() {
 
               {/* Dropdown hanya tampil jika ada sapi */}
               {/* {cows.length > 0 && ( */}
-                <div className="flex items-center gap-6 px-6 py-4" >
-                  <CowDropdown
-                    value={cowId}
-                    onChange={(val) => setCowId(Number(val))}
-                    options={cows.map((c) => ({ id: c.id, name: c.tag }))}
-                  />
+              <div className="flex items-center gap-6 px-6 py-4" >
+                <CowDropdown
+                  value={cowId}
+                  onChange={(val) => setCowId(Number(val))}
+                  options={cows.map((c) => ({ id: c.id, name: c.tag }))}
+                />
 
-                </div>
-              
+              </div>
+
 
             </div>
 
