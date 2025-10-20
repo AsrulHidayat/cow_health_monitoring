@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getHistory, getAverage, getSensorStatus, getAllCows } from "../services/temperatureService";
 
-// Dummy icons - replace with your actual icon imports
+// Dummy icons
 const CowIcon = () => (
   <svg className="w-20 h-20 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
@@ -77,19 +77,13 @@ const SensorStatus = ({ sensorStatus }) => {
 };
 
 const ChartRealtime = ({ data }) => {
-  // Format data untuk menampilkan menit.detik di X-axis
-  const formattedData = data.map((item, index) => {
-    const timeObj = new Date(item.fullDate || new Date());
-    const minutes = timeObj.getMinutes();
-    const seconds = timeObj.getSeconds();
-
-    return {
-      ...item,
-      index: index + 1,
-      displayTime: `${minutes}.${seconds.toString().padStart(2, '0')}`,
-      fullDate: item.fullDate || new Date()
-    };
-  });
+  // Format data untuk chart - setiap data mendapat 1 blok penuh
+  const formattedData = data.map((item, index) => ({
+    ...item,
+    index: index + 1,
+    displayIndex: `#${index + 1}`,
+    temperature: parseFloat(item.temperature.toFixed(1))
+  }));
 
   const categorizeTemp = (temp) => {
     if (temp < 37.5) return "Hipotermia";
@@ -99,25 +93,19 @@ const ChartRealtime = ({ data }) => {
     return "Kritis";
   };
 
+  const getBarColor = (temp) => {
+    if (temp < 37.5) return "#3B82F6"; // blue
+    if (temp >= 37.5 && temp <= 39.5) return "#22C55E"; // green
+    if (temp > 39.5 && temp <= 40.5) return "#EAB308"; // yellow
+    if (temp > 40.5 && temp <= 41.5) return "#F97316"; // orange
+    return "#EF4444"; // red
+  };
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const temp = payload[0].value;
       const category = categorizeTemp(temp);
-      const dateObj = new Date(data.fullDate);
-
-      // Format tanggal: 18 Oktober 2025
-      const dateStr = dateObj.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-
-      // Format waktu: 16h.45m.10s
-      const hours = dateObj.getHours();
-      const minutes = dateObj.getMinutes();
-      const seconds = dateObj.getSeconds();
-      const timeStr = `${hours}h.${minutes.toString().padStart(2, '0')}m.${seconds.toString().padStart(2, '0')}s`;
 
       return (
         <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
@@ -125,8 +113,13 @@ const ChartRealtime = ({ data }) => {
             {temp.toFixed(1)}°C - {category}
           </p>
           <div className="border-t border-gray-100 pt-2 mt-2">
-            <p className="text-sm text-gray-600">{dateStr}</p>
-            <p className="text-sm font-medium text-gray-700">{timeStr}</p>
+            <p className="text-sm text-gray-600">
+              {new Date(data.fullDate).toLocaleString("id-ID", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}</p>
+            <p className="text-sm font-medium text-gray-700">{data.time}</p>
           </div>
         </div>
       );
@@ -147,13 +140,13 @@ const ChartRealtime = ({ data }) => {
           vertical={false}
         />
         <XAxis
-          dataKey="displayTime"
-          tick={{ fontSize: 13, fill: "#374151", fontWeight: 600 }}
+          dataKey="displayIndex"
+          tick={{ fontSize: 12, fill: "#374151", fontWeight: 600 }}
           stroke="#d1d5db"
           axisLine={false}
           tickLine={false}
           label={{
-            value: 'Menit.Detik',
+            value: 'Data Ke-',
             position: 'insideBottom',
             offset: -10,
             style: { fontSize: 11, fill: '#9ca3af' }
@@ -171,12 +164,12 @@ const ChartRealtime = ({ data }) => {
         <Bar
           dataKey="temperature"
           radius={[8, 8, 0, 0]}
-          maxBarSize={40}
+          barSize={35}
         >
           {formattedData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
-              fill={index === formattedData.length - 1 ? "#22c55e" : "#86efac"}
+              fill={getBarColor(entry.temperature)}
             />
           ))}
         </Bar>
@@ -248,8 +241,8 @@ export default function Suhu() {
           return;
         }
 
-        const hist = await getHistory(cowId, 20);
-        const avg = await getAverage(cowId, 60);
+        const hist = await getHistory(cowId, 25);
+        const avg = await getAverage(cowId, 25);
 
         const formatted = hist.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
@@ -257,10 +250,12 @@ export default function Suhu() {
             minute: "2-digit",
             second: "2-digit",
           }),
-          temperature: parseFloat(h.temperature.toFixed(1)), // Round to 1 decimal
+          temperature: parseFloat(h.temperature.toFixed(1)),
+          fullDate: h.created_at
         }));
 
-        setHistory(formatted.reverse());
+        // Reverse agar data terbaru di depan untuk chart (chart dibaca dari kiri ke kanan)
+        setHistory(formatted);
         setAvgData(avg && avg.average ? { avg_temp: avg.average } : { avg_temp: null });
       } catch (err) {
         console.error("Gagal melakukan polling data:", err);
@@ -327,7 +322,7 @@ export default function Suhu() {
             ) : cows.length > 0 ? (
               history.length > 0 ? (
                 <div className="w-full h-full p-6">
-                  <ChartRealtime data={history} />
+                  <ChartRealtime data={history.slice(-25)} />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -357,7 +352,7 @@ export default function Suhu() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Rata-rata Suhu</h2>
-                <p className="text-sm text-gray-500">60 Data Terakhir</p>
+                <p className="text-sm text-gray-500">25 Data Terakhir</p>
               </div>
             </div>
 
@@ -384,7 +379,7 @@ export default function Suhu() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Sampel Data</p>
-                    <p className="text-2xl font-bold text-gray-800">60</p>
+                    <p className="text-2xl font-bold text-gray-800">25</p>
                   </div>
                 </div>
               </div>
@@ -397,7 +392,7 @@ export default function Suhu() {
             )}
           </div>
 
-          {/* HISTORY */}
+          {/* HISTORY - DATA TERBARU DI ATAS */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
@@ -407,7 +402,7 @@ export default function Suhu() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">History Realtime</h2>
-                <p className="text-sm text-gray-500">20 Data Terakhir</p>
+                <p className="text-sm text-gray-500">25 Data Terakhir</p>
               </div>
             </div>
 
@@ -416,11 +411,14 @@ export default function Suhu() {
                 <div className="space-y-2">
                   {history.map((h, i) => {
                     const category = categorizeTemperature(h.temperature);
+                    const dataNumber = i + 1; // Nomor urut dari yang terbaru di atas
+
                     return (
                       <div
                         key={i}
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
                       >
+                        <span className="text-sm font-bold text-gray-500 w-12">#{dataNumber}</span>
                         <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
                         <span className="text-lg font-bold text-gray-800">{h.temperature.toFixed(1)}°C</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>

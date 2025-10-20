@@ -8,12 +8,12 @@ export const getLatest = async (cowId) => {
   return res.data;
 };
 
-export const getHistory = async (cowId, limit = 20) => {
+export const getHistory = async (cowId, limit = 25) => {
   const res = await axios.get(`${API_URL}/temperature/${cowId}/history?limit=${limit}`);
   return res.data;
 };
 
-export const getAverage = async (cowId, limit = 60) => {
+export const getAverage = async (cowId, limit = 25) => {
   const res = await axios.get(`${API_URL}/temperature/${cowId}/average?limit=${limit}`);
   return res.data;
 };
