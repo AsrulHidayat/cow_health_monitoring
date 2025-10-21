@@ -1,8 +1,35 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { getHistory, getAverage, getSensorStatus, getAllCows } from "../services/temperatureService";
 
-// Dummy icons
+// API Service Functions
+const API_URL = "http://localhost:5001/api";
+
+const getHistory = async (cowId, limit = 25) => {
+  const res = await fetch(`${API_URL}/temperature/${cowId}/history?limit=${limit}`);
+  return res.json();
+};
+
+const getAverage = async (cowId, limit = 25) => {
+  const res = await fetch(`${API_URL}/temperature/${cowId}/average?limit=${limit}`);
+  return res.json();
+};
+
+const getSensorStatus = async (cowId) => {
+  const res = await fetch(`${API_URL}/temperature/${cowId}/status`);
+  return res.json();
+};
+
+const getAllCows = async () => {
+  try {
+    const res = await fetch(`${API_URL}/cows/public`);
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching cows:", error);
+    return [];
+  }
+};
+
+// Dummy Icons
 const CowIcon = () => (
   <svg className="w-20 h-20 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
@@ -77,7 +104,6 @@ const SensorStatus = ({ sensorStatus }) => {
 };
 
 const ChartRealtime = ({ data }) => {
-  // Format data untuk chart - setiap data mendapat 1 blok penuh
   const formattedData = data.map((item, index) => ({
     ...item,
     index: index + 1,
@@ -94,11 +120,11 @@ const ChartRealtime = ({ data }) => {
   };
 
   const getBarColor = (temp) => {
-    if (temp < 37.5) return "#3B82F6"; // blue
-    if (temp >= 37.5 && temp <= 39.5) return "#22C55E"; // green
-    if (temp > 39.5 && temp <= 40.5) return "#EAB308"; // yellow
-    if (temp > 40.5 && temp <= 41.5) return "#F97316"; // orange
-    return "#EF4444"; // red
+    if (temp < 37.5) return "#3B82F6";
+    if (temp >= 37.5 && temp <= 39.5) return "#22C55E";
+    if (temp > 39.5 && temp <= 40.5) return "#EAB308";
+    if (temp > 40.5 && temp <= 41.5) return "#F97316";
+    return "#EF4444";
   };
 
   const CustomTooltip = ({ active, payload }) => {
@@ -197,6 +223,144 @@ const getCategoryStyles = (color) => {
   return styles[color] || styles.green;
 };
 
+// Temperature Distribution Component
+const TemperatureDistribution = ({ history }) => {
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+
+  // Hitung distribusi persentase
+  const calculateDistribution = () => {
+    if (!history || history.length === 0) {
+      return {
+        hipotermia: 0,
+        normal: 0,
+        demamRingan: 0,
+        demamTinggi: 0,
+        kritis: 0
+      };
+    }
+
+    const counts = {
+      hipotermia: 0,
+      normal: 0,
+      demamRingan: 0,
+      demamTinggi: 0,
+      kritis: 0
+    };
+
+    history.forEach(item => {
+      const temp = item.temperature;
+      if (temp < 37.5) counts.hipotermia++;
+      else if (temp >= 37.5 && temp <= 39.5) counts.normal++;
+      else if (temp > 39.5 && temp <= 40.5) counts.demamRingan++;
+      else if (temp > 40.5 && temp <= 41.5) counts.demamTinggi++;
+      else counts.kritis++;
+    });
+
+    const total = history.length;
+    return {
+      hipotermia: Math.round((counts.hipotermia / total) * 100),
+      normal: Math.round((counts.normal / total) * 100),
+      demamRingan: Math.round((counts.demamRingan / total) * 100),
+      demamTinggi: Math.round((counts.demamTinggi / total) * 100),
+      kritis: Math.round((counts.kritis / total) * 100)
+    };
+  };
+
+  const distribution = calculateDistribution();
+
+  const categories = [
+    {
+      key: 'hipotermia',
+      label: 'Hipotermia',
+      color: '#3B82F6',
+      bgColor: 'bg-blue-500',
+      range: '< 37,5°C',
+      description: 'Penurunan suhu tubuh akibat cuaca dingin atau gangguan metabolik',
+      percentage: distribution.hipotermia
+    },
+    {
+      key: 'normal',
+      label: 'Normal',
+      color: '#22C55E',
+      bgColor: 'bg-green-500',
+      range: '37,5 - 39,5°C',
+      description: 'Kondisi fisiologis sapi yang sehat dan stabil',
+      percentage: distribution.normal
+    },
+    {
+      key: 'demamRingan',
+      label: 'Demam Ringan',
+      color: '#EAB308',
+      bgColor: 'bg-yellow-500',
+      range: '39,6 - 40,5°C',
+      description: 'Respon tubuh terhadap infeksi ringan atau stres',
+      percentage: distribution.demamRingan
+    },
+    {
+      key: 'demamTinggi',
+      label: 'Demam Tinggi',
+      color: '#F97316',
+      bgColor: 'bg-orange-500',
+      range: '40,6 - 41,5°C',
+      description: 'Kemungkinan infeksi serius yang memerlukan perhatian lebih',
+      percentage: distribution.demamTinggi
+    },
+    {
+      key: 'kritis',
+      label: 'Kritis',
+      color: '#EF4444',
+      bgColor: 'bg-red-500',
+      range: '> 41,5°C',
+      description: 'Kondisi berbahaya yang dapat mengancam nyawa jika tidak segera ditangani',
+      percentage: distribution.kritis
+    }
+  ];
+
+  return (
+    <div className="mt-8 pt-6 border-t border-gray-100">
+      <h3 className="text-sm font-semibold text-gray-700 mb-6 text-left">Distribusi Klasifikasi Suhu</h3>
+      
+      {/* Individual Bars untuk setiap kategori */}
+      <div className="space-y-4">
+        {categories.map((cat) => (
+          <div
+            key={cat.key}
+            className="relative"
+            onMouseEnter={() => setHoveredCategory(cat.key)}
+            onMouseLeave={() => setHoveredCategory(null)}
+          >
+            {/* Label dan Persentase */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-800">{cat.label}</span>
+                <span className="text-xs text-gray-500">({cat.range})</span>
+              </div>
+              <span className="text-lg font-bold text-gray-800">{cat.percentage}%</span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                className={`h-full ${cat.bgColor} transition-all duration-500 ease-out rounded-full`}
+                style={{ width: `${cat.percentage}%` }}
+              ></div>
+            </div>
+
+            {/* Tooltip saat hover */}
+            {hoveredCategory === cat.key && (
+              <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-10 animate-fadeIn">
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {cat.description}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function Suhu() {
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
@@ -254,7 +418,6 @@ export default function Suhu() {
           fullDate: h.created_at
         }));
 
-        // Reverse agar data terbaru di depan untuk chart (chart dibaca dari kiri ke kanan)
         setHistory(formatted);
         setAvgData(avg && avg.average ? { avg_temp: avg.average } : { avg_temp: null });
       } catch (err) {
@@ -382,6 +545,9 @@ export default function Suhu() {
                     <p className="text-2xl font-bold text-gray-800">25</p>
                   </div>
                 </div>
+
+                {/* Klasifikasi Suhu dengan Bar Horizontal */}
+                <TemperatureDistribution history={history} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -392,7 +558,7 @@ export default function Suhu() {
             )}
           </div>
 
-          {/* HISTORY - DATA TERBARU DI ATAS */}
+          {/* HISTORY */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
@@ -407,11 +573,11 @@ export default function Suhu() {
             </div>
 
             {history.length > 0 ? (
-              <div className="max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+              <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
                   {history.map((h, i) => {
                     const category = categorizeTemperature(h.temperature);
-                    const dataNumber = i + 1; // Nomor urut dari yang terbaru di atas
+                    const dataNumber = i + 1;
 
                     return (
                       <div
@@ -454,6 +620,21 @@ export default function Suhu() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #16a34a;
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>
