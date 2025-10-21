@@ -9,10 +9,7 @@ const getHistory = async (cowId, limit = 25) => {
   return res.json();
 };
 
-const getAverage = async (cowId, limit = 25) => {
-  const res = await fetch(`${API_URL}/temperature/${cowId}/average?limit=${limit}`);
-  return res.json();
-};
+// Removed unused getAverage function - calculating average from filtered data instead
 
 const getSensorStatus = async (cowId) => {
   const res = await fetch(`${API_URL}/temperature/${cowId}/status`);
@@ -27,6 +24,158 @@ const getAllCows = async () => {
     console.error("Error fetching cows:", error);
     return [];
   }
+};
+
+// Time filter configuration
+const TIME_FILTERS = {
+  MINUTE: { value: 'minute', label: 'Per Menit', limit: 60, interval: 1 },
+  HOUR: { value: 'hour', label: 'Per Jam', limit: 24 * 7, interval: 60 },
+  DAY: { value: 'day', label: 'Per Hari', limit: 30, interval: 60 * 24 },
+  WEEK: { value: 'week', label: 'Per Minggu', limit: 52, interval: 60 * 24 * 7 },
+  MONTH: { value: 'month', label: 'Per Bulan', limit: 12, interval: 60 * 24 * 30 },
+  YEAR: { value: 'year', label: 'Per Tahun', limit: 5, interval: 60 * 24 * 365 }
+};
+
+// Function to filter and group data based on time period
+const filterDataByTimePeriod = (data, timePeriod) => {
+  if (!data || data.length === 0) return [];
+
+  let filteredData = [...data];
+
+  switch (timePeriod) {
+    case TIME_FILTERS.MINUTE.value:
+      // Last 60 minutes
+      filteredData = data.slice(-60);
+      break;
+
+    case TIME_FILTERS.HOUR.value: {
+      // Group by hour for last 7 days (168 hours)
+      const hoursAgo = 168;
+      filteredData = groupByTimeInterval(data, hoursAgo * 60, 'hour');
+      break;
+    }
+
+    case TIME_FILTERS.DAY.value:
+      // Group by day for last 30 days
+      filteredData = groupByTimeInterval(data, 30 * 24 * 60, 'day');
+      break;
+
+    case TIME_FILTERS.WEEK.value:
+      // Group by week for last 52 weeks
+      filteredData = groupByTimeInterval(data, 52 * 7 * 24 * 60, 'week');
+      break;
+
+    case TIME_FILTERS.MONTH.value:
+      // Group by month for last 12 months
+      filteredData = groupByTimeInterval(data, 12 * 30 * 24 * 60, 'month');
+      break;
+
+    case TIME_FILTERS.YEAR.value:
+      // Group by year for last 5 years
+      filteredData = groupByTimeInterval(data, 5 * 365 * 24 * 60, 'year');
+      break;
+
+    default:
+      filteredData = data.slice(-25);
+  }
+
+  return filteredData;
+};
+
+// Helper function to group data by time interval
+const groupByTimeInterval = (data, minutesRange, intervalType) => {
+  if (!data || data.length === 0) return [];
+
+  const now = new Date();
+  const cutoffTime = new Date(now.getTime() - minutesRange * 60 * 1000);
+
+  // Filter data within time range
+  const relevantData = data.filter(item =>
+    new Date(item.fullDate || item.created_at) >= cutoffTime
+  );
+
+  if (relevantData.length === 0) return [];
+
+  // Group data by interval
+  const grouped = {};
+
+  relevantData.forEach(item => {
+    const date = new Date(item.fullDate || item.created_at);
+    let key;
+
+    switch (intervalType) {
+      case 'hour': {
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
+        break;
+      }
+      case 'day': {
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        break;
+      }
+      case 'week': {
+        const weekNum = Math.floor((date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+        key = `${date.getFullYear()}-W${weekNum}`;
+        break;
+      }
+      case 'month': {
+        key = `${date.getFullYear()}-${date.getMonth()}`;
+        break;
+      }
+      case 'year': {
+        key = `${date.getFullYear()}`;
+        break;
+      }
+      default: {
+        key = date.toISOString();
+      }
+    }
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        temps: [],
+        date: date,
+        key: key
+      };
+    }
+
+    grouped[key].temps.push(item.temperature);
+  });
+
+  // Calculate average for each group
+  return Object.values(grouped).map((group, index) => {
+    const avgTemp = group.temps.reduce((sum, t) => sum + t, 0) / group.temps.length;
+    const date = group.date;
+
+    let timeLabel;
+    switch (intervalType) {
+      case 'hour':
+        timeLabel = date.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit' });
+        break;
+      case 'day':
+        timeLabel = date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+        break;
+      case 'week':
+        timeLabel = `W${Math.floor((date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000))}`;
+        break;
+      case 'month':
+        timeLabel = date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        break;
+      case 'year':
+        timeLabel = date.getFullYear().toString();
+        break;
+      default:
+        timeLabel = date.toLocaleTimeString('id-ID');
+    }
+
+    return {
+      time: timeLabel,
+      temperature: parseFloat(avgTemp.toFixed(1)),
+      fullDate: date,
+      index: index + 1,
+      displayIndex: `#${index + 1}`,
+      count: group.temps.length
+    };
+  }).sort((a, b) => a.fullDate - b.fullDate);
 };
 
 // Dummy Icons
@@ -104,13 +253,6 @@ const SensorStatus = ({ sensorStatus }) => {
 };
 
 const ChartRealtime = ({ data }) => {
-  const formattedData = data.map((item, index) => ({
-    ...item,
-    index: index + 1,
-    displayIndex: `#${index + 1}`,
-    temperature: parseFloat(item.temperature.toFixed(1))
-  }));
-
   const categorizeTemp = (temp) => {
     if (temp < 37.5) return "Hipotermia";
     if (temp >= 37.5 && temp <= 39.5) return "Normal";
@@ -146,6 +288,11 @@ const ChartRealtime = ({ data }) => {
                 year: "numeric",
               })}</p>
             <p className="text-sm font-medium text-gray-700">{data.time}</p>
+            {data.count && data.count > 1 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Rata-rata dari {data.count} data
+              </p>
+            )}
           </div>
         </div>
       );
@@ -156,7 +303,7 @@ const ChartRealtime = ({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart
-        data={formattedData}
+        data={data}
         margin={{ top: 20, right: 40, left: 20, bottom: 20 }}
       >
         <CartesianGrid
@@ -166,17 +313,14 @@ const ChartRealtime = ({ data }) => {
           vertical={false}
         />
         <XAxis
-          dataKey="displayIndex"
-          tick={{ fontSize: 12, fill: "#374151", fontWeight: 600 }}
+          dataKey="time"
+          tick={{ fontSize: 11, fill: "#374151", fontWeight: 600 }}
           stroke="#d1d5db"
           axisLine={false}
           tickLine={false}
-          label={{
-            value: 'Data Ke-',
-            position: 'insideBottom',
-            offset: -10,
-            style: { fontSize: 11, fill: '#9ca3af' }
-          }}
+          angle={-45}
+          textAnchor="end"
+          height={80}
         />
         <YAxis
           domain={['dataMin - 0.5', 'dataMax + 0.5']}
@@ -192,7 +336,7 @@ const ChartRealtime = ({ data }) => {
           radius={[8, 8, 0, 0]}
           barSize={35}
         >
-          {formattedData.map((entry, index) => (
+          {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
               fill={getBarColor(entry.temperature)}
@@ -223,11 +367,9 @@ const getCategoryStyles = (color) => {
   return styles[color] || styles.green;
 };
 
-// Temperature Distribution Component
 const TemperatureDistribution = ({ history }) => {
   const [hoveredCategory, setHoveredCategory] = useState(null);
 
-  // Hitung distribusi persentase
   const calculateDistribution = () => {
     if (!history || history.length === 0) {
       return {
@@ -319,8 +461,7 @@ const TemperatureDistribution = ({ history }) => {
   return (
     <div className="mt-8 pt-6 border-t border-gray-100">
       <h3 className="text-sm font-semibold text-gray-700 mb-6 text-left">Distribusi Klasifikasi Suhu</h3>
-      
-      {/* Individual Bars untuk setiap kategori */}
+
       <div className="space-y-4">
         {categories.map((cat) => (
           <div
@@ -329,7 +470,6 @@ const TemperatureDistribution = ({ history }) => {
             onMouseEnter={() => setHoveredCategory(cat.key)}
             onMouseLeave={() => setHoveredCategory(null)}
           >
-            {/* Label dan Persentase */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-gray-800">{cat.label}</span>
@@ -337,8 +477,7 @@ const TemperatureDistribution = ({ history }) => {
               </div>
               <span className="text-lg font-bold text-gray-800">{cat.percentage}%</span>
             </div>
-            
-            {/* Progress Bar */}
+
             <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
               <div
                 className={`h-full ${cat.bgColor} transition-all duration-500 ease-out rounded-full`}
@@ -346,7 +485,6 @@ const TemperatureDistribution = ({ history }) => {
               ></div>
             </div>
 
-            {/* Tooltip saat hover */}
             {hoveredCategory === cat.key && (
               <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-10 animate-fadeIn">
                 <p className="text-xs text-gray-600 leading-relaxed">
@@ -364,10 +502,16 @@ const TemperatureDistribution = ({ history }) => {
 export default function Suhu() {
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [rawHistory, setRawHistory] = useState([]);
+  const [filteredHistory, setFilteredHistory] = useState([]);
+  const [displayedData, setDisplayedData] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
+  const [dataOffset, setDataOffset] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const ITEMS_PER_PAGE = 25;
 
   useEffect(() => {
     const fetchCows = async () => {
@@ -386,9 +530,11 @@ export default function Suhu() {
     fetchCows();
   }, []);
 
+  // Fetch data from API
   useEffect(() => {
     if (!cowId) {
-      setHistory([]);
+      setRawHistory([]);
+      setFilteredHistory([]);
       setAvgData({ avg_temp: null });
       setSensorStatus("offline");
       return;
@@ -400,13 +546,18 @@ export default function Suhu() {
         setSensorStatus(statusResult.status);
 
         if (statusResult.status !== "online") {
-          setHistory([]);
+          setRawHistory([]);
+          setFilteredHistory([]);
           setAvgData({ avg_temp: null });
           return;
         }
 
-        const hist = await getHistory(cowId, 25);
-        const avg = await getAverage(cowId, 25);
+        // Fetch more data for longer time periods
+        const limit = TIME_FILTERS[Object.keys(TIME_FILTERS).find(key =>
+          TIME_FILTERS[key].value === timePeriod
+        )].limit || 500;
+
+        const hist = await getHistory(cowId, limit);
 
         const formatted = hist.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
@@ -418,12 +569,12 @@ export default function Suhu() {
           fullDate: h.created_at
         }));
 
-        setHistory(formatted);
-        setAvgData(avg && avg.average ? { avg_temp: avg.average } : { avg_temp: null });
+        setRawHistory(formatted);
       } catch (err) {
         console.error("Gagal melakukan polling data:", err);
         setSensorStatus("offline");
-        setHistory([]);
+        setRawHistory([]);
+        setFilteredHistory([]);
         setAvgData({ avg_temp: null });
       }
     };
@@ -431,9 +582,89 @@ export default function Suhu() {
     pollData();
     const interval = setInterval(pollData, 5000);
     return () => clearInterval(interval);
-  }, [cowId]);
+  }, [cowId, timePeriod]);
+
+  // Filter data when time period or raw data changes
+  useEffect(() => {
+    if (rawHistory.length > 0) {
+      const filtered = filterDataByTimePeriod(rawHistory, timePeriod);
+      setFilteredHistory(filtered);
+
+      // Reset offset when changing time period
+      setDataOffset(0);
+
+      // Calculate total pages
+      const pages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+      setTotalPages(pages);
+
+      // Calculate average from filtered data
+      if (filtered.length > 0) {
+        const sum = filtered.reduce((acc, item) => acc + item.temperature, 0);
+        const avg = sum / filtered.length;
+        setAvgData({ avg_temp: avg });
+      } else {
+        setAvgData({ avg_temp: null });
+      }
+    } else {
+      setFilteredHistory([]);
+      setDisplayedData([]);
+      setAvgData({ avg_temp: null });
+      setTotalPages(0);
+    }
+  }, [rawHistory, timePeriod]);
+
+  // Perbarui data yang ditampilkan saat offset berubah
+  useEffect(() => {
+    if (filteredHistory.length > 0) {
+      const startIndex = dataOffset;
+      const endIndex = Math.min(filteredHistory.length, startIndex + ITEMS_PER_PAGE);
+      const sliced = filteredHistory.slice(startIndex, endIndex);
+      setDisplayedData(sliced);
+    } else {
+      setDisplayedData([]);
+    }
+  }, [filteredHistory, dataOffset]);
+
+  const handlePrevPage = () => {
+    if (dataOffset > 0) {
+      setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
+    }
+  };
+
+  const handleNextPage = () => {
+    if (dataOffset + ITEMS_PER_PAGE < filteredHistory.length) {
+      setDataOffset(dataOffset + ITEMS_PER_PAGE);
+    }
+  };
+
+  const getCurrentPage = () => {
+    return Math.floor(dataOffset / ITEMS_PER_PAGE) + 1;
+  };
+
+  const getPageOptions = () => {
+    const options = [];
+    for (let i = 0; i < totalPages; i++) {
+      const isCurrentPage = i === (totalPages - getCurrentPage());
+      const label = i === 0 ? 'Terbaru' : `${i * ITEMS_PER_PAGE} data sebelumnya`;
+      options.push({
+        value: i * ITEMS_PER_PAGE,
+        label: label,
+        isCurrent: isCurrentPage
+      });
+    }
+    return options.reverse();
+  };
+
+  const handlePageSelect = (offset) => {
+    setDataOffset(Number(offset));
+  };
 
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
+
+  const getTimePeriodLabel = () => {
+    const filter = Object.values(TIME_FILTERS).find(f => f.value === timePeriod);
+    return filter ? filter.label : 'Data';
+  };
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
@@ -465,15 +696,70 @@ export default function Suhu() {
 
         {/* REALTIME GRAPHICS */}
         <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 bg-white border-b border-gray-200">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
               <span className="text-gray-400 cursor-help text-sm">ⓘ</span>
             </div>
-            <select className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition">
-              <option>Per Menit</option>
-              <option>Per Jam</option>
-            </select>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Time Period Dropdown */}
+              <select
+                value={timePeriod}
+                onChange={(e) => setTimePeriod(e.target.value)}
+                className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
+              >
+                {Object.values(TIME_FILTERS).map(filter => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Page Navigation Dropdown */}
+              {filteredHistory.length > ITEMS_PER_PAGE && (
+                <select
+                  value={dataOffset}
+                  onChange={(e) => handlePageSelect(e.target.value)}
+                  className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-green-400 hover:shadow transition"
+                >
+                  {getPageOptions().map((option, idx) => (
+                    <option key={idx} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Navigation Buttons */}
+              {filteredHistory.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <span className="text-sm text-gray-600 font-medium px-2">
+                    {getCurrentPage()} / {totalPages}
+                  </span>
+
+                  <button
+                    onClick={handleNextPage}
+                    disabled={dataOffset === 0}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="bg-gray-50 min-h-[400px] flex items-center justify-center">
@@ -483,14 +769,23 @@ export default function Suhu() {
                 <p className="text-gray-600 font-medium">Memuat data sapi...</p>
               </div>
             ) : cows.length > 0 ? (
-              history.length > 0 ? (
+              displayedData.length > 0 ? (
                 <div className="w-full h-full p-6">
-                  <ChartRealtime data={history.slice(-25)} />
+                  <ChartRealtime data={displayedData} />
+
+                  {/* Data Range Info */}
+                  {filteredHistory.length > ITEMS_PER_PAGE && (
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-500">
+                        Menampilkan data {dataOffset + 1} - {Math.min(filteredHistory.length, dataOffset + ITEMS_PER_PAGE)} dari {filteredHistory.length} total data
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <CowIcon />
-                  <p className="text-gray-700 font-medium mt-4">Belum ada data suhu untuk sapi ini.</p>
+                  <p className="text-gray-700 font-medium mt-4">Belum ada data suhu untuk periode ini.</p>
                 </div>
               )
             ) : (
@@ -515,11 +810,11 @@ export default function Suhu() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Rata-rata Suhu</h2>
-                <p className="text-sm text-gray-500">25 Data Terakhir</p>
+                <p className="text-sm text-gray-500">{getTimePeriodLabel()}</p>
               </div>
             </div>
 
-            {history.length > 0 && avgData.avg_temp ? (
+            {filteredHistory.length > 0 && avgData.avg_temp ? (
               <div className="text-center py-8">
                 <div className="relative inline-block">
                   <div className="text-6xl font-bold text-gray-800 mb-3">
@@ -542,12 +837,11 @@ export default function Suhu() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Sampel Data</p>
-                    <p className="text-2xl font-bold text-gray-800">25</p>
+                    <p className="text-2xl font-bold text-gray-800">{filteredHistory.length}</p>
                   </div>
                 </div>
 
-                {/* Klasifikasi Suhu dengan Bar Horizontal */}
-                <TemperatureDistribution history={history} />
+                <TemperatureDistribution history={filteredHistory} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -568,28 +862,31 @@ export default function Suhu() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">History Realtime</h2>
-                <p className="text-sm text-gray-500">25 Data Terakhir</p>
+                <p className="text-sm text-gray-500">{getTimePeriodLabel()}</p>
               </div>
             </div>
 
-            {history.length > 0 ? (
+            {filteredHistory.length > 0 ? (
               <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
-                  {history.map((h, i) => {
+                  {filteredHistory.map((h, i) => {
                     const category = categorizeTemperature(h.temperature);
-                    const dataNumber = i + 1;
-
+                    const actualIndex = i + 1;
                     return (
                       <div
                         key={i}
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
                       >
-                        <span className="text-sm font-bold text-gray-500 w-12">#{dataNumber}</span>
+                        <span className="text-sm font-bold text-gray-500 w-12">#{actualIndex}</span>
                         <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
                         <span className="text-lg font-bold text-gray-800">{h.temperature.toFixed(1)}°C</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>
-                          {category.label}
-                        </span>
+                        <div className="w-[120px] flex justify-end">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>
+                            {category.label}
+                          </span>
+                        </div>
+
+
                       </div>
                     );
                   })}
