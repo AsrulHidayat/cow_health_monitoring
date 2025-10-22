@@ -8,13 +8,56 @@ export const getLatest = async (cowId) => {
   return res.data;
 };
 
-export const getHistory = async (cowId, limit = 25) => {
-  const res = await axios.get(`${API_URL}/temperature/${cowId}/history?limit=${limit}`);
+// Get history dengan pagination dan filter tanggal
+export const getHistory = async (cowId, limit = 500, offset = 0, startDate = null, endDate = null) => {
+  let url = `${API_URL}/temperature/${cowId}/history?limit=${limit}&offset=${offset}`;
+  
+  if (startDate) {
+    url += `&startDate=${startDate}`;
+  }
+  if (endDate) {
+    url += `&endDate=${endDate}`;
+  }
+  
+  const res = await axios.get(url);
   return res.data;
 };
 
-export const getAverage = async (cowId, limit = 25) => {
-  const res = await axios.get(`${API_URL}/temperature/${cowId}/average?limit=${limit}`);
+// Get temperature by date range
+export const getTemperatureByDateRange = async (cowId, startDate, endDate) => {
+  const res = await axios.get(
+    `${API_URL}/temperature/${cowId}/range?startDate=${startDate}&endDate=${endDate}`
+  );
+  return res.data;
+};
+
+// Get temperature statistics
+export const getTemperatureStats = async (cowId, startDate = null, endDate = null) => {
+  let url = `${API_URL}/temperature/${cowId}/stats`;
+  
+  const params = [];
+  if (startDate) params.push(`startDate=${startDate}`);
+  if (endDate) params.push(`endDate=${endDate}`);
+  
+  if (params.length > 0) {
+    url += `?${params.join('&')}`;
+  }
+  
+  const res = await axios.get(url);
+  return res.data;
+};
+
+export const getAverage = async (cowId, limit = 60, startDate = null, endDate = null) => {
+  let url = `${API_URL}/temperature/${cowId}/average?limit=${limit}`;
+  
+  if (startDate) {
+    url += `&startDate=${startDate}`;
+  }
+  if (endDate) {
+    url += `&endDate=${endDate}`;
+  }
+  
+  const res = await axios.get(url);
   return res.data;
 };
 
@@ -61,7 +104,6 @@ export const getDashboardStats = async () => {
   }
 };
 
-// Ambil semua sapi tanpa login (public)
 export const getAllCowsPublic = async () => {
   const res = await axios.get(`${API_URL}/cows/public`);
   return res.data;
@@ -78,6 +120,4 @@ export const getNotifications = async () => {
     console.error("Error fetching notifications:", error);
     return [];
   }
-
-  
 };
