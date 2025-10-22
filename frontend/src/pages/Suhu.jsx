@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // Import fungsi API dari service
-import { getHistory, getSensorStatus, getAllCows } from "../services/temperatureService";
+import { getHistory, getSensorStatus, getAllCows, getTemperatureStats } from "../services/temperatureService";
 
 // Import komponen dan utilitas dari folder suhu
 import {
@@ -14,33 +14,38 @@ import { Navbar, Dropdown, CowIcon, PlusIcon } from "../components/suhu/SuhuPage
 import SensorStatus from "../components/suhu/SensorStatus";
 import ChartRealtime from "../components/suhu/ChartRealtime";
 import TemperatureDistribution from "../components/suhu/TemperatureDistribution";
+import DateRangePicker from "../components/suhu/DateRangePicker";
 
 export default function Suhu() {
   // State utama
-  const [cows, setCows] = useState([]);                                    // Menyimpan daftar sapi dari database
-  const [cowId, setCowId] = useState(null);                                // Menyimpan ID sapi yang sedang dipantau
-  const [rawHistory, setRawHistory] = useState([]);                        // Menyimpan data mentah suhu dari API
-  const [filteredHistory, setFilteredHistory] = useState([]);              // Menyimpan data suhu setelah difilter berdasarkan periode waktu
-  const [displayedData, setDisplayedData] = useState([]);                  // Data yang sedang ditampilkan pada grafik/histori
-  const [avgData, setAvgData] = useState({ avg_temp: null });              // Menyimpan suhu rata-rata
-  const [sensorStatus, setSensorStatus] = useState("checking");            // Menyimpan status sensor ("online", "offline", atau "checking")
-  const [loading, setLoading] = useState(true);                            // Status loading awal
-  const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value); // Filter waktu (per menit, jam, hari, dst)
-  const [dataOffset, setDataOffset] = useState(0);                         // Offset data untuk pagination
-  const [totalPages, setTotalPages] = useState(0);                         // Total halaman data
-  const ITEMS_PER_PAGE = 25;                                               // Jumlah data per halaman
+  const [cows, setCows] = useState([]);
+  const [cowId, setCowId] = useState(null);
+  const [rawHistory, setRawHistory] = useState([]);
+  const [filteredHistory, setFilteredHistory] = useState([]);
+  const [displayedData, setDisplayedData] = useState([]);
+  const [avgData, setAvgData] = useState({ avg_temp: null });
+  const [sensorStatus, setSensorStatus] = useState("checking");
+  const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
+  const [dataOffset, setDataOffset] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const ITEMS_PER_PAGE = 25;
 
-  // 🔹 useEffect pertama: mengambil daftar sapi dari server saat pertama kali halaman dibuka
+  // State untuk filter tanggal kalender
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [datePickerStats, setDatePickerStats] = useState(null);
+
+  // useEffect pertama: mengambil daftar sapi
   useEffect(() => {
     const fetchCows = async () => {
       try {
         setLoading(true);
-        const allCows = await getAllCows(); // Ambil semua data sapi dari API
+        const allCows = await getAllCows();
         setCows(allCows);
-        if (allCows.length > 0) setCowId(allCows[0].id); // Pilih sapi pertama secara default
+        if (allCows.length > 0) setCowId(allCows[0].id);
       } catch (err) {
         console.error("Gagal mengambil data sapi:", err);
-        setCows([]); // Jika gagal, kosongkan data sapi
+        setCows([]);
       } finally {
         setLoading(false);
       }
@@ -48,10 +53,24 @@ export default function Suhu() {
     fetchCows();
   }, []);
 
-  // 🔹 useEffect kedua: memantau perubahan cowId atau timePeriod, lalu polling data suhu dari API
+  // useEffect tambahan: mengambil statistik data untuk DateRangePicker
+  useEffect(() => {
+    if (!cowId) return;
+    const fetchStats = async () => {
+      try {
+        const stats = await getTemperatureStats(cowId);
+        setDatePickerStats(stats);
+      } catch (err) {
+        console.error("Gagal mengambil stats data:", err);
+      }
+    };
+    fetchStats();
+  }, [cowId]);
+
+
+  // useEffect kedua (Dimodifikasi): memantau perubahan cowId, timePeriod, atau dateRange
   useEffect(() => {
     if (!cowId) {
-      // Jika belum ada sapi yang dipilih, kosongkan semua data
       setRawHistory([]);
       setFilteredHistory([]);
       setAvgData({ avg_temp: null });
@@ -59,30 +78,35 @@ export default function Suhu() {
       return;
     }
 
+    const isDateRangeMode = dateRange.startDate && dateRange.endDate;
+
     const pollData = async () => {
       try {
-        // Periksa status sensor terlebih dahulu
         const statusResult = await getSensorStatus(cowId);
         setSensorStatus(statusResult.status);
 
-        // Jika sensor tidak online, hentikan pengambilan data
-        if (statusResult.status !== "online") {
+        if (statusResult.status !== "online" && !isDateRangeMode) {
           setRawHistory([]);
           setFilteredHistory([]);
           setAvgData({ avg_temp: null });
           return;
         }
 
-        // Ambil batas data berdasarkan filter waktu (menit, jam, hari, dll.)
-        const limit = TIME_FILTERS[Object.keys(TIME_FILTERS).find(key =>
-          TIME_FILTERS[key].value === timePeriod
-        )].limit || 500;
+        const limit = isDateRangeMode 
+          ? 10000 
+          : (TIME_FILTERS[Object.keys(TIME_FILTERS).find(key =>
+              TIME_FILTERS[key].value === timePeriod
+            )]?.limit || 500);
 
-        // Ambil data riwayat suhu dari API
-        const hist = await getHistory(cowId, limit);
+        const histResponse = await getHistory(
+          cowId, 
+          limit, 
+          0,
+          dateRange.startDate, 
+          dateRange.endDate
+        );
 
-        // Format hasil data untuk menyesuaikan tampilan di grafik/histori
-        const formatted = hist.map((h) => ({
+        const formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
             hour: "2-digit",
             minute: "2-digit",
@@ -102,25 +126,34 @@ export default function Suhu() {
       }
     };
 
-    pollData(); // Jalankan fungsi pertama kali
-    const interval = setInterval(pollData, 5000); // Jalankan setiap 5 detik (realtime)
-    return () => clearInterval(interval); // Bersihkan interval saat komponen di-unmount
-  }, [cowId, timePeriod]);
+    pollData(); 
 
-  // 🔹 useEffect ketiga: filter dan hitung rata-rata data setiap kali rawHistory atau timePeriod berubah
+    if (!isDateRangeMode) {
+      const interval = setInterval(pollData, 5000);
+      return () => clearInterval(interval);
+    }
+    
+  }, [cowId, timePeriod, dateRange]);
+
+  // useEffect ketiga (Dimodifikasi): filter data
   useEffect(() => {
-    if (rawHistory.length > 0) {
-      const filtered = filterDataByTimePeriod(rawHistory, timePeriod); // Filter data sesuai periode waktu
-      setFilteredHistory(filtered);
+    const isDateRangeMode = dateRange.startDate && dateRange.endDate;
 
-      // Reset pagination ke halaman pertama
+    if (rawHistory.length > 0) {
+      let filtered;
+      
+      if (isDateRangeMode) {
+        filtered = rawHistory; 
+      } else {
+        filtered = filterDataByTimePeriod(rawHistory, timePeriod);
+      }
+      
+      setFilteredHistory(filtered);
       setDataOffset(0);
 
-      // Hitung total halaman
       const pages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
       setTotalPages(pages);
 
-      // Hitung suhu rata-rata
       if (filtered.length > 0) {
         const sum = filtered.reduce((acc, item) => acc + item.temperature, 0);
         const avg = sum / filtered.length;
@@ -129,27 +162,26 @@ export default function Suhu() {
         setAvgData({ avg_temp: null });
       }
     } else {
-      // Jika tidak ada data sama sekali
       setFilteredHistory([]);
       setDisplayedData([]);
       setAvgData({ avg_temp: null });
       setTotalPages(0);
     }
-  }, [rawHistory, timePeriod]);
+  }, [rawHistory, timePeriod, dateRange]);
 
-  // 🔹 useEffect keempat: memperbarui data yang sedang ditampilkan berdasarkan offset (pagination)
+  // useEffect keempat: memperbarui data yang ditampilkan (pagination client-side)
   useEffect(() => {
     if (filteredHistory.length > 0) {
       const startIndex = dataOffset;
       const endIndex = Math.min(filteredHistory.length, startIndex + ITEMS_PER_PAGE);
-      const sliced = filteredHistory.slice(startIndex, endIndex); // Potong data sesuai halaman
+      const sliced = filteredHistory.slice(startIndex, endIndex);
       setDisplayedData(sliced);
     } else {
       setDisplayedData([]);
     }
   }, [filteredHistory, dataOffset]);
 
-  // 🔹 Fungsi navigasi halaman (sebelumnya dan selanjutnya)
+  // Fungsi navigasi halaman
   const handlePrevPage = () => {
     if (dataOffset > 0) {
       setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
@@ -162,12 +194,10 @@ export default function Suhu() {
     }
   };
 
-  // 🔹 Mengembalikan halaman saat ini (dari total halaman)
   const getCurrentPage = () => {
     return Math.floor(dataOffset / ITEMS_PER_PAGE) + 1;
   };
 
-  // 🔹 Membuat daftar opsi halaman untuk dropdown pagination
   const getPageOptions = () => {
     const options = [];
     for (let i = 0; i < totalPages; i++) {
@@ -179,30 +209,54 @@ export default function Suhu() {
         isCurrent: isCurrentPage
       });
     }
-    return options.reverse(); // Urutkan dari terbaru ke terlama
+    return options.reverse();
   };
 
   const handlePageSelect = (offset) => {
     setDataOffset(Number(offset));
   };
 
-  // 🔹 Klasifikasi suhu rata-rata (Normal, Panas, Hipotermia, dll)
+
+  // Fungsi handler untuk DateRangePicker
+  const handleDateRangeApply = (startDate, endDate) => {
+    setDateRange({ startDate, endDate });
+    // Asumsi Anda punya TIME_FILTERS.ALL.value di SuhuUtils
+    setTimePeriod(TIME_FILTERS.ALL.value); 
+    setDataOffset(0);
+  };
+
+  const handleDateRangeReset = () => {
+    setDateRange({ startDate: null, endDate: null });
+    setTimePeriod(TIME_FILTERS.MINUTE.value);
+    setDataOffset(0);
+    setRawHistory([]);
+    setFilteredHistory([]);
+  };
+
+  // Klasifikasi suhu rata-rata
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
-  // 🔹 Mendapatkan label periode waktu aktif (Per Jam, Per Hari, dst.)
+  // Mendapatkan label periode waktu (termasuk filter kalender)
   const getTimePeriodLabel = () => {
+    if (dateRange.startDate && dateRange.endDate) {
+      try {
+        const start = new Date(dateRange.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+        const end = new Date(dateRange.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        return `${start} - ${end}`;
+      } catch {
+        return "Rentang Kustom";
+      }
+    }
     const filter = Object.values(TIME_FILTERS).find(f => f.value === timePeriod);
     return filter ? filter.label : 'Data';
   };
 
-  // 🔹 Render utama halaman
+  // Render utama halaman
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
       
-      {/* Navbar bagian atas */}
       <Navbar title="Suhu" />
 
-      {/* Dropdown pemilihan sapi */}
       {cows.length > 0 && (
         <div className="flex items-center gap-6 px-6 py-4 bg-white border-b border-gray-100">
           <Dropdown
@@ -213,16 +267,13 @@ export default function Suhu() {
         </div>
       )}
 
-      {/* Status sensor */}
       {cows.length > 0 && (
         <div className="px-6 pt-6">
           <SensorStatus sensorStatus={sensorStatus} />
         </div>
       )}
 
-      {/* Bagian utama: grafik realtime, rata-rata, dan riwayat */}
       <div className="px-6 py-6 space-y-6">
-        {/* Tombol tambah sapi jika belum ada */}
         {cows.length === 0 && !loading && (
           <button className="flex items-center gap-2 px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-all font-medium">
             <PlusIcon />
@@ -230,22 +281,34 @@ export default function Suhu() {
           </button>
         )}
 
-        {/* BAGIAN GRAFIK REALTIME */}
-        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-          {/* Header bagian grafik */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 bg-white border-b border-gray-200">
+        {/* 🔹 PERBAIKAN: 
+          'overflow-hidden' dihapus dari div ini agar dropdown DateRangePicker tidak terpotong. 
+        */}
+        <div className="bg-gray-50 rounded-xl border border-gray-200">
+          {/* 🔹 PERBAIKAN: 
+            'rounded-t-xl' ditambahkan di sini untuk menjaga lengkungan sudut atas.
+          */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 bg-white border-b border-gray-200 rounded-t-xl">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
               <span className="text-gray-400 cursor-help text-sm">ⓘ</span>
             </div>
 
-            {/* Dropdown periode waktu dan navigasi halaman */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Pilihan periode waktu */}
+              
+              <DateRangePicker 
+                onApply={handleDateRangeApply} 
+                onReset={handleDateRangeReset}
+                stats={datePickerStats}
+              />
+
               <select
                 value={timePeriod}
                 onChange={(e) => setTimePeriod(e.target.value)}
-                className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
+                disabled={dateRange.startDate && dateRange.endDate}
+                className={`border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition ${
+                  dateRange.startDate && dateRange.endDate ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''
+                }`}
               >
                 {Object.values(TIME_FILTERS).map(filter => (
                   <option key={filter.value} value={filter.value}>
@@ -254,7 +317,6 @@ export default function Suhu() {
                 ))}
               </select>
 
-              {/* Dropdown pagination */}
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <select
                   value={dataOffset}
@@ -269,12 +331,12 @@ export default function Suhu() {
                 </select>
               )}
 
-              {/* Tombol navigasi halaman */}
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handlePrevPage}
-                    disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
+                    // (Perbaikan Logika Disable)
+                    disabled={dataOffset === 0}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,7 +350,8 @@ export default function Suhu() {
 
                   <button
                     onClick={handleNextPage}
-                    disabled={dataOffset === 0}
+                    // (Perbaikan Logika Disable)
+                    disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,21 +363,20 @@ export default function Suhu() {
             </div>
           </div>
 
-          {/* Tampilan isi grafik atau pesan kosong */}
-          <div className="bg-gray-50 min-h-[400px] flex items-center justify-center">
+          {/* 🔹 PERBAIKAN: 
+            'rounded-b-xl' ditambahkan di sini untuk menjaga lengkungan sudut bawah.
+          */}
+          <div className="bg-gray-50 min-h-[400px] flex items-center justify-center rounded-b-xl">
             {loading ? (
-              // Ketika loading
               <div className="text-center py-20">
                 <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-gray-600 font-medium">Memuat data sapi...</p>
               </div>
             ) : cows.length > 0 ? (
               displayedData.length > 0 ? (
-                // Grafik data realtime
                 <div className="w-full h-full p-6">
                   <ChartRealtime data={displayedData} />
 
-                  {/* Informasi range data */}
                   {filteredHistory.length > ITEMS_PER_PAGE && (
                     <div className="mt-4 text-center">
                       <p className="text-sm text-gray-500">
@@ -324,14 +386,12 @@ export default function Suhu() {
                   )}
                 </div>
               ) : (
-                // Jika belum ada data suhu
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <CowIcon />
                   <p className="text-gray-700 font-medium mt-4">Belum ada data suhu untuk periode ini.</p>
                 </div>
               )
             ) : (
-              // Jika belum ada sapi terdaftar
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <CowIcon />
                 <p className="text-gray-700 font-medium mt-4">Belum ada ID sapi yang terdaftar.</p>
@@ -346,8 +406,6 @@ export default function Suhu() {
 
           {/* AVERAGE */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-
-            {/* Header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,7 +418,6 @@ export default function Suhu() {
               </div>
             </div>
 
-            {/* Isi rata-rata */}
             {filteredHistory.length > 0 && avgData.avg_temp ? (
               <div className="text-center py-8">
                 <div className="relative inline-block">
@@ -375,7 +432,6 @@ export default function Suhu() {
                   </div>
                 </div>
 
-                {/* Status dan jumlah data */}
                 <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Status</p>
@@ -392,7 +448,6 @@ export default function Suhu() {
                 <TemperatureDistribution history={filteredHistory} />
               </div>
             ) : (
-              // Jika belum ada data rata-rata
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <CowIcon />
                 <p className="text-gray-600 font-medium mt-4">Belum ada data rata-rata suhu</p>
@@ -415,13 +470,12 @@ export default function Suhu() {
               </div>
             </div>
 
-            {/* Daftar riwayat suhu */}
             {filteredHistory.length > 0 ? (
               <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
-                  {filteredHistory.map((h, i) => {
+                  {displayedData.map((h, i) => { 
                     const category = categorizeTemperature(h.temperature);
-                    const actualIndex = i + 1;
+                    const actualIndex = dataOffset + i + 1; 
                     return (
                       <div
                         key={i}
@@ -441,7 +495,6 @@ export default function Suhu() {
                 </div>
               </div>
             ) : (
-              // Jika belum ada riwayat
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <CowIcon />
                 <p className="text-gray-600 font-medium mt-4">Belum ada data riwayat suhu</p>
@@ -452,7 +505,7 @@ export default function Suhu() {
         </div>
       </div>
 
-      {/* Styling untuk scrollbar dan animasi */}
+      {/* Styling */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
