@@ -9,6 +9,15 @@ export const TIME_FILTERS = {
   YEAR: { value: 'year', label: 'Per Tahun', limit: 5, interval: 60 * 24 * 365 }
 };
 
+export const TEMPERATURE_CATEGORIES = [
+  { label: 'Semua Status', value: 'ALL' },
+  { label: 'Hipotermia', value: 'hipotermia' },
+  { label: 'Normal', value: 'normal' },
+  { label: 'Demam Ringan', value: 'demam-ringan' },
+  { label: 'Demam Tinggi', value: 'demam-tinggi' },
+  { label: 'Kritis', value: 'kritis' },
+];
+
 // Fungsi bantu untuk mengelompokkan data berdasarkan interval waktu
 const groupByTimeInterval = (data, minutesRange, intervalType) => {
   if (!data || data.length === 0) return [];
@@ -164,11 +173,18 @@ export const filterDataByTimePeriod = (data, timePeriod) => {
 
 // Fungsi untuk mengkategorikan suhu berdasarkan tingkat keparahan
 export const categorizeTemperature = (temp) => {
-  if (temp < 37.5) return { label: "Hipotermia", color: "blue" };
-  if (temp >= 37.5 && temp <= 39.5) return { label: "Normal", color: "green" };
-  if (temp > 39.5 && temp <= 40.5) return { label: "Demam Ringan", color: "yellow" };
-  if (temp > 40.5 && temp <= 41.5) return { label: "Demam Tinggi", color: "orange" };
-  return { label: "Kritis", color: "red" };
+  if (temp < 38.0) {
+    return { label: 'Hipotermia', color: 'blue', value: 'hipotermia' };
+  } else if (temp >= 38.0 && temp <= 39.2) {
+    return { label: 'Normal', color: 'green', value: 'normal' };
+  } else if (temp >= 39.3 && temp <= 40.0) {
+    return { label: 'Demam Ringan', color: 'yellow', value: 'demam-ringan' };
+  } else if (temp >= 40.1 && temp <= 41.0) {
+    return { label: 'Demam Tinggi', color: 'orange', value: 'demam-tinggi' };
+  } else if (temp > 41.0) {
+    return { label: 'Kritis', color: 'red', value: 'kritis' };
+  }
+  return { label: 'N/A', color: 'gray', value: 'na' };
 };
 
 // Fungsi untuk menentukan gaya tampilan berdasarkan warna kategori suhu

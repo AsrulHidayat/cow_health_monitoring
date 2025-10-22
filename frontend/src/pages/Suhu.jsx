@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // (Import useRef sudah ada)
 
 // Import fungsi API dari service
 import { getHistory, getSensorStatus, getAllCows, getTemperatureStats } from "../services/temperatureService";
@@ -6,6 +6,7 @@ import { getHistory, getSensorStatus, getAllCows, getTemperatureStats } from "..
 // Import komponen dan utilitas dari folder suhu
 import {
   TIME_FILTERS,
+  TEMPERATURE_CATEGORIES,
   filterDataByTimePeriod,
   categorizeTemperature,
   getCategoryStyles
@@ -34,6 +35,12 @@ export default function Suhu() {
   // State untuk filter tanggal kalender
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [datePickerStats, setDatePickerStats] = useState(null);
+
+  // State untuk filter kategori
+  const [filterCategory, setFilterCategory] = useState('ALL');
+
+  // Ref untuk melacak sesi polling (mencegah race condition)
+  const pollingRef = useRef(null);
 
   // useEffect pertama: mengambil daftar sapi
   useEffect(() => {
@@ -68,7 +75,7 @@ export default function Suhu() {
   }, [cowId]);
 
 
-  // useEffect kedua (Dimodifikasi): memantau perubahan cowId, timePeriod, atau dateRange
+  // useEffect kedua (Polling): memantau perubahan filter utama
   useEffect(() => {
     if (!cowId) {
       setRawHistory([]);
@@ -80,9 +87,19 @@ export default function Suhu() {
 
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
 
+    // Buat ID unik untuk "sesi" polling ini
+    const currentPollId = Date.now();
+    pollingRef.current = currentPollId;
+
     const pollData = async () => {
       try {
+        // Cek sebelum fetch
+        if (pollingRef.current !== currentPollId) return;
+
         const statusResult = await getSensorStatus(cowId);
+
+        // Cek lagi setelah await
+        if (pollingRef.current !== currentPollId) return;
         setSensorStatus(statusResult.status);
 
         if (statusResult.status !== "online" && !isDateRangeMode) {
@@ -92,19 +109,22 @@ export default function Suhu() {
           return;
         }
 
-        const limit = isDateRangeMode 
-          ? 10000 
+        const limit = isDateRangeMode
+          ? 10000
           : (TIME_FILTERS[Object.keys(TIME_FILTERS).find(key =>
-              TIME_FILTERS[key].value === timePeriod
-            )]?.limit || 500);
+            TIME_FILTERS[key].value === timePeriod
+          )]?.limit || 500);
 
         const histResponse = await getHistory(
-          cowId, 
-          limit, 
+          cowId,
+          limit,
           0,
-          dateRange.startDate, 
+          dateRange.startDate,
           dateRange.endDate
         );
+
+        // Cek lagi setelah await getHistory (paling penting)
+        if (pollingRef.current !== currentPollId) return;
 
         const formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
@@ -118,58 +138,78 @@ export default function Suhu() {
 
         setRawHistory(formatted);
       } catch (err) {
-        console.error("Gagal melakukan polling data:", err);
-        setSensorStatus("offline");
-        setRawHistory([]);
-        setFilteredHistory([]);
-        setAvgData({ avg_temp: null });
+        if (pollingRef.current === currentPollId) {
+          console.error("Gagal melakukan polling data:", err);
+          setSensorStatus("offline");
+          setRawHistory([]);
+          setFilteredHistory([]);
+          setAvgData({ avg_temp: null });
+        }
       }
     };
 
-    pollData(); 
+    pollData();
 
     if (!isDateRangeMode) {
       const interval = setInterval(pollData, 5000);
       return () => clearInterval(interval);
     }
-    
+
   }, [cowId, timePeriod, dateRange]);
 
-  // useEffect ketiga (Dimodifikasi): filter data
+  // 🔹 useEffect ketiga: HANYA filter, hitung rata-rata, dan total halaman
   useEffect(() => {
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
+    let baseData;
 
+    // 1. Terapkan filter Waktu (TimePeriod atau DateRange)
     if (rawHistory.length > 0) {
-      let filtered;
-      
       if (isDateRangeMode) {
-        filtered = rawHistory; 
+        baseData = rawHistory;
       } else {
-        filtered = filterDataByTimePeriod(rawHistory, timePeriod);
-      }
-      
-      setFilteredHistory(filtered);
-      setDataOffset(0);
-
-      const pages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-      setTotalPages(pages);
-
-      if (filtered.length > 0) {
-        const sum = filtered.reduce((acc, item) => acc + item.temperature, 0);
-        const avg = sum / filtered.length;
-        setAvgData({ avg_temp: avg });
-      } else {
-        setAvgData({ avg_temp: null });
+        baseData = filterDataByTimePeriod(rawHistory, timePeriod); // Filter by (Menit, Jam, Hari)
       }
     } else {
-      setFilteredHistory([]);
-      setDisplayedData([]);
-      setAvgData({ avg_temp: null });
-      setTotalPages(0);
+      baseData = [];
     }
-  }, [rawHistory, timePeriod, dateRange]);
 
-  // useEffect keempat: memperbarui data yang ditampilkan (pagination client-side)
+    // 2. Terapkan filter Kategori (setelah filter waktu)
+    let categoryFilteredData;
+    if (filterCategory === 'ALL') {
+      categoryFilteredData = baseData; // Tidak ada filter kategori
+    } else {
+      // Filter data berdasarkan kategori yang dipilih
+      categoryFilteredData = baseData.filter(item => {
+        const categoryInfo = categorizeTemperature(item.temperature);
+        return categoryInfo.value === filterCategory;
+      });
+    }
+
+    // 3. Set state akhir
+    setFilteredHistory(categoryFilteredData);
+
+    // 4. Hitung total halaman (berdasarkan data yang sudah terfilter ganda)
+    const pages = Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE);
+    setTotalPages(pages);
+
+    // 5. Hitung suhu rata-rata
+    if (categoryFilteredData.length > 0) {
+      const sum = categoryFilteredData.reduce((acc, item) => acc + item.temperature, 0);
+      const avg = sum / categoryFilteredData.length;
+      setAvgData({ avg_temp: avg });
+    } else {
+      setAvgData({ avg_temp: null });
+    }
+
+  }, [rawHistory, timePeriod, dateRange, filterCategory]);
+
+
+  // 🔹 useEffect keempat 
+  useEffect(() => {
+    setDataOffset(0);
+  }, [cowId, timePeriod, dateRange, filterCategory]);
+
+  // 🔹 (Sekarang jadi useEffect kelima): Memperbarui data yang ditampilkan (pagination client-side)
   useEffect(() => {
     if (filteredHistory.length > 0) {
       const startIndex = dataOffset;
@@ -220,23 +260,21 @@ export default function Suhu() {
   // Fungsi handler untuk DateRangePicker
   const handleDateRangeApply = (startDate, endDate) => {
     setDateRange({ startDate, endDate });
-    // Asumsi Anda punya TIME_FILTERS.ALL.value di SuhuUtils
-    setTimePeriod(TIME_FILTERS.ALL.value); 
-    setDataOffset(0);
+    // setDataOffset(0) akan ditangani oleh hook pagination reset di atas
   };
 
   const handleDateRangeReset = () => {
     setDateRange({ startDate: null, endDate: null });
     setTimePeriod(TIME_FILTERS.MINUTE.value);
-    setDataOffset(0);
     setRawHistory([]);
     setFilteredHistory([]);
+    // setDataOffset(0) akan ditangani oleh hook pagination reset di atas
   };
 
   // Klasifikasi suhu rata-rata
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
-  // Mendapatkan label periode waktu (termasuk filter kalender)
+  // Mendapatkan label periode waktu
   const getTimePeriodLabel = () => {
     if (dateRange.startDate && dateRange.endDate) {
       try {
@@ -254,7 +292,7 @@ export default function Suhu() {
   // Render utama halaman
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
-      
+
       <Navbar title="Suhu" />
 
       {cows.length > 0 && (
@@ -281,13 +319,7 @@ export default function Suhu() {
           </button>
         )}
 
-        {/* 🔹 PERBAIKAN: 
-          'overflow-hidden' dihapus dari div ini agar dropdown DateRangePicker tidak terpotong. 
-        */}
         <div className="bg-gray-50 rounded-xl border border-gray-200">
-          {/* 🔹 PERBAIKAN: 
-            'rounded-t-xl' ditambahkan di sini untuk menjaga lengkungan sudut atas.
-          */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 bg-white border-b border-gray-200 rounded-t-xl">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
@@ -295,20 +327,33 @@ export default function Suhu() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              
-              <DateRangePicker 
-                onApply={handleDateRangeApply} 
+
+              <DateRangePicker
+                onApply={handleDateRangeApply}
                 onReset={handleDateRangeReset}
                 stats={datePickerStats}
               />
 
+              {/* Filter Kategori Status */}
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
+              >
+                {TEMPERATURE_CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Filter Periode Waktu */}
               <select
                 value={timePeriod}
                 onChange={(e) => setTimePeriod(e.target.value)}
                 disabled={dateRange.startDate && dateRange.endDate}
-                className={`border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition ${
-                  dateRange.startDate && dateRange.endDate ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''
-                }`}
+                className={`border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition ${dateRange.startDate && dateRange.endDate ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''
+                  }`}
               >
                 {Object.values(TIME_FILTERS).map(filter => (
                   <option key={filter.value} value={filter.value}>
@@ -317,6 +362,7 @@ export default function Suhu() {
                 ))}
               </select>
 
+              {/* Dropdown pagination */}
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <select
                   value={dataOffset}
@@ -331,11 +377,11 @@ export default function Suhu() {
                 </select>
               )}
 
+              {/* Tombol navigasi halaman */}
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handlePrevPage}
-                    // (Perbaikan Logika Disable)
                     disabled={dataOffset === 0}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
@@ -350,7 +396,6 @@ export default function Suhu() {
 
                   <button
                     onClick={handleNextPage}
-                    // (Perbaikan Logika Disable)
                     disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
@@ -363,9 +408,6 @@ export default function Suhu() {
             </div>
           </div>
 
-          {/* 🔹 PERBAIKAN: 
-            'rounded-b-xl' ditambahkan di sini untuk menjaga lengkungan sudut bawah.
-          */}
           <div className="bg-gray-50 min-h-[400px] flex items-center justify-center rounded-b-xl">
             {loading ? (
               <div className="text-center py-20">
@@ -441,10 +483,12 @@ export default function Suhu() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Sampel Data</p>
-                    <p className="text-2xl font-bold text-gray-800">{filteredHistory.length}</p>
+                    {/* Menggunakan displayedData.length agar sesuai dengan history list */}
+                    <p className="text-2xl font-bold text-gray-800">{displayedData.length}</p>
                   </div>
                 </div>
 
+                {/* Pie chart tetap menggunakan filteredHistory agar akurat */}
                 <TemperatureDistribution history={filteredHistory} />
               </div>
             ) : (
@@ -473,9 +517,9 @@ export default function Suhu() {
             {filteredHistory.length > 0 ? (
               <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
-                  {displayedData.map((h, i) => { 
+                  {displayedData.map((h, i) => {
                     const category = categorizeTemperature(h.temperature);
-                    const actualIndex = dataOffset + i + 1; 
+                    const actualIndex = dataOffset + i + 1;
                     return (
                       <div
                         key={i}
