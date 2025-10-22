@@ -1,5 +1,6 @@
-// Time filter configuration
+// Konfigurasi filter waktu
 export const TIME_FILTERS = {
+  FIVE_SECONDS: { value: 'five_seconds', label: 'Per 5 Detik', limit: 120, interval: 5 },
   MINUTE: { value: 'minute', label: 'Per Menit', limit: 60, interval: 1 },
   HOUR: { value: 'hour', label: 'Per Jam', limit: 24 * 7, interval: 60 },
   DAY: { value: 'day', label: 'Per Hari', limit: 30, interval: 60 * 24 },
@@ -8,28 +9,31 @@ export const TIME_FILTERS = {
   YEAR: { value: 'year', label: 'Per Tahun', limit: 5, interval: 60 * 24 * 365 }
 };
 
-// Helper function to group data by time interval
+// Fungsi bantu untuk mengelompokkan data berdasarkan interval waktu
 const groupByTimeInterval = (data, minutesRange, intervalType) => {
   if (!data || data.length === 0) return [];
 
   const now = new Date();
   const cutoffTime = new Date(now.getTime() - minutesRange * 60 * 1000);
 
-  // Filter data within time range
+  // Menyaring data agar hanya mencakup rentang waktu tertentu
   const relevantData = data.filter(item =>
     new Date(item.fullDate || item.created_at) >= cutoffTime
   );
 
   if (relevantData.length === 0) return [];
 
-  // Group data by interval
+  // Mengelompokkan data berdasarkan interval waktu (jam, hari, minggu, bulan, tahun)
   const grouped = {};
-
   relevantData.forEach(item => {
     const date = new Date(item.fullDate || item.created_at);
     let key;
 
     switch (intervalType) {
+      case 'minute': {
+        key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
+        break;
+      }
       case 'hour': {
         key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
         break;
@@ -67,13 +71,15 @@ const groupByTimeInterval = (data, minutesRange, intervalType) => {
     grouped[key].temps.push(item.temperature);
   });
 
-  // Calculate average for each group
+  // Menghitung rata-rata suhu untuk setiap kelompok waktu
   return Object.values(grouped).map((group, index) => {
     const avgTemp = group.temps.reduce((sum, t) => sum + t, 0) / group.temps.length;
     const date = group.date;
 
     let timeLabel;
     switch (intervalType) {
+      case 'minute': timeLabel = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit',}); 
+        break;
       case 'hour':
         timeLabel = date.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit' });
         break;
@@ -104,42 +110,48 @@ const groupByTimeInterval = (data, minutesRange, intervalType) => {
   }).sort((a, b) => a.fullDate - b.fullDate);
 };
 
-// Function to filter and group data based on time period
+// Fungsi untuk memfilter dan mengelompokkan data berdasarkan periode waktu
 export const filterDataByTimePeriod = (data, timePeriod) => {
   if (!data || data.length === 0) return [];
 
   let filteredData = [...data];
 
   switch (timePeriod) {
+
+    case TIME_FILTERS.FIVE_SECONDS.value:
+      // Ambil 100 data terakhir = sekitar 10 menit terakhir (5 detik × 120)
+      filteredData = data.slice(-100);
+      break;
+
     case TIME_FILTERS.MINUTE.value:
-      // Last 60 minutes
-      filteredData = data.slice(-60);
+      // Group rata-rata suhu per 1 menit terakhir
+      filteredData = groupByTimeInterval(data, 60, 'minute');
       break;
 
     case TIME_FILTERS.HOUR.value: {
-      // Group by hour for last 7 days (168 hours)
+      // Mengelompokkan data per jam selama 7 hari terakhir
       const hoursAgo = 168;
       filteredData = groupByTimeInterval(data, hoursAgo * 60, 'hour');
       break;
     }
 
     case TIME_FILTERS.DAY.value:
-      // Group by day for last 30 days
+      // Mengelompokkan data per hari selama 30 hari terakhir
       filteredData = groupByTimeInterval(data, 30 * 24 * 60, 'day');
       break;
 
     case TIME_FILTERS.WEEK.value:
-      // Group by week for last 52 weeks
+      // Mengelompokkan data per minggu selama 52 minggu terakhir
       filteredData = groupByTimeInterval(data, 52 * 7 * 24 * 60, 'week');
       break;
 
     case TIME_FILTERS.MONTH.value:
-      // Group by month for last 12 months
+      // Mengelompokkan data per bulan selama 12 bulan terakhir
       filteredData = groupByTimeInterval(data, 12 * 30 * 24 * 60, 'month');
       break;
 
     case TIME_FILTERS.YEAR.value:
-      // Group by year for last 5 years
+      // Mengelompokkan data per tahun selama 5 tahun terakhir
       filteredData = groupByTimeInterval(data, 5 * 365 * 24 * 60, 'year');
       break;
 
@@ -150,7 +162,7 @@ export const filterDataByTimePeriod = (data, timePeriod) => {
   return filteredData;
 };
 
-// Utility functions for styling
+// Fungsi untuk mengkategorikan suhu berdasarkan tingkat keparahan
 export const categorizeTemperature = (temp) => {
   if (temp < 37.5) return { label: "Hipotermia", color: "blue" };
   if (temp >= 37.5 && temp <= 39.5) return { label: "Normal", color: "green" };
@@ -159,6 +171,7 @@ export const categorizeTemperature = (temp) => {
   return { label: "Kritis", color: "red" };
 };
 
+// Fungsi untuk menentukan gaya tampilan berdasarkan warna kategori suhu
 export const getCategoryStyles = (color) => {
   const styles = {
     blue: "bg-blue-100 text-blue-700 border-blue-200",

@@ -145,14 +145,10 @@ export default function Dashboard() {
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-gray-800">
-                    Realtime Graphics
+                    Cow Card
                   </h2>
                   <span className="text-gray-400 cursor-help text-sm">ⓘ</span>
-                </div>
-                <select className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition">
-                  <option>Per Menit</option>
-                  <option>Per Jam</option>
-                </select>
+                </div>    
               </div>
 
               <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50">
