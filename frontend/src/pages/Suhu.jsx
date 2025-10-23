@@ -16,6 +16,7 @@ import SensorStatus from "../components/suhu/SensorStatus";
 import ChartRealtime from "../components/suhu/ChartRealtime";
 import TemperatureDistribution from "../components/suhu/TemperatureDistribution";
 import DateRangePicker from "../components/suhu/DateRangePicker";
+import TimeRangePicker from "../components/suhu/TimeRangePicker";
 
 export default function Suhu() {
   // State utama
@@ -36,11 +37,16 @@ export default function Suhu() {
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [datePickerStats, setDatePickerStats] = useState(null);
 
+  // State untuk filter rentang jam
+  const [appliedTimeRange, setAppliedTimeRange] = useState({ startTime: '00:00', endTime: '23:59' });
+
   // State untuk filter kategori
   const [filterCategory, setFilterCategory] = useState('ALL');
 
   // Ref untuk melacak sesi polling (mencegah race condition)
   const pollingRef = useRef(null);
+
+
 
   // useEffect pertama: mengambil daftar sapi
   useEffect(() => {
@@ -157,6 +163,7 @@ export default function Suhu() {
 
   }, [cowId, timePeriod, dateRange]);
 
+
   // 🔹 useEffect ketiga: HANYA filter, hitung rata-rata, dan total halaman
   useEffect(() => {
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
@@ -164,21 +171,39 @@ export default function Suhu() {
 
     // 1. Terapkan filter Waktu (TimePeriod atau DateRange)
     if (rawHistory.length > 0) {
-      // FIX: Selalu panggil filterDataByTimePeriod.
-      // Kirim 'isDateRangeMode' sebagai argumen baru agar utilitas
-      // tahu untuk tidak memotong data berdasarkan waktu relatif (cth: 600 menit).
       baseData = filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode);
     } else {
       baseData = [];
     }
 
-    // 2. Terapkan filter Kategori (setelah filter waktu)
+    // 1.5. Terapkan filter rentang JAM
+    let timeFilteredData;
+    const { startTime, endTime } = appliedTimeRange;
+
+    // Hanya filter jika rentang waktu BUKAN default (00:00 - 23:59)
+    if (startTime !== '00:00' || endTime !== '23:59') {
+      timeFilteredData = baseData.filter(item => {
+        const itemDate = new Date(item.fullDate);
+
+        // Format waktu item ke "HH:MM" (24-jam) secara manual
+        const hours = itemDate.getHours().toString().padStart(2, '0');
+        const minutes = itemDate.getMinutes().toString().padStart(2, '0');
+        const itemTime = `${hours}:${minutes}`; // Contoh: "08:05"
+
+        // Bandingkan sebagai string
+        return itemTime >= startTime && itemTime <= endTime;
+      });
+    } else {
+      timeFilteredData = baseData; // Tidak ada filter jam, teruskan semua data
+    }
+
+    // 2. Terapkan filter Kategori (setelah filter waktu DAN jam)
     let categoryFilteredData;
     if (filterCategory === 'ALL') {
-      categoryFilteredData = baseData; // Tidak ada filter kategori
+      categoryFilteredData = timeFilteredData; // Ganti baseData -> timeFilteredData
     } else {
       // Filter data berdasarkan kategori yang dipilih
-      categoryFilteredData = baseData.filter(item => {
+      categoryFilteredData = timeFilteredData.filter(item => { // Ganti baseData -> timeFilteredData
         const categoryInfo = categorizeTemperature(item.temperature);
         return categoryInfo.value === filterCategory;
       });
@@ -199,14 +224,13 @@ export default function Suhu() {
     } else {
       setAvgData({ avg_temp: null });
     }
-
-  }, [rawHistory, timePeriod, dateRange, filterCategory]);
+  }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
 
   // 🔹 useEffect keempat 
   useEffect(() => {
     setDataOffset(0);
-  }, [cowId, timePeriod, dateRange, filterCategory]);
+  }, [cowId, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
   // 🔹 (Sekarang jadi useEffect kelima): Memperbarui data yang ditampilkan (pagination client-side)
   useEffect(() => {
@@ -255,7 +279,6 @@ export default function Suhu() {
     setDataOffset(Number(offset));
   };
 
-
   // Fungsi handler untuk DateRangePicker
   const handleDateRangeApply = (startDate, endDate) => {
     setDateRange({ startDate, endDate });
@@ -268,6 +291,14 @@ export default function Suhu() {
     setRawHistory([]);
     setFilteredHistory([]);
     // setDataOffset(0) akan ditangani oleh hook pagination reset di atas
+  };
+
+  const handleTimeRangeApply = (startTime, endTime) => {
+    setAppliedTimeRange({ startTime, endTime });
+  };
+
+  const handleTimeRangeReset = () => {
+    setAppliedTimeRange({ startTime: '00:00', endTime: '23:59' });
   };
 
   // Klasifikasi suhu rata-rata
@@ -330,6 +361,12 @@ export default function Suhu() {
               <DateRangePicker
                 onApply={handleDateRangeApply}
                 onReset={handleDateRangeReset}
+                stats={datePickerStats}
+              />
+
+              <TimeRangePicker
+                onApply={handleTimeRangeApply}
+                onReset={handleTimeRangeReset}
                 stats={datePickerStats}
               />
 
