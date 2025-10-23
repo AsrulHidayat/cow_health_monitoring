@@ -164,11 +164,10 @@ export default function Suhu() {
 
     // 1. Terapkan filter Waktu (TimePeriod atau DateRange)
     if (rawHistory.length > 0) {
-      if (isDateRangeMode) {
-        baseData = rawHistory;
-      } else {
-        baseData = filterDataByTimePeriod(rawHistory, timePeriod); // Filter by (Menit, Jam, Hari)
-      }
+      // FIX: Selalu panggil filterDataByTimePeriod.
+      // Kirim 'isDateRangeMode' sebagai argumen baru agar utilitas
+      // tahu untuk tidak memotong data berdasarkan waktu relatif (cth: 600 menit).
+      baseData = filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode);
     } else {
       baseData = [];
     }
@@ -351,7 +350,6 @@ export default function Suhu() {
               <select
                 value={timePeriod}
                 onChange={(e) => setTimePeriod(e.target.value)}
-                disabled={dateRange.startDate && dateRange.endDate}
                 className={`border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition ${dateRange.startDate && dateRange.endDate ? 'bg-gray-100 opacity-70 cursor-not-allowed' : ''
                   }`}
               >
