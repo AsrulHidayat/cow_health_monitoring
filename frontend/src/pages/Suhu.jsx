@@ -15,8 +15,7 @@ import { Navbar, Dropdown, CowIcon, PlusIcon } from "../components/suhu/SuhuPage
 import SensorStatus from "../components/suhu/SensorStatus";
 import ChartRealtime from "../components/suhu/ChartRealtime";
 import TemperatureDistribution from "../components/suhu/TemperatureDistribution";
-import DateRangePicker from "../components/suhu/DateRangePicker";
-import TimeRangePicker from "../components/suhu/TimeRangePicker";
+import DateTimeRangePicker from "../components/suhu/DateTimeRangePicker";
 
 export default function Suhu() {
   // State utama
@@ -279,28 +278,6 @@ export default function Suhu() {
     setDataOffset(Number(offset));
   };
 
-  // Fungsi handler untuk DateRangePicker
-  const handleDateRangeApply = (startDate, endDate) => {
-    setDateRange({ startDate, endDate });
-    // setDataOffset(0) akan ditangani oleh hook pagination reset di atas
-  };
-
-  const handleDateRangeReset = () => {
-    setDateRange({ startDate: null, endDate: null });
-    setTimePeriod(TIME_FILTERS.MINUTE.value);
-    setRawHistory([]);
-    setFilteredHistory([]);
-    // setDataOffset(0) akan ditangani oleh hook pagination reset di atas
-  };
-
-  const handleTimeRangeApply = (startTime, endTime) => {
-    setAppliedTimeRange({ startTime, endTime });
-  };
-
-  const handleTimeRangeReset = () => {
-    setAppliedTimeRange({ startTime: '00:00', endTime: '23:59' });
-  };
-
   // Klasifikasi suhu rata-rata
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
@@ -358,15 +335,15 @@ export default function Suhu() {
 
             <div className="flex flex-wrap items-center gap-3">
 
-              <DateRangePicker
-                onApply={handleDateRangeApply}
-                onReset={handleDateRangeReset}
-                stats={datePickerStats}
-              />
-
-              <TimeRangePicker
-                onApply={handleTimeRangeApply}
-                onReset={handleTimeRangeReset}
+              <DateTimeRangePicker
+                onApply={({ startDate, endDate, startTime, endTime }) => {
+                  setDateRange({ startDate, endDate });
+                  setAppliedTimeRange({ startTime, endTime });
+                }}
+                onReset={() => {
+                  setDateRange({ startDate: null, endDate: null });
+                  setAppliedTimeRange({ startTime: "00:00", endTime: "23:59" });
+                }}
                 stats={datePickerStats}
               />
 
