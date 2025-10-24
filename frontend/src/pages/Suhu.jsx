@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"; // (Import useRef sudah ada)
+import { useEffect, useState, useRef } from "react";
 
 // Import fungsi API dari service
 import { getHistory, getSensorStatus, getAllCows, getTemperatureStats } from "../services/temperatureService";
@@ -32,22 +32,16 @@ export default function Suhu() {
   const [totalPages, setTotalPages] = useState(0);
   const ITEMS_PER_PAGE = 25;
 
-  // State untuk filter tanggal kalender
+  // Filter tanggal
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [datePickerStats, setDatePickerStats] = useState(null);
+  const [appliedTimeRange, setAppliedTimeRange] = useState({ startTime: "00:00", endTime: "23:59" });
+  const [filterCategory, setFilterCategory] = useState("ALL");
 
-  // State untuk filter rentang jam
-  const [appliedTimeRange, setAppliedTimeRange] = useState({ startTime: '00:00', endTime: '23:59' });
-
-  // State untuk filter kategori
-  const [filterCategory, setFilterCategory] = useState('ALL');
-
-  // Ref untuk melacak sesi polling (mencegah race condition)
+  // Ref polling
   const pollingRef = useRef(null);
 
-
-
-  // useEffect pertama: mengambil daftar sapi
+  // Ambil daftar sapi
   useEffect(() => {
     const fetchCows = async () => {
       try {
@@ -65,7 +59,7 @@ export default function Suhu() {
     fetchCows();
   }, []);
 
-  // useEffect tambahan: mengambil statistik data untuk DateRangePicker
+  // Ambil statistik tanggal
   useEffect(() => {
     if (!cowId) return;
     const fetchStats = async () => {
@@ -79,8 +73,7 @@ export default function Suhu() {
     fetchStats();
   }, [cowId]);
 
-
-  // useEffect kedua (Polling): memantau perubahan filter utama
+  // Polling data suhu
   useEffect(() => {
     if (!cowId) {
       setRawHistory([]);
@@ -91,19 +84,14 @@ export default function Suhu() {
     }
 
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
-
-    // Buat ID unik untuk "sesi" polling ini
     const currentPollId = Date.now();
     pollingRef.current = currentPollId;
 
     const pollData = async () => {
       try {
-        // Cek sebelum fetch
         if (pollingRef.current !== currentPollId) return;
 
         const statusResult = await getSensorStatus(cowId);
-
-        // Cek lagi setelah await
         if (pollingRef.current !== currentPollId) return;
         setSensorStatus(statusResult.status);
 
@@ -116,29 +104,49 @@ export default function Suhu() {
 
         const limit = isDateRangeMode
           ? 10000
-          : (TIME_FILTERS[Object.keys(TIME_FILTERS).find(key =>
-            TIME_FILTERS[key].value === timePeriod
-          )]?.limit || 500);
+          : (TIME_FILTERS[Object.keys(TIME_FILTERS).find(key => TIME_FILTERS[key].value === timePeriod)]?.limit || 500);
 
-        const histResponse = await getHistory(
-          cowId,
-          limit,
-          0,
-          dateRange.startDate,
-          dateRange.endDate
-        );
+        let start = dateRange.startDate;
+        let end = dateRange.endDate;
+        let formatted = [];
 
-        // Cek lagi setelah await getHistory (paling penting)
+        // 🔹 Jika tidak ada filter tanggal → ambil data realtime
+        if (!start || !end) {
+          const histResponse = await getHistory(cowId, limit, 0);
+          if (pollingRef.current !== currentPollId) return;
+
+          formatted = histResponse.data.map((h) => ({
+            time: new Date(h.created_at).toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            temperature: parseFloat(h.temperature.toFixed(1)),
+            fullDate: h.created_at,
+          }));
+
+          setRawHistory(formatted);
+          return;
+        }
+
+        // 🔹 Jika start dan end sama → tambahkan 1 hari
+        if (start === end) {
+          const endDateObj = new Date(end);
+          endDateObj.setDate(endDateObj.getDate() + 1);
+          end = endDateObj.toISOString().split("T")[0];
+        }
+
+        const histResponse = await getHistory(cowId, limit, 0, start, end);
         if (pollingRef.current !== currentPollId) return;
 
-        const formatted = histResponse.data.map((h) => ({
+        formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
           }),
           temperature: parseFloat(h.temperature.toFixed(1)),
-          fullDate: h.created_at
+          fullDate: h.created_at,
         }));
 
         setRawHistory(formatted);
@@ -159,141 +167,103 @@ export default function Suhu() {
       const interval = setInterval(pollData, 5000);
       return () => clearInterval(interval);
     }
-
   }, [cowId, timePeriod, dateRange]);
 
-
-  // 🔹 useEffect ketiga: HANYA filter, hitung rata-rata, dan total halaman
+  // Filter dan hitung data
   useEffect(() => {
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
-    let baseData;
+    let baseData = rawHistory.length > 0
+      ? filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode, dateRange.startDate, dateRange.endDate)
+      : [];
 
-    // 1. Terapkan filter Waktu (TimePeriod atau DateRange)
-    if (rawHistory.length > 0) {
-      baseData = filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode, dateRange.startDate, dateRange.endDate);
-    } else {
-      baseData = [];
-    }
-
-    // 1.5. Terapkan filter rentang JAM
-    let timeFilteredData;
     const { startTime, endTime } = appliedTimeRange;
+    const timeFilteredData =
+      startTime !== "00:00" || endTime !== "23:59"
+        ? baseData.filter((item) => {
+            const itemDate = new Date(item.fullDate);
+            const hours = itemDate.getHours().toString().padStart(2, "0");
+            const minutes = itemDate.getMinutes().toString().padStart(2, "0");
+            const itemTime = `${hours}:${minutes}`;
+            return itemTime >= startTime && itemTime <= endTime;
+          })
+        : baseData;
 
-    // Hanya filter jika rentang waktu BUKAN default (00:00 - 23:59)
-    if (startTime !== '00:00' || endTime !== '23:59') {
-      timeFilteredData = baseData.filter(item => {
-        const itemDate = new Date(item.fullDate);
+    const categoryFilteredData =
+      filterCategory === "ALL"
+        ? timeFilteredData
+        : timeFilteredData.filter((item) => {
+            const categoryInfo = categorizeTemperature(item.temperature);
+            return categoryInfo.value === filterCategory;
+          });
 
-        // Format waktu item ke "HH:MM" (24-jam) secara manual
-        const hours = itemDate.getHours().toString().padStart(2, '0');
-        const minutes = itemDate.getMinutes().toString().padStart(2, '0');
-        const itemTime = `${hours}:${minutes}`; // Contoh: "08:05"
-
-        // Bandingkan sebagai string
-        return itemTime >= startTime && itemTime <= endTime;
-      });
-    } else {
-      timeFilteredData = baseData; // Tidak ada filter jam, teruskan semua data
-    }
-
-    // 2. Terapkan filter Kategori (setelah filter waktu DAN jam)
-    let categoryFilteredData;
-    if (filterCategory === 'ALL') {
-      categoryFilteredData = timeFilteredData; // Ganti baseData -> timeFilteredData
-    } else {
-      // Filter data berdasarkan kategori yang dipilih
-      categoryFilteredData = timeFilteredData.filter(item => { // Ganti baseData -> timeFilteredData
-        const categoryInfo = categorizeTemperature(item.temperature);
-        return categoryInfo.value === filterCategory;
-      });
-    }
-
-    // 3. Set state akhir
     setFilteredHistory(categoryFilteredData);
+    setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
 
-    // 4. Hitung total halaman (berdasarkan data yang sudah terfilter ganda)
-    const pages = Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE);
-    setTotalPages(pages);
-
-    // 5. Hitung suhu rata-rata
     if (categoryFilteredData.length > 0) {
       const sum = categoryFilteredData.reduce((acc, item) => acc + item.temperature, 0);
-      const avg = sum / categoryFilteredData.length;
-      setAvgData({ avg_temp: avg });
+      setAvgData({ avg_temp: sum / categoryFilteredData.length });
     } else {
       setAvgData({ avg_temp: null });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
-
-  // 🔹 useEffect keempat 
   useEffect(() => {
     setDataOffset(0);
   }, [cowId, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
-  // 🔹 (Sekarang jadi useEffect kelima): Memperbarui data yang ditampilkan (pagination client-side)
   useEffect(() => {
     if (filteredHistory.length > 0) {
       const startIndex = dataOffset;
       const endIndex = Math.min(filteredHistory.length, startIndex + ITEMS_PER_PAGE);
-      const sliced = filteredHistory.slice(startIndex, endIndex);
-      setDisplayedData(sliced);
+      setDisplayedData(filteredHistory.slice(startIndex, endIndex));
     } else {
       setDisplayedData([]);
     }
   }, [filteredHistory, dataOffset]);
 
-  // Fungsi navigasi halaman
   const handlePrevPage = () => {
-    if (dataOffset > 0) {
-      setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
-    }
+    if (dataOffset > 0) setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
   };
 
   const handleNextPage = () => {
-    if (dataOffset + ITEMS_PER_PAGE < filteredHistory.length) {
-      setDataOffset(dataOffset + ITEMS_PER_PAGE);
-    }
+    if (dataOffset + ITEMS_PER_PAGE < filteredHistory.length) setDataOffset(dataOffset + ITEMS_PER_PAGE);
   };
 
-  const getCurrentPage = () => {
-    return Math.floor(dataOffset / ITEMS_PER_PAGE) + 1;
+  // Handle page selection from dropdown
+  const handlePageSelect = (val) => {
+    // ensure numeric value
+    setDataOffset(Number(val));
   };
+
+  const getCurrentPage = () => Math.floor(dataOffset / ITEMS_PER_PAGE) + 1;
 
   const getPageOptions = () => {
     const options = [];
     for (let i = 0; i < totalPages; i++) {
-      const isCurrentPage = i === (totalPages - getCurrentPage());
-      const label = i === 0 ? 'Terbaru' : `${i * ITEMS_PER_PAGE} data sebelumnya`;
-      options.push({
-        value: i * ITEMS_PER_PAGE,
-        label: label,
-        isCurrent: isCurrentPage
-      });
+      const label = i === 0 ? "Terbaru" : `${i * ITEMS_PER_PAGE} data sebelumnya`;
+      options.push({ value: i * ITEMS_PER_PAGE, label });
     }
     return options.reverse();
   };
 
-  const handlePageSelect = (offset) => {
-    setDataOffset(Number(offset));
-  };
-
-  // Klasifikasi suhu rata-rata
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
-  // Mendapatkan label periode waktu
   const getTimePeriodLabel = () => {
     if (dateRange.startDate && dateRange.endDate) {
       try {
-        const start = new Date(dateRange.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-        const end = new Date(dateRange.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        const start = new Date(dateRange.startDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+        const end = new Date(dateRange.endDate).toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
         return `${start} - ${end}`;
       } catch {
         return "Rentang Kustom";
       }
     }
-    const filter = Object.values(TIME_FILTERS).find(f => f.value === timePeriod);
-    return filter ? filter.label : 'Data';
+    const filter = Object.values(TIME_FILTERS).find((f) => f.value === timePeriod);
+    return filter ? filter.label : "Data";
   };
 
   // Render utama halaman
@@ -345,6 +315,7 @@ export default function Suhu() {
                   setAppliedTimeRange({ startTime: "00:00", endTime: "23:59" });
                 }}
                 stats={datePickerStats}
+                timeCategory={timePeriod}
               />
 
               {/* Filter Kategori Status */}

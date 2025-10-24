@@ -1,19 +1,37 @@
 import React, { useState } from "react";
 
-export default function DateTimeRangePicker({ onApply, onReset, stats }) {
+export default function DateTimeRangePicker({ onApply, onReset, stats, timeCategory }) {
   const [isOpen, setIsOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("00:00");
   const [endTime, setEndTime] = useState("23:59");
+  const [warning, setWarning] = useState(null); // ⚠️ Tambahan: state untuk pesan peringatan
 
   const isDateSelected = startDate && endDate;
 
   const handleApply = () => {
     if (!isDateSelected) {
-      alert("Harap pilih tanggal mulai dan tanggal akhir");
+      setWarning("Harap pilih tanggal mulai dan tanggal akhir");
       return;
     }
+
+    const diffDays =
+      (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+      (1000 * 60 * 60 * 24);
+
+    // 🔒 Validasi berdasarkan kategori waktu
+    if (timeCategory === "five_seconds" && diffDays > 1) {
+      setWarning("Kategori 'Per 5 Detik' hanya bisa memilih data dalam satu hari.");
+      return;
+    }
+
+    if (timeCategory === "minute" && diffDays > 1) {
+      setWarning("Kategori 'Per Menit' hanya bisa memilih data maksimal tiga hari.");
+      return;
+    }
+
+    setWarning(null); // ✅ Hapus peringatan jika valid
     onApply({ startDate, endDate, startTime, endTime });
     setIsOpen(false);
   };
@@ -23,6 +41,7 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
     setEndDate("");
     setStartTime("00:00");
     setEndTime("23:59");
+    setWarning(null);
     onReset();
     setIsOpen(false);
   };
@@ -33,6 +52,7 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
     start.setDate(start.getDate() - days);
     setStartDate(start.toISOString().split("T")[0]);
     setEndDate(end.toISOString().split("T")[0]);
+    setWarning(null);
   };
 
   return (
@@ -84,6 +104,14 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
             </div>
 
             <div className="p-4 space-y-4">
+              {/* ⚠️ Peringatan ditampilkan di atas Info Data */}
+              {warning && (
+                <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg text-sm font-medium animate-fadeIn">
+                  <p className="leading-snug">{warning}</p>
+                </div>
+              )}
+
+
               {/* Quick Presets */}
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-2 block">
@@ -93,10 +121,10 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                 {/* Preset untuk tanggal */}
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <button
-                    onClick={() => setQuickDate(1)}
+                    onClick={() => setQuickDate(0)}
                     className="px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-all"
                   >
-                    Hari ini
+                    Hari Ini
                   </button>
                   <button
                     onClick={() => setQuickDate(3)}
@@ -135,6 +163,7 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                     { label: "Sore", start: "15:00", end: "18:59" },
                     { label: "Malam", start: "19:00", end: "23:59" },
                     { label: "Dini Hari", start: "00:00", end: "05:59" },
+                    { label: "24 jam", start: "00:00", end: "23:59" },
                   ].map((range) => (
                     <button
                       key={range.label}
@@ -160,9 +189,19 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    max={endDate || new Date().toISOString().split("T")[0]}
+                    max={(() => {
+                      const today = new Date().toISOString().split("T")[0];
+                      if (timeCategory === "five_seconds") return today; // hanya hari ini
+                      if (timeCategory === "minute") {
+                        const limit = new Date();
+                        limit.setDate(limit.getDate() - 3);
+                        return today; // tetap hari ini, tetapi validasi dilakukan di handleApply
+                      }
+                      return today;
+                    })()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
                   />
+
                 </div>
 
                 <div>
@@ -174,9 +213,13 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     min={startDate}
-                    max={new Date().toISOString().split("T")[0]}
+                    max={(() => {
+                      const today = new Date().toISOString().split("T")[0];
+                      return today;
+                    })()}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
                   />
+
                 </div>
               </div>
 
