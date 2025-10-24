@@ -89,7 +89,21 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                 <label className="text-xs font-medium text-gray-600 mb-2 block">
                   Pilihan Cepat
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+
+                {/* Preset untuk tanggal */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <button
+                    onClick={() => setQuickDate(1)}
+                    className="px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-all"
+                  >
+                    Hari ini
+                  </button>
+                  <button
+                    onClick={() => setQuickDate(3)}
+                    className="px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-all"
+                  >
+                    3 Hari
+                  </button>
                   <button
                     onClick={() => setQuickDate(7)}
                     className="px-3 py-2 text-sm bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-all"
@@ -108,6 +122,31 @@ export default function DateTimeRangePicker({ onApply, onReset, stats }) {
                   >
                     90 Hari
                   </button>
+                </div>
+
+                {/* Preset untuk waktu (aktif jika tanggal sudah dipilih) */}
+                <div
+                  className={`grid grid-cols-3 gap-2 ${!isDateSelected ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                >
+                  {[
+                    { label: "Pagi", start: "06:00", end: "10:59" },
+                    { label: "Siang", start: "11:00", end: "14:59" },
+                    { label: "Sore", start: "15:00", end: "18:59" },
+                    { label: "Malam", start: "19:00", end: "23:59" },
+                    { label: "Dini Hari", start: "00:00", end: "05:59" },
+                  ].map((range) => (
+                    <button
+                      key={range.label}
+                      onClick={() => {
+                        setStartTime(range.start);
+                        setEndTime(range.end);
+                      }}
+                      className="px-3 py-2 text-sm bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-lg transition-all"
+                    >
+                      {range.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

@@ -170,7 +170,7 @@ export default function Suhu() {
 
     // 1. Terapkan filter Waktu (TimePeriod atau DateRange)
     if (rawHistory.length > 0) {
-      baseData = filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode);
+      baseData = filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode, dateRange.startDate, dateRange.endDate);
     } else {
       baseData = [];
     }

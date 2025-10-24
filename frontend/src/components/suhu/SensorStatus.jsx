@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function SensorStatus({ sensorStatus }) {
   if (sensorStatus === "offline") {
     return (

@@ -167,67 +167,85 @@ const groupByTimeInterval = (data, minutesRange, intervalType, isDateRangeActive
 };
 
 // Fungsi untuk memfilter dan mengelompokkan data berdasarkan periode waktu
-export const filterDataByTimePeriod = (data, timePeriod, isDateRangeActive = false) => {
+export const filterDataByTimePeriod = (
+  data,
+  timePeriod,
+  isDateRangeActive = false,
+  startDate = null,
+  endDate = null
+) => {
   if (!data || data.length === 0) return [];
 
   let filteredData = [...data];
 
-  switch (timePeriod) {
+  // 1. Jika mode rentang tanggal aktif, filter dulu berdasarkan tanggal
+  if (isDateRangeActive && startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
+    // Pastikan tanggal akhir mencakup seluruh hari (23:59:59)
+    end.setHours(23, 59, 59, 999);
+
+    filteredData = data.filter((item) => {
+      const itemDate = new Date(item.fullDate);
+      return itemDate >= start && itemDate <= end;
+    });
+  }
+
+  // 2. Setelah tanggal terfilter, teruskan ke logika grouping/time filter
+  switch (timePeriod) {
     case TIME_FILTERS.FIVE_SECONDS.value:
-      // FIX: Jika mode rentang tanggal, tampilkan semua data mentah dalam rentang itu.
-      // Jika tidak, baru batasi 100 terakhir.
       if (isDateRangeActive) {
-        filteredData = data.map((item, index) => ({
+        filteredData = filteredData.map((item, index) => ({
           ...item,
           index: index + 1,
-          displayIndex: `#${index + 1}`
+          displayIndex: `#${index + 1}`,
         }));
       } else {
-        filteredData = data
+        filteredData = filteredData
           .slice(-100)
-          .reverse() // Balik urutan agar yang terbaru di depan
+          .reverse()
           .map((item, index) => ({
             ...item,
             index: index + 1,
-            displayIndex: `#${index + 1}`
+            displayIndex: `#${index + 1}`,
           }));
       }
       break;
-    
-    // FIX: Teruskan 'isDateRangeActive' ke semua pemanggilan groupByTimeInterval
+
     case TIME_FILTERS.MINUTE.value:
-      filteredData = groupByTimeInterval(data, 600, 'minute', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, 600, "minute", isDateRangeActive);
       break;
 
     case TIME_FILTERS.HOUR.value: {
       const hoursAgo = 168;
-      filteredData = groupByTimeInterval(data, hoursAgo * 60, 'hour', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, hoursAgo * 60, "hour", isDateRangeActive);
       break;
     }
 
     case TIME_FILTERS.DAY.value:
-      filteredData = groupByTimeInterval(data, 30 * 24 * 60, 'day', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, 30 * 24 * 60, "day", isDateRangeActive);
       break;
 
     case TIME_FILTERS.WEEK.value:
-      filteredData = groupByTimeInterval(data, 52 * 7 * 24 * 60, 'week', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, 52 * 7 * 24 * 60, "week", isDateRangeActive);
       break;
 
     case TIME_FILTERS.MONTH.value:
-      filteredData = groupByTimeInterval(data, 12 * 30 * 24 * 60, 'month', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, 12 * 30 * 24 * 60, "month", isDateRangeActive);
       break;
 
     case TIME_FILTERS.YEAR.value:
-      filteredData = groupByTimeInterval(data, 5 * 365 * 24 * 60, 'year', isDateRangeActive);
+      filteredData = groupByTimeInterval(filteredData, 5 * 365 * 24 * 60, "year", isDateRangeActive);
       break;
 
     default:
-      filteredData = data.slice(-25);
+      filteredData = filteredData.slice(-25);
   }
 
   return filteredData;
 };
+
 // Fungsi untuk mengkategorikan suhu berdasarkan tingkat keparahan
 export const categorizeTemperature = (temp) => {
   if (temp < 38.0) {
