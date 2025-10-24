@@ -15,23 +15,7 @@ export default function DateTimeRangePicker({ onApply, onReset, stats, timeCateg
       setWarning("Harap pilih tanggal mulai dan tanggal akhir");
       return;
     }
-
-    const diffDays =
-      (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-      (1000 * 60 * 60 * 24);
-
-    // 🔒 Validasi berdasarkan kategori waktu
-    if (timeCategory === "five_seconds" && diffDays > 1) {
-      setWarning("Kategori 'Per 5 Detik' hanya bisa memilih data dalam satu hari.");
-      return;
-    }
-
-    if (timeCategory === "minute" && diffDays > 1) {
-      setWarning("Kategori 'Per Menit' hanya bisa memilih data maksimal tiga hari.");
-      return;
-    }
-
-    setWarning(null); // ✅ Hapus peringatan jika valid
+    
     onApply({ startDate, endDate, startTime, endTime });
     setIsOpen(false);
   };

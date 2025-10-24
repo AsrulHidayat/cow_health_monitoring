@@ -239,20 +239,22 @@ export const filterDataByTimePeriod = (
 // 🔹 KATEGORI SUHU
 // ========================================================
 export const categorizeTemperature = (temp) => {
-  if (temp < 38.0) {
+  if (temp == null) {
+    return { label: 'N/A', color: 'gray', value: 'na' };
+  }
+  if (temp < 37.5) {
     return { label: 'Hipotermia', color: 'blue', value: 'hipotermia' };
-  } else if (temp >= 38.0 && temp <= 39.2) {
+  } else if (temp >= 37.5 && temp <= 39.5) {
     return { label: 'Normal', color: 'green', value: 'normal' };
-  } else if (temp >= 39.3 && temp <= 40.0) {
+  } else if (temp > 39.5 && temp <= 40.5) {
     return { label: 'Demam Ringan', color: 'yellow', value: 'demam-ringan' };
-  } else if (temp >= 40.1 && temp <= 41.0) {
+  } else if (temp > 40.5 && temp <= 41.5) {
     return { label: 'Demam Tinggi', color: 'orange', value: 'demam-tinggi' };
-  } else if (temp > 41.0) {
+  } else if (temp > 41.5) {
     return { label: 'Kritis', color: 'red', value: 'kritis' };
   }
   return { label: 'N/A', color: 'gray', value: 'na' };
 };
-
 // ========================================================
 // 🔹 WARNA KATEGORI
 // ========================================================

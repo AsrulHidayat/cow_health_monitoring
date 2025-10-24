@@ -24,11 +24,12 @@ export default function TemperatureDistribution({ history }) {
 
     history.forEach(item => {
       const temp = item.temperature;
+      if (temp == null) return;
       if (temp < 37.5) counts.hipotermia++;
       else if (temp >= 37.5 && temp <= 39.5) counts.normal++;
       else if (temp > 39.5 && temp <= 40.5) counts.demamRingan++;
       else if (temp > 40.5 && temp <= 41.5) counts.demamTinggi++;
-      else counts.kritis++;
+      else if (temp > 41.5) counts.kritis++;
     });
 
     const total = history.length;

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
 const categorizeTemperature = (temp) => {
+  if (temp == null) return 'na';
   if (temp < 37.5) return 'hipotermia';
   if (temp >= 37.5 && temp <= 39.5) return 'normal';
   if (temp > 39.5 && temp <= 40.5) return 'demam_ringan';
   if (temp > 40.5 && temp <= 41.5) return 'demam_tinggi';
-  return 'kritis';
+  if (temp > 41.5) return 'kritis';
+  return 'na';
 };
 
 const getCategoryColor = (category) => {
@@ -112,7 +114,7 @@ export default function RealtimeAverage({ cowId }) {
 
     // Urutan warna: hipotermia, normal, demam ringan, demam tinggi, kritis
     const categories = ['hipotermia', 'normal', 'demam_ringan', 'demam_tinggi', 'kritis'];
-    
+
     categories.forEach((category) => {
       const percentage = distribution[category];
       if (percentage > 0) {
@@ -158,12 +160,12 @@ export default function RealtimeAverage({ cowId }) {
                 stroke="#E5E7EB"
                 strokeWidth={strokeWidth}
               />
-              
+
               {/* Progress segments */}
               {segments.map((segment, index) => {
                 const segmentLength = (segment.percentage / 100) * circumference;
                 const segmentOffset = (segment.offset / 100) * circumference;
-                
+
                 return (
                   <circle
                     key={index}
