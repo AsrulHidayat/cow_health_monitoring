@@ -511,8 +511,8 @@ export default function Suhu() {
                         <span className="text-sm font-bold text-gray-500 w-12">#{actualIndex}</span>
                         <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
                         <span className="text-lg font-bold text-gray-800">
-                          {avgData.avg_temp !== null && avgData.avg_temp !== undefined
-                            ? avgData.avg_temp.toFixed(1)
+                          {h.temperature !== null && h.temperature !== undefined
+                            ? h.temperature.toFixed(1)
                             : "--"}
                           °C
                         </span>
