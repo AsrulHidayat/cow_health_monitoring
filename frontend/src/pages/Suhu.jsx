@@ -180,21 +180,21 @@ export default function Suhu() {
     const timeFilteredData =
       startTime !== "00:00" || endTime !== "23:59"
         ? baseData.filter((item) => {
-            const itemDate = new Date(item.fullDate);
-            const hours = itemDate.getHours().toString().padStart(2, "0");
-            const minutes = itemDate.getMinutes().toString().padStart(2, "0");
-            const itemTime = `${hours}:${minutes}`;
-            return itemTime >= startTime && itemTime <= endTime;
-          })
+          const itemDate = new Date(item.fullDate);
+          const hours = itemDate.getHours().toString().padStart(2, "0");
+          const minutes = itemDate.getMinutes().toString().padStart(2, "0");
+          const itemTime = `${hours}:${minutes}`;
+          return itemTime >= startTime && itemTime <= endTime;
+        })
         : baseData;
 
     const categoryFilteredData =
       filterCategory === "ALL"
         ? timeFilteredData
         : timeFilteredData.filter((item) => {
-            const categoryInfo = categorizeTemperature(item.temperature);
-            return categoryInfo.value === filterCategory;
-          });
+          const categoryInfo = categorizeTemperature(item.temperature);
+          return categoryInfo.value === filterCategory;
+        });
 
     setFilteredHistory(categoryFilteredData);
     setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
@@ -510,7 +510,12 @@ export default function Suhu() {
                       >
                         <span className="text-sm font-bold text-gray-500 w-12">#{actualIndex}</span>
                         <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
-                        <span className="text-lg font-bold text-gray-800">{h.temperature.toFixed(1)}°C</span>
+                        <span className="text-lg font-bold text-gray-800">
+                          {avgData.avg_temp !== null && avgData.avg_temp !== undefined
+                            ? avgData.avg_temp.toFixed(1)
+                            : "--"}
+                          °C
+                        </span>
                         <div className="w-[120px] flex justify-end">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>
                             {category.label}

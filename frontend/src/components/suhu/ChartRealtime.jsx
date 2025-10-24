@@ -1,8 +1,18 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import React from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
+} from "recharts";
 
 export default function ChartRealtime({ data }) {
   const categorizeTemp = (temp) => {
+    if (temp == null) return "Tidak ada data";
     if (temp < 37.5) return "Hipotermia";
     if (temp >= 37.5 && temp <= 39.5) return "Normal";
     if (temp > 39.5 && temp <= 40.5) return "Demam Ringan";
@@ -11,6 +21,7 @@ export default function ChartRealtime({ data }) {
   };
 
   const getBarColor = (temp) => {
+    if (temp == null) return "transparent"; // ⬅️ batang transparan kalau data kosong
     if (temp < 37.5) return "#3B82F6";
     if (temp >= 37.5 && temp <= 39.5) return "#22C55E";
     if (temp > 39.5 && temp <= 40.5) return "#EAB308";
@@ -22,6 +33,10 @@ export default function ChartRealtime({ data }) {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const temp = payload[0].value;
+
+      // Jangan tampilkan tooltip jika datanya kosong
+      if (temp == null) return null;
+
       const category = categorizeTemp(temp);
 
       return (
@@ -35,7 +50,8 @@ export default function ChartRealtime({ data }) {
                 day: "2-digit",
                 month: "long",
                 year: "numeric",
-              })}</p>
+              })}
+            </p>
             <p className="text-sm font-medium text-gray-700">{data.time}</p>
             {data.count && data.count > 1 && (
               <p className="text-xs text-gray-500 mt-1">
@@ -51,10 +67,7 @@ export default function ChartRealtime({ data }) {
 
   return (
     <ResponsiveContainer width="100%" height={320}>
-      <BarChart
-        data={data}
-        margin={{ top: 20, right: 40, left: 20, bottom: 20 }}
-      >
+      <BarChart data={data} margin={{ top: 20, right: 40, left: 20, bottom: 20 }}>
         <CartesianGrid
           strokeDasharray="3 3"
           stroke="#e5e7eb"
@@ -72,19 +85,18 @@ export default function ChartRealtime({ data }) {
           height={80}
         />
         <YAxis
-          domain={['dataMin - 0.5', 'dataMax + 0.5']}
+          domain={["dataMin - 0.5", "dataMax + 0.5"]}
           tick={{ fontSize: 12, fill: "#6b7280" }}
           stroke="#d1d5db"
           axisLine={false}
           tickLine={false}
           tickFormatter={(value) => `${value.toFixed(1)}°C`}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(34, 197, 94, 0.1)' }} />
-        <Bar
-          dataKey="temperature"
-          radius={[8, 8, 0, 0]}
-          barSize={35}
-        >
+        <Tooltip
+          content={<CustomTooltip />}
+          cursor={{ fill: "rgba(34, 197, 94, 0.1)" }}
+        />
+        <Bar dataKey="temperature" radius={[8, 8, 0, 0]} barSize={35}>
           {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
@@ -95,4 +107,4 @@ export default function ChartRealtime({ data }) {
       </BarChart>
     </ResponsiveContainer>
   );
-};
+}
