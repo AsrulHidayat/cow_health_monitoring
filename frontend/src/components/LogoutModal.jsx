@@ -1,4 +1,3 @@
-import React from "react";
 import { LogOut, XCircle } from "lucide-react";
 
 export default function LogoutModal({ isOpen, onClose, onConfirm }) {
