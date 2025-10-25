@@ -1,5 +1,3 @@
-import React from 'react';
-
 // Dummy Icons
 export const CowIcon = () => (
   <svg className="w-20 h-20 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
@@ -13,12 +11,8 @@ export const PlusIcon = () => (
   </svg>
 );
 
-// Components
-export const Navbar = ({ title }) => (
-  <div className="w-full border-b border-gray-200 bg-white px-6 py-6">
-    <h1 className="text-lg font-semibold text-gray-800">{title}</h1>
-  </div>
-);
+
+export { default as Navbar } from "../Navbar";
 
 export const Dropdown = ({ options, value, onChange }) => (
   <select

@@ -18,7 +18,6 @@ import TemperatureDistribution from "../components/suhu/TemperatureDistribution"
 import DateTimeRangePicker from "../components/suhu/DateTimeRangePicker";
 
 export default function Suhu() {
-  // State utama
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
   const [rawHistory, setRawHistory] = useState([]);
@@ -40,6 +39,8 @@ export default function Suhu() {
 
   // Ref polling
   const pollingRef = useRef(null);
+
+  const selectedCow = cows.find(c => c.id === cowId);
 
   // Ambil daftar sapi
   useEffect(() => {
@@ -270,7 +271,11 @@ export default function Suhu() {
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
 
-      <Navbar title="Suhu" />
+      <Navbar
+        title="Suhu"
+        cowId={cowId}
+        cowData={selectedCow}
+      />
 
       {cows.length > 0 && (
         <div className="flex items-center gap-6 px-6 py-4 bg-white border-b border-gray-100">
