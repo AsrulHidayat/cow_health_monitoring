@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getSensorStatus } from "../services/temperatureService";
 
 import axios from "axios";
-import Navbar from "../components/suhu/Navbar";
+import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
 import DashboardPerSapi from "../components/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
