@@ -17,6 +17,8 @@ import SensorStatus from "../components/suhu/SensorStatus";
 import ChartRealtime from "../components/suhu/ChartRealtime";
 import TemperatureDistribution from "../components/suhu/TemperatureDistribution";
 import DateTimeRangePicker from "../components/suhu/DateTimeRangePicker";
+import EditCheckupModal from "../components/suhu/EditCheckupModal";
+import DeleteModal from "../components/suhu/DeleteModal";
 
 export default function Suhu() {
   // ==========================
@@ -333,7 +335,7 @@ export default function Suhu() {
       );
 
       setShowEditModal(false);
-      alert(`✅ Status pemeriksaan berhasil diubah menjadi "${status === 'checked' ? 'Sudah Diperiksa' : 'Belum Diperiksa'}"`);
+      alert(`✅ Status pemeriksaan berhasil diubah menjadi "${status}"`);
 
     } catch (error) {
       console.error("Gagal update status pemeriksaan:", error);
@@ -421,11 +423,11 @@ export default function Suhu() {
 
             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
               <span className="text-xs text-gray-600 font-medium">Status:</span>
-              <span className={`text-xs font-bold px-2 py-1 rounded ${selectedCow?.checkupStatus === 'checked'
+              <span className={`text-xs font-bold px-2 py-1 rounded ${selectedCow?.checkupStatus === 'Telah diperiksa'
                   ? 'bg-green-100 text-green-700 border border-green-200'
                   : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                 }`}>
-                {selectedCow?.checkupStatus === 'checked' ? 'Sudah Diperiksa' : 'Belum Diperiksa'}
+                {selectedCow?.checkupStatus || 'Belum diperiksa'}
               </span>
             </div>
 
@@ -737,113 +739,19 @@ export default function Suhu() {
         }
       `}</style>
 
-      {/* Modal Edit Pemeriksaan */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b">
-              <h2 className="text-lg font-bold text-gray-800">Edit Status Pemeriksaan</h2>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+      <EditCheckupModal
+        show={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onConfirm={handleEditCheckup}
+        selectedCow={selectedCow}
+      />
 
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Pilih status pemeriksaan untuk sapi <span className="font-bold">{selectedCow?.tag}</span>
-              </p>
-
-              <div className="space-y-3">
-                <button
-                  onClick={() => handleEditCheckup('checked')}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-green-700">Sudah Diperiksa</p>
-                      <p className="text-xs text-green-600">Sapi telah menjalani pemeriksaan</p>
-                    </div>
-                  </div>
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-
-                <button
-                  onClick={() => handleEditCheckup('unchecked')}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="text-left">
-                      <p className="font-semibold text-yellow-700">Belum Diperiksa</p>
-                      <p className="text-xs text-yellow-600">Sapi belum menjalani pemeriksaan</p>
-                    </div>
-                  </div>
-                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Delete */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Hapus Data Suhu</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                Anda akan menghapus <span className="font-bold">SEMUA</span> data suhu untuk:
-              </p>
-              <p className="text-lg font-bold text-red-600 mb-4">
-                {selectedCow?.tag}
-              </p>
-              <p className="text-xs text-gray-500 mb-6">
-                ⚠️ Tindakan ini tidak dapat dibatalkan!
-              </p>
-
-              <div className="flex gap-3 w-full">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all"
-                >
-                  Ya, Hapus
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteModal
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        selectedCow={selectedCow}
+      />
     </div>
   );
 }

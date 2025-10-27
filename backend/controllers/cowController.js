@@ -251,7 +251,8 @@ export const updateCheckupStatus = async (req, res) => {
       return res.status(404).json({ message: "Sapi tidak ditemukan" });
     }
 
-    await cow.update({ checkupStatus });
+    cow.checkupStatus = checkupStatus;
+    await cow.save();
     
     res.json({ 
       message: "Status pemeriksaan berhasil diupdate",

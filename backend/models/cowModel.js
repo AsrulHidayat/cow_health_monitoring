@@ -27,9 +27,9 @@ const Cow = db.define(
       allowNull: true,
     },
     checkupStatus: {
-      type: DataTypes.ENUM("Belum diperiksa", "Telah diperiksa"),
+      type: DataTypes.ENUM('Belum diperiksa', 'Telah diperiksa'),
       allowNull: false,
-      defaultValue: "Belum diperiksa", // sesuai default di database
+      defaultValue: 'Belum diperiksa',
     },
     created_at: {
       type: DataTypes.DATE,
