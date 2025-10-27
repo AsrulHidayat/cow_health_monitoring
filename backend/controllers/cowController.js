@@ -1,6 +1,5 @@
 import Cow from "../models/cowModel.js";
 import Temperature from "../models/temperatureModel.js";
-import db from "../config/db.js";
 
 // Ambil semua sapi milik user yang login
 export const getCows = async (req, res) => {

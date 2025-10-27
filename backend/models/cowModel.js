@@ -16,12 +16,12 @@ const Cow = db.define("Cow", {
     }
   },
   tag: {
-    type: DataTypes.STRING(50), // Sesuaikan dengan varchar(50) di database
+    type: DataTypes.STRING(50), 
     allowNull: false,
     unique: true // Tambahkan unique constraint jika perlu
   },
   umur: {
-    type: DataTypes.STRING(30), // Sesuaikan dengan varchar(30) di database
+    type: DataTypes.STRING(30), 
     allowNull: true, // Sesuai dengan database yang membolehkan NULL
   },
   created_at: {
