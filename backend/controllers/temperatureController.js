@@ -250,5 +250,24 @@ export const getTemperatureStats = async (req, res) => {
   }
 };
 
+// Hapus semua data suhu untuk sapi tertentu
+export const deleteAllTemperature = async (req, res) => {
+  try {
+    const cowId = Number(req.params.cowId);
+    
+    const deleted = await Temperature.destroy({
+      where: { cow_id: cowId }
+    });
+    
+    res.json({ 
+      message: `Berhasil menghapus ${deleted} data suhu`,
+      deletedCount: deleted 
+    });
+  } catch (err) {
+    console.error("Error deleting temperature data:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
+};
+
 // Import Op dari Sequelize untuk operator
 import { Op } from "sequelize";

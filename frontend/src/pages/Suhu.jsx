@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import axios from "axios";
 
 // 🔹 Import API services
 import { getHistory, getSensorStatus, getAllCows, getTemperatureStats } from "../services/temperatureService";
@@ -21,26 +22,30 @@ export default function Suhu() {
   // ==========================
   // 🔹 State utama
   // ==========================
-  const [cows, setCows] = useState([]);                                     // daftar sapi
-  const [cowId, setCowId] = useState(null);                                 // sapi yang dipilih
-  const [rawHistory, setRawHistory] = useState([]);                         // data suhu mentah
-  const [filteredHistory, setFilteredHistory] = useState([]);               // data setelah filter waktu & kategori
-  const [displayedData, setDisplayedData] = useState([]);                   // data yang ditampilkan per halaman
-  const [avgData, setAvgData] = useState({ avg_temp: null });               // rata-rata suhu
-  const [sensorStatus, setSensorStatus] = useState("checking");             // status sensor: online/offline/checking
-  const [loading, setLoading] = useState(true);                             // state loading
-  const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);  // filter periode waktu
-  const [dataOffset, setDataOffset] = useState(0);                          // offset untuk pagination
-  const [totalPages, setTotalPages] = useState(0);                          // total halaman
-  const ITEMS_PER_PAGE = 25;                                                // jumlah data per halaman
+  const [cows, setCows] = useState([]);
+  const [cowId, setCowId] = useState(null);
+  const [rawHistory, setRawHistory] = useState([]);
+  const [filteredHistory, setFilteredHistory] = useState([]);
+  const [displayedData, setDisplayedData] = useState([]);
+  const [avgData, setAvgData] = useState({ avg_temp: null });
+  const [sensorStatus, setSensorStatus] = useState("checking");
+  const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
+  const [dataOffset, setDataOffset] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const ITEMS_PER_PAGE = 25;
+
+  // Modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // ==================================
   // 🔹 Filter tanggal dan kategori
   // ==================================
-  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });                      // rentang tanggal filter
-  const [datePickerStats, setDatePickerStats] = useState(null);                                        // stats untuk date picker
-  const [appliedTimeRange, setAppliedTimeRange] = useState({ startTime: "00:00", endTime: "23:59" });  // filter jam khusus
-  const [filterCategory, setFilterCategory] = useState("ALL");                                         // filter kategori suhu
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [datePickerStats, setDatePickerStats] = useState(null);
+  const [appliedTimeRange, setAppliedTimeRange] = useState({ startTime: "00:00", endTime: "23:59" });
+  const [filterCategory, setFilterCategory] = useState("ALL");
 
   // ==========================
   // 🔹 Ref untuk polling
@@ -59,7 +64,7 @@ export default function Suhu() {
         setLoading(true);
         const allCows = await getAllCows();
         setCows(allCows);
-        if (allCows.length > 0) setCowId(allCows[0].id); // set sapi pertama jika ada
+        if (allCows.length > 0) setCowId(allCows[0].id);
       } catch (err) {
         console.error("Gagal mengambil data sapi:", err);
         setCows([]);
@@ -107,12 +112,10 @@ export default function Suhu() {
       try {
         if (pollingRef.current !== currentPollId) return;
 
-        // 🔸 Cek status sensor
         const statusResult = await getSensorStatus(cowId);
         if (pollingRef.current !== currentPollId) return;
         setSensorStatus(statusResult.status);
 
-        // 🔸 Jika sensor offline → reset data
         if (statusResult.status !== "online" && !isDateRangeMode) {
           setRawHistory([]);
           setFilteredHistory([]);
@@ -120,7 +123,6 @@ export default function Suhu() {
           return;
         }
 
-        // 🔸 Batas jumlah data
         const limit = isDateRangeMode
           ? 10000
           : (TIME_FILTERS[Object.keys(TIME_FILTERS).find(key => TIME_FILTERS[key].value === timePeriod)]?.limit || 500);
@@ -129,7 +131,6 @@ export default function Suhu() {
         let end = dateRange.endDate;
         let formatted = [];
 
-        // 🔸 Realtime mode → ambil data terbaru
         if (!start || !end) {
           const histResponse = await getHistory(cowId, limit, 0);
           if (pollingRef.current !== currentPollId) return;
@@ -148,25 +149,23 @@ export default function Suhu() {
           return;
         }
 
-        // 🔸 Jika start dan end sama → tambah 1 hari
         if (start === end) {
           const endDateObj = new Date(end);
           endDateObj.setDate(endDateObj.getDate() + 1);
           end = endDateObj.toISOString().split("T")[0];
         }
 
-        // 🔸 Ambil data sesuai rentang tanggal
         const histResponse = await getHistory(cowId, limit, 0, start, end);
         if (pollingRef.current !== currentPollId) return;
 
         formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
-            hour   : "2-digit",
-            minute : "2-digit",
-            second : "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
           }),
           temperature: parseFloat(h.temperature.toFixed(1)),
-          fullDate : h.created_at,
+          fullDate: h.created_at,
         }));
 
         setRawHistory(formatted);
@@ -183,7 +182,6 @@ export default function Suhu() {
 
     pollData();
 
-    // 🔸 Jika realtime → polling setiap 5 detik
     if (!isDateRangeMode) {
       const interval = setInterval(pollData, 5000);
       return () => clearInterval(interval);
@@ -200,20 +198,18 @@ export default function Suhu() {
       ? filterDataByTimePeriod(rawHistory, timePeriod, isDateRangeMode, dateRange.startDate, dateRange.endDate)
       : [];
 
-    // 🔸 Filter berdasarkan jam
     const { startTime, endTime } = appliedTimeRange;
     const timeFilteredData =
       startTime !== "00:00" || endTime !== "23:59"
         ? baseData.filter((item) => {
           const itemDate = new Date(item.fullDate);
-          const hours    = itemDate.getHours().toString().padStart(2, "0");
-          const minutes  = itemDate.getMinutes().toString().padStart(2, "0");
+          const hours = itemDate.getHours().toString().padStart(2, "0");
+          const minutes = itemDate.getMinutes().toString().padStart(2, "0");
           const itemTime = `${hours}:${minutes}`;
           return itemTime >= startTime && itemTime <= endTime;
         })
         : baseData;
 
-    // 🔸 Filter berdasarkan kategori
     const categoryFilteredData =
       filterCategory === "ALL"
         ? timeFilteredData
@@ -225,7 +221,6 @@ export default function Suhu() {
     setFilteredHistory(categoryFilteredData);
     setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
 
-    // 🔸 Hitung rata-rata
     if (categoryFilteredData.length > 0) {
       const sum = categoryFilteredData.reduce((acc, item) => acc + item.temperature, 0);
       setAvgData({ avg_temp: sum / categoryFilteredData.length });
@@ -234,7 +229,6 @@ export default function Suhu() {
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
-  // 🔹 Reset halaman saat filter berubah
   useEffect(() => {
     setDataOffset(0);
   }, [cowId, timePeriod, dateRange, filterCategory, appliedTimeRange]);
@@ -275,6 +269,114 @@ export default function Suhu() {
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
   // ==========================
+  // 🔹 Helper Functions
+  // ==========================
+
+  // Fungsi untuk menentukan kondisi sapi berdasarkan sensor
+  const getCowCondition = () => {
+    if (!selectedCow || !avgData.avg_temp) return "Normal";
+
+    let abnormalSensors = 0;
+
+    // 1. Cek sensor suhu
+    const temp = avgData.avg_temp;
+    const isTempAbnormal = temp < 37.5 || temp > 39.5;
+    if (isTempAbnormal) abnormalSensors++;
+
+    // 2. Cek sensor detak jantung (placeholder - nanti ambil dari API)
+    const heartRate = selectedCow?.heartRate || 70;
+    const isHeartRateAbnormal = heartRate < 60 || heartRate > 80;
+    if (isHeartRateAbnormal) abnormalSensors++;
+
+    // 3. Cek sensor gerakan/aktivitas (placeholder - nanti ambil dari API)
+    const activity = selectedCow?.activity || "active";
+    const isActivityAbnormal = activity === "inactive" || activity === "abnormal";
+    if (isActivityAbnormal) abnormalSensors++;
+
+    if (abnormalSensors === 0) return "Normal";
+    if (abnormalSensors === 1) return "Perlu Diperhatikan";
+    if (abnormalSensors === 2) return "Harus Diperhatikan";
+    return "Segera Tindaki";
+  };
+
+  // Fungsi untuk styling kondisi sapi
+  const getCowConditionStyle = () => {
+    const condition = getCowCondition();
+    const styles = {
+      "Normal": "bg-green-100 text-green-700 border border-green-200",
+      "Perlu Diperhatikan": "bg-yellow-100 text-yellow-700 border border-yellow-200",
+      "Harus Diperhatikan": "bg-orange-100 text-orange-700 border border-orange-200",
+      "Segera Tindaki": "bg-red-100 text-red-700 border border-red-200"
+    };
+    return styles[condition] || styles["Normal"];
+  };
+
+  // Handle edit status pemeriksaan
+  const handleEditCheckup = async (status) => {
+    if (!cowId) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.put(
+        `http://localhost:5001/api/cows/${cowId}/checkup-status`,
+        { checkupStatus: status },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setCows(prevCows =>
+        prevCows.map(cow =>
+          cow.id === cowId
+            ? { ...cow, checkupStatus: status }
+            : cow
+        )
+      );
+
+      setShowEditModal(false);
+      alert(`✅ Status pemeriksaan berhasil diubah menjadi "${status === 'checked' ? 'Sudah Diperiksa' : 'Belum Diperiksa'}"`);
+
+    } catch (error) {
+      console.error("Gagal update status pemeriksaan:", error);
+      alert("❌ Gagal mengubah status pemeriksaan. Silakan coba lagi.");
+    }
+  };
+
+  // Handle hapus data
+  const handleDelete = async () => {
+    if (!cowId || !selectedCow) return;
+
+    const confirmDelete = window.confirm(
+      `Apakah Anda yakin ingin menghapus data suhu untuk ${selectedCow.tag}?\n\nPeringatan: Data yang dihapus tidak dapat dikembalikan!`
+    );
+
+    if (!confirmDelete) {
+      setShowDeleteModal(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(
+        `http://localhost:5001/api/temperature/${cowId}/all`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRawHistory([]);
+      setFilteredHistory([]);
+      setAvgData({ avg_temp: null });
+
+      setShowDeleteModal(false);
+      alert(`✅ Semua data suhu untuk ${selectedCow.tag} berhasil dihapus`);
+
+    } catch (error) {
+      console.error("Gagal menghapus data:", error);
+      alert("❌ Gagal menghapus data. Silakan coba lagi.");
+      setShowDeleteModal(false);
+    }
+  };
+
+  // ==========================
   // 🔹 Label periode waktu
   // ==========================
   const getTimePeriodLabel = () => {
@@ -295,43 +397,77 @@ export default function Suhu() {
   // 🔹 Render halaman utama
   // ==========================
   return (
-    // 🔹 Container utama halaman
-    // Flex column agar seluruh konten tersusun vertikal
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
+      <Navbar title="Suhu" cowId={cowId} cowData={selectedCow} />
 
-      {/* 🔹 Navbar */}
-      {/* Terletak di atas halaman, menampilkan judul dan pilihan sapi */}
-      <Navbar
-        title="Suhu"
-        cowId={cowId}
-        cowData={selectedCow}
-      />
-
-      {/* 🔹 Dropdown pemilihan sapi */}
-      {/* Layout: flex horizontal, di bawah navbar */}
+      {/* Dropdown + Status Labels + Buttons */}
       {cows.length > 0 && (
-        <div className="flex items-center gap-6 px-6 py-4 bg-white border-b border-gray-100">
-          <Dropdown
-            value={cowId}
-            onChange={(val) => setCowId(Number(val))}
-            options={cows.map((c) => ({ id: c.id, name: c.tag }))}
-          />
+        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+          <div className="flex items-center gap-4">
+            <Dropdown
+              value={cowId}
+              onChange={(val) => setCowId(Number(val))}
+              options={cows.map((c) => ({ id: c.id, name: c.tag }))}
+            />
+
+            {avgCategory && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs text-gray-600 font-medium">Rata-rata:</span>
+                <span className={`text-xs font-bold px-2 py-1 rounded ${getCategoryStyles(avgCategory.color)}`}>
+                  {avgCategory.label}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="text-xs text-gray-600 font-medium">Status:</span>
+              <span className={`text-xs font-bold px-2 py-1 rounded ${selectedCow?.checkupStatus === 'checked'
+                  ? 'bg-green-100 text-green-700 border border-green-200'
+                  : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                }`}>
+                {selectedCow?.checkupStatus === 'checked' ? 'Sudah Diperiksa' : 'Belum Diperiksa'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="text-xs text-gray-600 font-medium">Kondisi:</span>
+              <span className={`text-xs font-bold px-2 py-1 rounded ${getCowConditionStyle()}`}>
+                {getCowCondition()}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg border border-blue-200 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span className="text-sm font-medium">Edit Pemeriksaan</span>
+            </button>
+
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span className="text-sm font-medium">Hapus</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* 🔹 Status Sensor */}
-      {/* Layout: box kecil di bawah dropdown */}
       {cows.length > 0 && (
         <div className="px-6 pt-6">
           <SensorStatus sensorStatus={sensorStatus} />
         </div>
       )}
 
-      {/* 🔹 Kontainer utama grafik dan kontrol */}
       <div className="px-6 py-6 space-y-6">
-
-        {/* 🔹 Tombol tambah sapi */}
-        {/* Muncul hanya jika tidak ada sapi dan loading selesai */}
         {cows.length === 0 && !loading && (
           <button className="flex items-center gap-2 px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-all font-medium">
             <PlusIcon />
@@ -339,19 +475,13 @@ export default function Suhu() {
           </button>
         )}
 
-        {/* 🔹 Container Realtime Graphics */}
-        {/* Layout: card dengan border, background putih */}
         <div className="bg-gray-50 rounded-xl border border-gray-200">
-
-          {/* 🔹 Header Grafik */}
-          {/* Layout: flex row, title + filter */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 bg-white border-b border-gray-200 rounded-t-xl">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
               <span className="text-gray-400 cursor-help text-sm">ⓘ</span>
             </div>
 
-            {/* 🔹 Kontrol filter (tanggal, kategori, periode, pagination) */}
             <div className="flex flex-wrap items-center gap-3">
               <DateTimeRangePicker
                 onApply={({ startDate, endDate, startTime, endTime }) => {
@@ -366,7 +496,6 @@ export default function Suhu() {
                 timeCategory={timePeriod}
               />
 
-              {/* Filter kategori suhu */}
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -379,7 +508,6 @@ export default function Suhu() {
                 ))}
               </select>
 
-              {/* Filter periode waktu */}
               <select
                 value={timePeriod}
                 onChange={(e) => setTimePeriod(e.target.value)}
@@ -393,54 +521,50 @@ export default function Suhu() {
                 ))}
               </select>
 
-              {/* Dropdown pagination */}
               {filteredHistory.length > ITEMS_PER_PAGE && (
-                <select
-                  value={dataOffset}
-                  onChange={(e) => handlePageSelect(e.target.value)}
-                  className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-green-400 hover:shadow transition"
-                >
-                  {getPageOptions().map((option, idx) => (
-                    <option key={idx} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Tombol navigasi halaman */}
-              {filteredHistory.length > ITEMS_PER_PAGE && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrevPage}
-                    disabled={dataOffset === 0}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                <>
+                  <select
+                    value={dataOffset}
+                    onChange={(e) => handlePageSelect(e.target.value)}
+                    className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-green-400 hover:shadow transition"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
+                    {getPageOptions().map((option, idx) => (
+                      <option key={idx} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
 
-                  <span className="text-sm text-gray-600 font-medium px-2">
-                    {getCurrentPage()} / {totalPages}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={dataOffset === 0}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
 
-                  <button
-                    onClick={handleNextPage}
-                    disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
+                    <span className="text-sm text-gray-600 font-medium px-2">
+                      {getCurrentPage()} / {totalPages}
+                    </span>
+
+                    <button
+                      onClick={handleNextPage}
+                      disabled={dataOffset + ITEMS_PER_PAGE >= filteredHistory.length}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
 
-          {/* 🔹 Kontainer Chart Realtime */}
-          {/* Layout: flex center, menampilkan loading, grafik, atau pesan kosong */}
           <div className="bg-gray-50 min-h-[400px] flex items-center justify-center rounded-b-xl">
             {loading ? (
               <div className="text-center py-20">
@@ -476,17 +600,10 @@ export default function Suhu() {
           </div>
         </div>
 
-        {/* 🔹 Grid AVERAGE & HISTORY */}
-        {/* Layout: dua kolom di layar besar, satu kolom di mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* AVERAGE */}
-          {/* Card: menampilkan rata-rata suhu, status, jumlah sampel, dan pie chart */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                {/* Icon rata-rata */}
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
@@ -497,7 +614,6 @@ export default function Suhu() {
               </div>
             </div>
 
-            {/* Konten rata-rata */}
             {filteredHistory.length > 0 && avgData.avg_temp ? (
               <div className="text-center py-8">
                 <div className="relative inline-block">
@@ -512,7 +628,6 @@ export default function Suhu() {
                   </div>
                 </div>
 
-                {/* Statistik tambahan: status & jumlah sampel */}
                 <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-1">Status</p>
@@ -526,7 +641,6 @@ export default function Suhu() {
                   </div>
                 </div>
 
-                {/* Pie chart distribusi */}
                 <TemperatureDistribution history={filteredHistory} />
               </div>
             ) : (
@@ -538,12 +652,9 @@ export default function Suhu() {
             )}
           </div>
 
-          {/* HISTORY */}
-          {/* Card: menampilkan daftar data suhu realtime */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                {/* Icon history */}
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -554,7 +665,6 @@ export default function Suhu() {
               </div>
             </div>
 
-            {/* Konten history */}
             {filteredHistory.length > 0 ? (
               <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="space-y-2">
@@ -595,38 +705,145 @@ export default function Suhu() {
         </div>
       </div>
 
-      {/* 🔹 Custom scrollbar & animasi */}
       <style>{`
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f3f4f6;
-        border-radius: 10px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #22c55e;
-        border-radius: 10px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #16a34a;
-      }
-      
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 10px;
         }
-      }
-      
-      .animate-fadeIn {
-        animation: fadeIn 0.3s ease-out;
-      }
-    `}</style>
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #22c55e;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #16a34a;
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
+
+      {/* Modal Edit Pemeriksaan */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b">
+              <h2 className="text-lg font-bold text-gray-800">Edit Status Pemeriksaan</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Pilih status pemeriksaan untuk sapi <span className="font-bold">{selectedCow?.tag}</span>
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleEditCheckup('checked')}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-green-700">Sudah Diperiksa</p>
+                      <p className="text-xs text-green-600">Sapi telah menjalani pemeriksaan</p>
+                    </div>
+                  </div>
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => handleEditCheckup('unchecked')}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-yellow-700">Belum Diperiksa</p>
+                      <p className="text-xs text-yellow-600">Sapi belum menjalani pemeriksaan</p>
+                    </div>
+                  </div>
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Delete */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Hapus Data Suhu</h2>
+              <p className="text-sm text-gray-600 mb-2">
+                Anda akan menghapus <span className="font-bold">SEMUA</span> data suhu untuk:
+              </p>
+              <p className="text-lg font-bold text-red-600 mb-4">
+                {selectedCow?.tag}
+              </p>
+              <p className="text-xs text-gray-500 mb-6">
+                ⚠️ Tindakan ini tidak dapat dibatalkan!
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all"
+                >
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

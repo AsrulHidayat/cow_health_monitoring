@@ -237,3 +237,28 @@ export const getNotifications = async (req, res) => {
     res.status(500).json({ message: "Database error", error: error.message });
   }
 };
+
+// Update status pemeriksaan
+export const updateCheckupStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { checkupStatus } = req.body;
+    const user_id = req.user.id;
+
+    const cow = await Cow.findOne({ where: { id, user_id } });
+    
+    if (!cow) {
+      return res.status(404).json({ message: "Sapi tidak ditemukan" });
+    }
+
+    await cow.update({ checkupStatus });
+    
+    res.json({ 
+      message: "Status pemeriksaan berhasil diupdate",
+      cow 
+    });
+  } catch (error) {
+    console.error("Error updating checkup status:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

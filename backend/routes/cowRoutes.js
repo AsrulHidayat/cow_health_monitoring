@@ -9,6 +9,7 @@ import {
   getNotifications
 } from "../controllers/cowController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
+import { updateCheckupStatus } from "../controllers/cowController.js";
 
 const router = express.Router();
 
@@ -32,5 +33,8 @@ router.get("/:id", verifyToken, getCowById);
 
 // 🔹 Hapus sapi berdasarkan ID (hanya milik user login)
 router.delete("/:id", verifyToken, deleteCow);
+
+// 🔹 Perbarui status checkup sapi
+router.put("/:id/checkup-status", verifyToken, updateCheckupStatus);
 
 export default router;
