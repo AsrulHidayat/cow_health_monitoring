@@ -276,30 +276,34 @@ export default function Suhu() {
 
   // Fungsi untuk menentukan kondisi sapi berdasarkan sensor
   const getCowCondition = () => {
-    if (!selectedCow || !avgData.avg_temp) return "Normal";
+    if (!selectedCow || avgData.avg_temp == null) return "Normal";
 
     let abnormalSensors = 0;
 
-    // 1. Cek sensor suhu
+    // 1. Sensor suhu
     const temp = avgData.avg_temp;
     const isTempAbnormal = temp < 37.5 || temp > 39.5;
     if (isTempAbnormal) abnormalSensors++;
 
-    // 2. Cek sensor detak jantung (placeholder - nanti ambil dari API)
-    const heartRate = selectedCow?.heartRate || 70;
-    const isHeartRateAbnormal = heartRate < 60 || heartRate > 80;
+    // 2. Sensor detak jantung (anggap tidak ada data = abnormal)
+    const heartRate = selectedCow?.heartRate;
+    const isHeartRateAbnormal =
+      heartRate == null || heartRate < 60 || heartRate > 80;
     if (isHeartRateAbnormal) abnormalSensors++;
 
-    // 3. Cek sensor gerakan/aktivitas (placeholder - nanti ambil dari API)
-    const activity = selectedCow?.activity || "active";
-    const isActivityAbnormal = activity === "inactive" || activity === "abnormal";
+    // 3. Sensor aktivitas (anggap tidak ada data = abnormal)
+    const activity = selectedCow?.activity;
+    const isActivityAbnormal =
+      activity == null || activity === "inactive" || activity === "abnormal";
     if (isActivityAbnormal) abnormalSensors++;
 
+    // 4. Tentukan tingkat kondisi
     if (abnormalSensors === 0) return "Normal";
     if (abnormalSensors === 1) return "Perlu Diperhatikan";
     if (abnormalSensors === 2) return "Harus Diperhatikan";
     return "Segera Tindaki";
   };
+
 
   // Fungsi untuk styling kondisi sapi
   const getCowConditionStyle = () => {
@@ -424,8 +428,8 @@ export default function Suhu() {
             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
               <span className="text-xs text-gray-600 font-medium">Status:</span>
               <span className={`text-xs font-bold px-2 py-1 rounded ${selectedCow?.checkupStatus === 'Telah diperiksa'
-                  ? 'bg-green-100 text-green-700 border border-green-200'
-                  : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                ? 'bg-green-100 text-green-700 border border-green-200'
+                : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                 }`}>
                 {selectedCow?.checkupStatus || 'Belum diperiksa'}
               </span>
@@ -743,14 +747,12 @@ export default function Suhu() {
         show={showEditModal}
         onClose={() => setShowEditModal(false)}
         onConfirm={handleEditCheckup}
-        selectedCow={selectedCow}
       />
 
       <DeleteModal
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
-        selectedCow={selectedCow}
       />
     </div>
   );

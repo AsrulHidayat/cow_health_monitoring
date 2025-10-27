@@ -157,7 +157,7 @@ export const getDashboardStats = async (req, res) => {
     // Status pemeriksaan (dalam persentase)
     const totalChecked = healthyCount + unhealthyCount + criticalCount;
     const checkupStatus = {
-      telahDiperiksa: totalCows > 0 ? Math.round((totalChecked / totalCows) * 100) : 0,
+      sudahDiperiksa: totalCows > 0 ? Math.round((totalChecked / totalCows) * 100) : 0,
       sedangDiperiksa: 22, // Contoh statis, bisa disesuaikan
       belumDiperiksa: totalCows > 0 ? Math.round(((totalCows - totalChecked) / totalCows) * 100) : 0,
       sapiAman: 28 // Contoh statis
@@ -252,6 +252,15 @@ export const updateCheckupStatus = async (req, res) => {
     }
 
     cow.checkupStatus = checkupStatus;
+    
+    // Jika status diubah ke "Telah diperiksa", simpan tanggal pemeriksaan
+    if (checkupStatus === 'Telah diperiksa') {
+      cow.checkupDate = new Date();
+    } else {
+      // Jika diubah ke "Belum diperiksa", hapus tanggal pemeriksaan
+      cow.checkupDate = null;
+    }
+    
     await cow.save();
     
     res.json({ 
@@ -263,3 +272,35 @@ export const updateCheckupStatus = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Fungsi helper untuk mengecek dan mereset status pemeriksaan yang sudah kadaluarsa
+export const checkAndResetExpiredCheckups = async (req, res, next) => {
+  try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Update semua sapi yang statusnya "Telah diperiksa" dan sudah lebih dari 1 minggu
+    await Cow.update(
+      { 
+        checkupStatus: 'Belum diperiksa',
+        checkupDate: null 
+      },
+      {
+        where: {
+          checkupStatus: 'Telah diperiksa',
+          checkupDate: {
+            [Op.lte]: oneWeekAgo
+          }
+        }
+      }
+    );
+
+    next();
+  } catch (error) {
+    console.error("Error checking expired checkups:", error);
+    next();
+  }
+};
+
+// Import Op dari Sequelize
+import { Op } from "sequelize";
