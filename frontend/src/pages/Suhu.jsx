@@ -161,12 +161,12 @@ export default function Suhu() {
 
         formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
+            hour   : "2-digit",
+            minute : "2-digit",
+            second : "2-digit",
           }),
           temperature: parseFloat(h.temperature.toFixed(1)),
-          fullDate: h.created_at,
+          fullDate : h.created_at,
         }));
 
         setRawHistory(formatted);
@@ -206,8 +206,8 @@ export default function Suhu() {
       startTime !== "00:00" || endTime !== "23:59"
         ? baseData.filter((item) => {
           const itemDate = new Date(item.fullDate);
-          const hours = itemDate.getHours().toString().padStart(2, "0");
-          const minutes = itemDate.getMinutes().toString().padStart(2, "0");
+          const hours    = itemDate.getHours().toString().padStart(2, "0");
+          const minutes  = itemDate.getMinutes().toString().padStart(2, "0");
           const itemTime = `${hours}:${minutes}`;
           return itemTime >= startTime && itemTime <= endTime;
         })
@@ -487,6 +487,9 @@ export default function Suhu() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                 {/* Icon rata-rata */}
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Rata-rata Suhu</h2>
@@ -541,6 +544,9 @@ export default function Suhu() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
                 {/* Icon history */}
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">History Realtime</h2>
