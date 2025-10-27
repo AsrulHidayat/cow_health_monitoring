@@ -8,7 +8,7 @@ import {
   getDashboardStats,
   getNotifications
 } from "../controllers/cowController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 import { updateCheckupStatus } from "../controllers/cowController.js";
 
 const router = express.Router();

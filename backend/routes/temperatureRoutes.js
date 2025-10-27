@@ -9,7 +9,7 @@ import {
   getTemperatureStats,
 } from "../controllers/temperatureController.js";
 import { deleteAllTemperature } from "../controllers/temperatureController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 
 const router = express.Router();
 

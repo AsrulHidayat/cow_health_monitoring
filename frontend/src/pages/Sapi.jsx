@@ -4,7 +4,7 @@ import { getSensorStatus } from "../services/temperatureService";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 import AddCowModal from "../components/AddCowModal";
-import DashboardPerSapi from "../components/DashboardPerSapi";
+import DashboardPerSapi from "../components/sapi/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";

@@ -20,29 +20,29 @@ const Cow = db.define(
     tag: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      unique: true, // Tambahkan unique constraint jika perlu
+      unique: true,
     },
     umur: {
       type: DataTypes.STRING(30),
-      allowNull: true, // Sesuai dengan database yang membolehkan NULL
+      allowNull: true,
     },
     checkupStatus: {
-      type: DataTypes.STRING(20),
-      allowNull: true,
-      defaultValue: "unchecked", // Nilai default saat membuat sapi baru
+      type: DataTypes.ENUM("Belum diperiksa", "Telah diperiksa"),
+      allowNull: false,
+      defaultValue: "Belum diperiksa", // sesuai default di database
     },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
-      field: "created_at", // Map ke nama kolom di database
+      field: "created_at",
     },
   },
   {
     tableName: "cows",
     timestamps: true,
-    createdAt: "created_at", // Map createdAt ke kolom created_at
-    updatedAt: false, // Tidak ada updatedAt di database
+    createdAt: "created_at",
+    updatedAt: false,
   }
 );
 
