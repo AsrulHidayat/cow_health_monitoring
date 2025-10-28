@@ -1,5 +1,6 @@
 import Cow from "../models/cowModel.js";
 import Temperature from "../models/temperatureModel.js";
+import { Op } from "sequelize";
 
 // Ambil semua sapi milik user yang login (exclude soft deleted)
 export const getCows = async (req, res) => {
@@ -133,6 +134,97 @@ export const deleteCow = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Gagal menghapus sapi:", error);
+    res.status(500).json({ message: "Database error", error: error.message });
+  }
+};
+
+// Ambil semua sapi yang sudah dihapus (soft deleted)
+export const getDeletedCows = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const deletedCows = await Cow.findAll({
+      where: {
+        user_id,
+        is_deleted: true,
+      },
+      order: [["deleted_at", "DESC"]],
+    });
+    res.json(deletedCows);
+  } catch (error) {
+    console.error("❌ Gagal mengambil data sapi yang dihapus:", error);
+    res.status(500).json({ message: "Database error", error: error.message });
+  }
+};
+
+// Restore sapi yang sudah dihapus dengan tag baru
+export const restoreCow = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    // Cari sapi yang akan di-restore
+    const cow = await Cow.findOne({
+      where: {
+        id,
+        user_id,
+        is_deleted: true,
+      },
+    });
+
+    if (!cow) {
+      return res.status(404).json({
+        message: "Sapi tidak ditemukan atau belum dihapus",
+      });
+    }
+
+    // 🔢 Cari nomor ID yang kosong (gap filling)
+    const allCows = await Cow.findAll({
+      where: {
+        user_id,
+        is_deleted: false,
+      },
+      attributes: ["tag"],
+    });
+
+    const existingNumbers = allCows
+      .map((c) => {
+        const match = c.tag.match(/SAPI-(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .sort((a, b) => a - b);
+
+    // Cari nomor terkecil yang belum terpakai
+    let nextNumber = 1;
+    for (const num of existingNumbers) {
+      if (num === nextNumber) {
+        nextNumber++;
+      } else if (num > nextNumber) {
+        break;
+      }
+    }
+
+    const newTag = `SAPI-${String(nextNumber).padStart(3, "0")}`;
+
+    // Update sapi dengan tag baru dan reset soft delete
+    await cow.update({
+      tag: newTag,
+      is_deleted: false,
+      deleted_at: null,
+    });
+
+    console.log(`✅ Sapi berhasil di-restore dengan tag baru: ${newTag}`);
+
+    res.json({
+      message: "Sapi berhasil di-restore",
+      cow: {
+        id: cow.id,
+        tag: newTag,
+        umur: cow.umur,
+        oldTag: req.body.oldTag || "N/A",
+      },
+    });
+  } catch (error) {
+    console.error("❌ Gagal restore sapi:", error);
     res.status(500).json({ message: "Database error", error: error.message });
   }
 };
@@ -328,6 +420,3 @@ export const checkAndResetExpiredCheckups = async (req, res, next) => {
     next();
   }
 };
-
-// Import Op dari Sequelize
-import { Op } from "sequelize";

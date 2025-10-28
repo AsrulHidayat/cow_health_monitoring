@@ -10,6 +10,7 @@ import { Navbar, PlusIcon } from "../components/suhu/SuhuPageComponents";
 import SensorStatus from "../components/suhu/SensorStatus";
 import EditCheckupModal from "../components/suhu/modals/EditCheckupModal";
 import DeleteModal from "../components/suhu/modals/DeleteModal";
+import RestoreModal from "../components/suhu/modals/RestoreModal";
 
 // 🔹 Import seksi komponen
 import HeaderSection from "../components/suhu/sections/HeaderSection";
@@ -50,6 +51,9 @@ export default function Suhu() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [deletedCows, setDeletedCows] = useState([]);
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
   const handleEditCheckup = async (status) => {
     if (!cowId) return;
@@ -111,6 +115,53 @@ export default function Suhu() {
     }
   };
 
+  const handleShowRestoreModal = async () => {
+    setRestoreLoading(true);
+    setShowRestoreModal(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5001/api/cows/deleted", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDeletedCows(response.data);
+    } catch (error) {
+      console.error("Gagal mengambil data sapi yang dihapus:", error);
+      alert("❌ Gagal memuat data sapi yang dihapus. Silakan coba lagi.");
+      setShowRestoreModal(false);
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
+  const handleRestoreCow = async (cowToRestore) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `http://localhost:5001/api/cows/${cowToRestore.id}/restore`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const restoredCow = response.data.cow;
+
+      // Update state
+      setCows(prevCows => [...prevCows, restoredCow].sort((a, b) => a.tag.localeCompare(b.tag)));
+      setDeletedCows(prevDeleted => prevDeleted.filter(cow => cow.id !== cowToRestore.id));
+
+      alert(`✅ Sapi dengan ID ${cowToRestore.id} berhasil di-restore dengan Tag baru: ${restoredCow.tag}`);
+
+      // Jika tidak ada lagi sapi yang dihapus, tutup modal
+      if (deletedCows.length === 1) {
+        setShowRestoreModal(false);
+      }
+
+    } catch (error) {
+      console.error("Gagal me-restore sapi:", error);
+      const errorMsg = error.response?.data?.message || "Gagal me-restore ID sapi. Silakan coba lagi.";
+      alert(`❌ ${errorMsg}`);
+    }
+  };
+
   const getTimePeriodLabel = () => {
     if (dateRange.startDate && dateRange.endDate) {
       try {
@@ -139,6 +190,7 @@ export default function Suhu() {
         selectedCow={selectedCow}
         onEditClick={() => setShowEditModal(true)}
         onDeleteClick={() => setShowDeleteModal(true)}
+        onRestoreClick={handleShowRestoreModal}
         getCowCondition={getCowCondition}
         getCowConditionStyle={getCowConditionStyle}
         getCategoryStyles={getCategoryStyles}
@@ -230,6 +282,14 @@ export default function Suhu() {
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
+      />
+
+      <RestoreModal
+        show={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        deletedCows={deletedCows}
+        onRestore={handleRestoreCow}
+        loading={restoreLoading}
       />
     </div>
   );

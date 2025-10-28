@@ -8,7 +8,9 @@ import {
   getDashboardStats,
   getNotifications,
   updateCheckupStatus,
-  checkAndResetExpiredCheckups
+  checkAndResetExpiredCheckups,
+  getDeletedCows,
+  restoreCow
 } from "../controllers/cowController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 
@@ -22,6 +24,12 @@ router.get("/dashboard/stats", verifyToken, checkAndResetExpiredCheckups, getDas
 
 // 🔹 Dashboard notifications
 router.get("/dashboard/notifications", verifyToken, checkAndResetExpiredCheckups, getNotifications);
+
+// 🔹 Ambil sapi yang sudah dihapus (soft delete)
+router.get("/deleted", verifyToken, getDeletedCows);
+
+// 🔹 Restore sapi yang sudah dihapus
+router.patch("/restore/:id", verifyToken, restoreCow);
 
 // 🔹 Ambil semua sapi milik user yang login
 router.get("/", verifyToken, checkAndResetExpiredCheckups, getCows);
