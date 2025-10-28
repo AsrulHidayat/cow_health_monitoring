@@ -9,18 +9,34 @@ export default function DeleteModal({ show, onClose, onConfirm, selectedCow }) {
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
             <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </div>
 
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Hapus Data Suhu</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Hapus ID Sapi</h2>
           <p className="text-sm text-gray-600 mb-2">
-            Anda akan menghapus <span className="font-bold">SEMUA</span> data suhu untuk:
+            Anda akan menghapus ID sapi <span className="font-bold text-red-600">{selectedCow?.tag}</span>
           </p>
-          <p className="text-lg font-bold text-red-600 mb-4">
-            {selectedCow?.tag}
+          <p className="text-sm text-gray-600 mb-2">
+            Beserta <span className="font-bold">SEMUA data monitoring</span> yang terkait:
           </p>
-          <p className="text-xs text-gray-500 mb-6">
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 w-full">
+            <ul className="text-xs text-left text-red-700 space-y-1">
+              <li>• Data suhu</li>
+              <li>• Data detak jantung</li>
+              <li>• Data aktivitas</li>
+              <li>• Riwayat pemeriksaan</li>
+            </ul>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 w-full">
+            <p className="text-xs text-blue-700 leading-relaxed">
+              ℹ️ Data akan di-backup dan bisa dipulihkan oleh admin jika diperlukan
+            </p>
+          </div>
+
+          <p className="text-xs text-gray-500 mb-6 font-medium">
             ⚠️ Tindakan ini tidak dapat dibatalkan!
           </p>
 

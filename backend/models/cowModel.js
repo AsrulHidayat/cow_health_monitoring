@@ -36,6 +36,17 @@ const Cow = db.define(
       allowNull: true,
       field: "checkup_date",
     },
+    is_deleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_deleted",
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "deleted_at",
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,

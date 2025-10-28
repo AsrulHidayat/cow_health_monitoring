@@ -77,25 +77,36 @@ export default function Suhu() {
 
   const handleDelete = async () => {
     if (!cowId || !selectedCow) return;
-    const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus data suhu untuk ${selectedCow.tag}?\n\nPeringatan: Data yang dihapus tidak dapat dikembalikan!`
-    );
-    if (!confirmDelete) {
-      setShowDeleteModal(false);
-      return;
-    }
+
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(
-        `http://localhost:5001/api/temperature/${cowId}/all`,
+
+      // Hapus ID sapi (soft delete)
+      const response = await axios.delete(
+        `http://localhost:5001/api/cows/${cowId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Data will be cleared automatically by the hook's polling mechanism
+
+      console.log("✅ Response delete:", response.data);
+
+      // Update state: hapus dari daftar cows
+      setCows(prevCows => prevCows.filter(cow => cow.id !== cowId));
+
+      // Reset selected cow
+      const remainingCows = cows.filter(cow => cow.id !== cowId);
+      if (remainingCows.length > 0) {
+        setCowId(remainingCows[0].id);
+      } else {
+        setCowId(null);
+      }
+
       setShowDeleteModal(false);
-      alert(`✅ Semua data suhu untuk ${selectedCow.tag} berhasil dihapus`);
+      alert(`✅ ID Sapi ${selectedCow.tag} berhasil dihapus beserta semua data monitoring terkait`);
+
     } catch (error) {
-      console.error("Gagal menghapus data:", error);
-      alert("❌ Gagal menghapus data. Silakan coba lagi.");
+      console.error("Gagal menghapus sapi:", error);
+      const errorMsg = error.response?.data?.message || "Gagal menghapus ID sapi. Silakan coba lagi.";
+      alert(`❌ ${errorMsg}`);
       setShowDeleteModal(false);
     }
   };
