@@ -162,6 +162,8 @@ export const restoreCow = async (req, res) => {
     const { id } = req.params;
     const user_id = req.user.id;
 
+    console.log(`🔄 Memproses restore untuk sapi ID: ${id}, User ID: ${user_id}`);
+
     // Cari sapi yang akan di-restore
     const cow = await Cow.findOne({
       where: {
@@ -172,10 +174,13 @@ export const restoreCow = async (req, res) => {
     });
 
     if (!cow) {
+      console.log(`❌ Sapi tidak ditemukan atau belum dihapus`);
       return res.status(404).json({
         message: "Sapi tidak ditemukan atau belum dihapus",
       });
     }
+
+    console.log(`✅ Sapi ditemukan: ${cow.tag}`);
 
     // 🔢 Cari nomor ID yang kosong (gap filling)
     const allCows = await Cow.findAll({
@@ -204,6 +209,9 @@ export const restoreCow = async (req, res) => {
     }
 
     const newTag = `SAPI-${String(nextNumber).padStart(3, "0")}`;
+    const oldTag = cow.tag;
+
+    console.log(`🔄 Mengubah tag dari ${oldTag} menjadi ${newTag}`);
 
     // Update sapi dengan tag baru dan reset soft delete
     await cow.update({
@@ -220,12 +228,19 @@ export const restoreCow = async (req, res) => {
         id: cow.id,
         tag: newTag,
         umur: cow.umur,
-        oldTag: req.body.oldTag || "N/A",
+        oldTag: oldTag,
+        user_id: cow.user_id,
+        checkupStatus: cow.checkupStatus,
+        checkupDate: cow.checkupDate,
+        created_at: cow.created_at
       },
     });
   } catch (error) {
     console.error("❌ Gagal restore sapi:", error);
-    res.status(500).json({ message: "Database error", error: error.message });
+    res.status(500).json({ 
+      message: "Database error", 
+      error: error.message 
+    });
   }
 };
 

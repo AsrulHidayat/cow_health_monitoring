@@ -28,8 +28,8 @@ router.get("/dashboard/notifications", verifyToken, checkAndResetExpiredCheckups
 // 🔹 Ambil sapi yang sudah dihapus (soft delete)
 router.get("/deleted", verifyToken, getDeletedCows);
 
-// 🔹 Restore sapi yang sudah dihapus
-router.patch("/restore/:id", verifyToken, restoreCow);
+// 🔹 Restore sapi yang sudah dihapus 
+router.put("/restore/:id", verifyToken, restoreCow);
 
 // 🔹 Ambil semua sapi milik user yang login
 router.get("/", verifyToken, checkAndResetExpiredCheckups, getCows);

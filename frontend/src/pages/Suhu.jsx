@@ -136,19 +136,49 @@ export default function Suhu() {
   const handleRestoreCow = async (cowToRestore) => {
     try {
       const token = localStorage.getItem("token");
+
+      console.log(`🔄 Mengirim request restore untuk sapi ID: ${cowToRestore.id}`);
+
+      // ✅ Perbaikan: Gunakan endpoint yang benar sesuai backend
       const response = await axios.put(
-        `http://localhost:5001/api/cows/${cowToRestore.id}/restore`,
+        `http://localhost:5001/api/cows/restore/${cowToRestore.id}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
+
+      console.log("✅ Response restore:", response.data);
 
       const restoredCow = response.data.cow;
 
-      // Update state
-      setCows(prevCows => [...prevCows, restoredCow].sort((a, b) => a.tag.localeCompare(b.tag)));
-      setDeletedCows(prevDeleted => prevDeleted.filter(cow => cow.id !== cowToRestore.id));
+      // Update state: Tambahkan sapi yang di-restore ke daftar aktif
+      setCows(prevCows => {
+        const updated = [...prevCows, {
+          id: restoredCow.id,
+          tag: restoredCow.tag,
+          umur: restoredCow.umur,
+          user_id: restoredCow.user_id,
+          checkupStatus: restoredCow.checkupStatus || 'Belum diperiksa',
+          checkupDate: restoredCow.checkupDate,
+          created_at: restoredCow.created_at,
+          is_deleted: false,
+          deleted_at: null
+        }];
 
-      alert(`✅ Sapi dengan ID ${cowToRestore.id} berhasil di-restore dengan Tag baru: ${restoredCow.tag}`);
+        // Urutkan berdasarkan tag
+        return updated.sort((a, b) => a.tag.localeCompare(b.tag));
+      });
+
+      // Hapus dari daftar deleted
+      setDeletedCows(prevDeleted =>
+        prevDeleted.filter(cow => cow.id !== cowToRestore.id)
+      );
+
+      alert(`✅ Sapi berhasil di-restore!\n\nTag Lama: ${restoredCow.oldTag || cowToRestore.tag}\nTag Baru: ${restoredCow.tag}\n\nSemua data monitoring tetap tersimpan.`);
 
       // Jika tidak ada lagi sapi yang dihapus, tutup modal
       if (deletedCows.length === 1) {
@@ -156,8 +186,16 @@ export default function Suhu() {
       }
 
     } catch (error) {
-      console.error("Gagal me-restore sapi:", error);
-      const errorMsg = error.response?.data?.message || "Gagal me-restore ID sapi. Silakan coba lagi.";
+      console.error("❌ Gagal me-restore sapi:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      const errorMsg = error.response?.data?.message ||
+        error.message ||
+        "Gagal me-restore ID sapi. Silakan coba lagi.";
       alert(`❌ ${errorMsg}`);
     }
   };
