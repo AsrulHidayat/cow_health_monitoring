@@ -1,211 +1,334 @@
-import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import Dropdown from "../components/Dropdown";
-import ChartRealtime from "../components/ChartRealtime";
-import SensorStatus from "../components/SensorStatus";
+import { useState } from "react";
+import axios from "axios";
 
-import { getHistory, getAverage, getSensorStatus, getAllCows } from "../services/temperatureService";
-import cowIcon from "../assets/cow.png";
-import plusIcon from "../assets/plus-icon.svg";
+// 🔹 Import hooks
+import { useTemperatureData } from "../components/suhu/hooks/useTemperatureData";
 
-const categorizeTemperature = (temp) => {
-  if (temp < 36.5) return "Hipotermia";
-  if (temp >= 36.5 && temp <= 39) return "Normal";
-  if (temp > 39 && temp <= 40) return "Demam Ringan";
-  if (temp > 40 && temp <= 41) return "Demam Tinggi";
-  return "Kritis";
-};
+// 🔹 Import utilitas dan komponen UI
+import { TIME_FILTERS, categorizeTemperature, getCategoryStyles } from "../components/suhu/utils/SuhuUtils";
+import { Navbar, PlusIcon } from "../components/suhu/SuhuPageComponents";
+import SensorStatus from "../components/suhu/SensorStatus";
+import EditCheckupModal from "../components/suhu/modals/EditCheckupModal";
+import DeleteModal from "../components/suhu/modals/DeleteModal";
+import RestoreModal from "../components/suhu/modals/RestoreModal";
+
+// 🔹 Import seksi komponen
+import HeaderSection from "../components/suhu/sections/HeaderSection";
+import RealtimeChartCard from "../components/suhu/sections/RealtimeChartCard";
+import AverageCard from "../components/suhu/sections/AverageCard";
+import HistoryCard from "../components/suhu/sections/HistoryCard";
 
 export default function Suhu() {
-  const [cows, setCows] = useState([]);
-  const [cowId, setCowId] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [avgData, setAvgData] = useState({ avg_temp: null });
-  const [sensorStatus, setSensorStatus] = useState("checking");
-  const [loading, setLoading] = useState(true);
+  const {
+    cows,
+    cowId,
+    setCowId,
+    selectedCow,
+    loading,
+    sensorStatus,
+    avgData,
+    filteredHistory,
+    displayedData,
+    dateRange,
+    setDateRange,
+    appliedTimeRange,
+    setAppliedTimeRange,
+    datePickerStats,
+    timePeriod,
+    setTimePeriod,
+    filterCategory,
+    setFilterCategory,
+    dataOffset,
+    totalPages,
+    handlePrevPage,
+    handleNextPage,
+    handlePageSelect,
+    getCowCondition,
+    getCowConditionStyle,
+    ITEMS_PER_PAGE,
+    setCows
+  } = useTemperatureData();
 
-  // Ambil semua sapi dari database
-  useEffect(() => {
-    const fetchCows = async () => {
-      try {
-        setLoading(true);
-        const allCows = await getAllCows();
-        setCows(allCows);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [deletedCows, setDeletedCows] = useState([]);
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
-        if (allCows.length > 0) setCowId(allCows[0].id);
-      } catch (err) {
-        console.error("Gagal mengambil data sapi:", err);
-        setCows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCows();
-  }, []);
-
-  // Polling data sensor hanya jika ada cowId
-  useEffect(() => {
-    if (!cowId) {
-      setHistory([]);
-      setAvgData({ avg_temp: null });
-      setSensorStatus("offline");
-      return;
+  const handleEditCheckup = async (status) => {
+    if (!cowId) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5001/api/cows/${cowId}/checkup-status`,
+        { checkupStatus: status },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCows(prevCows =>
+        prevCows.map(cow =>
+          cow.id === cowId
+            ? { ...cow, checkupStatus: status }
+            : cow
+        )
+      );
+      setShowEditModal(false);
+      alert(`✅ Status pemeriksaan berhasil diubah menjadi "${status}"`);
+    } catch (error) {
+      console.error("Gagal update status pemeriksaan:", error);
+      alert("❌ Gagal mengubah status pemeriksaan. Silakan coba lagi.");
     }
+  };
 
-    const pollData = async () => {
-      try {
-        const statusResult = await getSensorStatus(cowId);
-        setSensorStatus(statusResult.status);
+  const handleDelete = async () => {
+    if (!cowId || !selectedCow) return;
 
-        if (statusResult.status !== "online") {
-          setHistory([]);
-          setAvgData({ avg_temp: null });
-          return;
-        }
+    try {
+      const token = localStorage.getItem("token");
 
-        const hist = await getHistory(cowId, 20);
-        const avg = await getAverage(cowId, 60);
+      // Hapus ID sapi (soft delete)
+      const response = await axios.delete(
+        `http://localhost:5001/api/cows/${cowId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        const formatted = hist.map((h) => ({
-          time: new Date(h.created_at).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          temperature: h.temperature,
-        }));
+      console.log("✅ Response delete:", response.data);
 
-        setHistory(formatted.reverse());
-        setAvgData(avg && avg.avg_temp ? avg : { avg_temp: null });
-      } catch (err) {
-        console.error("Gagal melakukan polling data:", err);
-        setSensorStatus("offline");
-        setHistory([]);
-        setAvgData({ avg_temp: null });
+      // Update state: hapus dari daftar cows
+      setCows(prevCows => prevCows.filter(cow => cow.id !== cowId));
+
+      // Reset selected cow
+      const remainingCows = cows.filter(cow => cow.id !== cowId);
+      if (remainingCows.length > 0) {
+        setCowId(remainingCows[0].id);
+      } else {
+        setCowId(null);
       }
-    };
 
-    pollData();
-    const interval = setInterval(pollData, 5000);
-    return () => clearInterval(interval);
-  }, [cowId]);
+      setShowDeleteModal(false);
+      alert(`✅ ID Sapi ${selectedCow.tag} berhasil dihapus beserta semua data monitoring terkait`);
+
+    } catch (error) {
+      console.error("Gagal menghapus sapi:", error);
+      const errorMsg = error.response?.data?.message || "Gagal menghapus ID sapi. Silakan coba lagi.";
+      alert(`❌ ${errorMsg}`);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleShowRestoreModal = async () => {
+    setRestoreLoading(true);
+    setShowRestoreModal(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5001/api/cows/deleted", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDeletedCows(response.data);
+    } catch (error) {
+      console.error("Gagal mengambil data sapi yang dihapus:", error);
+      alert("❌ Gagal memuat data sapi yang dihapus. Silakan coba lagi.");
+      setShowRestoreModal(false);
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
+  const handleRestoreCow = async (cowToRestore) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      console.log(`🔄 Mengirim request restore untuk sapi ID: ${cowToRestore.id}`);
+
+      // ✅ Perbaikan: Gunakan endpoint yang benar sesuai backend
+      const response = await axios.put(
+        `http://localhost:5001/api/cows/restore/${cowToRestore.id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log("✅ Response restore:", response.data);
+
+      const restoredCow = response.data.cow;
+
+      // Update state: Tambahkan sapi yang di-restore ke daftar aktif
+      setCows(prevCows => {
+        const updated = [...prevCows, {
+          id: restoredCow.id,
+          tag: restoredCow.tag,
+          umur: restoredCow.umur,
+          user_id: restoredCow.user_id,
+          checkupStatus: restoredCow.checkupStatus || 'Belum diperiksa',
+          checkupDate: restoredCow.checkupDate,
+          created_at: restoredCow.created_at,
+          is_deleted: false,
+          deleted_at: null
+        }];
+
+        // Urutkan berdasarkan tag
+        return updated.sort((a, b) => a.tag.localeCompare(b.tag));
+      });
+
+      // Hapus dari daftar deleted
+      setDeletedCows(prevDeleted =>
+        prevDeleted.filter(cow => cow.id !== cowToRestore.id)
+      );
+
+      alert(`✅ Sapi berhasil di-restore!\n\nTag Lama: ${restoredCow.oldTag || cowToRestore.tag}\nTag Baru: ${restoredCow.tag}\n\nSemua data monitoring tetap tersimpan.`);
+
+      // Jika tidak ada lagi sapi yang dihapus, tutup modal
+      if (deletedCows.length === 1) {
+        setShowRestoreModal(false);
+      }
+
+    } catch (error) {
+      console.error("❌ Gagal me-restore sapi:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      const errorMsg = error.response?.data?.message ||
+        error.message ||
+        "Gagal me-restore ID sapi. Silakan coba lagi.";
+      alert(`❌ ${errorMsg}`);
+    }
+  };
+
+  const getTimePeriodLabel = () => {
+    if (dateRange.startDate && dateRange.endDate) {
+      try {
+        const start = new Date(dateRange.startDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+        const end = new Date(dateRange.endDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+        return `${start} - ${end}`;
+      } catch {
+        return "Rentang Kustom";
+      }
+    }
+    const filter = Object.values(TIME_FILTERS).find((f) => f.value === timePeriod);
+    return filter ? filter.label : "Data";
+  };
+
+  const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-white">
-      <Navbar title="Detak Jantung" />
+    <div className="flex flex-col w-full min-h-screen bg-gray-50">
+      <Navbar title="DetakJantung" cowId={cowId} cowData={selectedCow} />
 
-      {/* Dropdown hanya tampil jika ada sapi */}
-      {cows.length > 0 && (
-        <div className="flex items-center gap-6 px-6 py-4">
-          <Dropdown
-            value={cowId}
-            onChange={(val) => setCowId(Number(val))}
-            options={cows.map((c) => ({ id: c.id, name: c.tag }))}
-          />
-        </div>
-      )}
+      <HeaderSection
+        cows={cows}
+        cowId={cowId}
+        onCowChange={setCowId}
+        avgCategory={avgCategory}
+        selectedCow={selectedCow}
+        onEditClick={() => setShowEditModal(true)}
+        onDeleteClick={() => setShowDeleteModal(true)}
+        onRestoreClick={handleShowRestoreModal}
+        getCowCondition={getCowCondition}
+        getCowConditionStyle={getCowConditionStyle}
+        getCategoryStyles={getCategoryStyles}
+      />
 
-      {/* SensorStatus hanya tampil jika ada sapi */}
       {cows.length > 0 && (
-        <div className="px-6">
+        <div className="px-6 pt-6">
           <SensorStatus sensorStatus={sensorStatus} />
         </div>
       )}
 
-      {/* Chart Realtime / Placeholder */}
-      <div className="px-6 py-4">
-        {/* Tombol Tambah Sapi hanya tampil jika tidak ada sapi */}
+      <div className="px-6 py-6 space-y-6">
         {cows.length === 0 && !loading && (
-          <div className="flex pb-6 pt-2">
-            <button className="flex items-center gap-2 px-4 py-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition">
-              <img src={plusIcon} alt="Tambah Sapi" className="w-5 h-5" />
-              <span className="text-blue-600 font-medium">Tambah Sapi</span>
-            </button>
-          </div>
+          <button className="flex items-center gap-2 px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-all font-medium">
+            <PlusIcon />
+            <span>Tambah Sapi</span>
+          </button>
         )}
 
-      {/* Header Realtime Graphics */}
-      <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1">
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
-            <span className="text-gray-400 cursor-help text-sm">ⓘ</span>
-          </div>
-          <select className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition">
-            <option>Per Menit</option>
-            <option>Per Jam</option>
-          </select>
+        <RealtimeChartCard
+          loading={loading}
+          cows={cows}
+          displayedData={displayedData}
+          filteredHistory={filteredHistory}
+          dataOffset={dataOffset}
+          ITEMS_PER_PAGE={ITEMS_PER_PAGE}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          appliedTimeRange={appliedTimeRange}
+          setAppliedTimeRange={setAppliedTimeRange}
+          datePickerStats={datePickerStats}
+          timePeriod={timePeriod}
+          setTimePeriod={setTimePeriod}
+          filterCategory={filterCategory}
+          setFilterCategory={setFilterCategory}
+          totalPages={totalPages}
+          handlePageSelect={handlePageSelect}
+          handlePrevPage={handlePrevPage}
+          handleNextPage={handleNextPage}
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AverageCard
+            filteredHistory={filteredHistory}
+            avgData={avgData}
+            displayedData={displayedData}
+            getTimePeriodLabel={getTimePeriodLabel}
+          />
+          <HistoryCard
+            filteredHistory={filteredHistory}
+            displayedData={displayedData}
+            dataOffset={dataOffset}
+            getTimePeriodLabel={getTimePeriodLabel}
+          />
         </div>
       </div>
 
-      {/* Konten Grafik */}
-      {loading ? (
-        <div className="flex flex-1 items-center justify-center text-gray-400 text-lg py-24">
-          Memuat data sapi...
-        </div>
-      ) : cows.length > 0 ? (
-        history.length > 0 ? (
-          <ChartRealtime data={history} />
-        ) : (
-          <div className="flex-1 bg-gray-50 rounded-xl flex flex-col items-center justify-center text-center p-24 shadow">
-            <img src={cowIcon} alt="No Data" className="w-20 h-20 mb-4 opacity-80" />
-            <p className="text-gray-700 font-medium">Belum ada data suhu untuk sapi ini.</p>
-          </div>
-        )
-      ) : (
-        <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 items-center justify-center text-center p-24">
-          <img src={cowIcon} alt="No Sapi" className="w-24 h-24 mb-4 opacity-90" />
-          <p className="text-gray-700 font-medium">Belum ada ID sapi yang terdaftar.</p>
-          <p className="text-gray-400 text-sm">
-            Tambahkan data sapi terlebih dahulu untuk memulai monitoring.
-          </p>
-        </div>
-      )}
-    </div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f3f4f6;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #22c55e;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #16a34a;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
 
+      <EditCheckupModal
+        show={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onConfirm={handleEditCheckup}
+      />
 
-      {/* Average & History */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 py-4">
-        {/* Average Suhu */}
-        <div className="bg-white shadow rounded-xl p-4 flex flex-col items-center justify-center">
-          <h2 className="text-lg font-semibold mb-2">Rata-rata Suhu</h2>
-          {history.length > 0 && avgData.avg_temp ? (
-            <p className="text-2xl font-bold">
-              {avgData.avg_temp.toFixed(2)}°C
-              <span className="ml-2 text-green-600">
-                ({categorizeTemperature(avgData.avg_temp)})
-              </span>
-            </p>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-10 text-gray-400">
-              <img src={cowIcon} alt="No Avg" className="w-16 h-16 mb-3 opacity-70" />
-              <p>Belum ada data rata-rata suhu</p>
-            </div>
-          )}
-        </div>
+      <DeleteModal
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+      />
 
-        {/* History Realtime */}
-        <div className="bg-white shadow rounded-xl p-4 flex flex-col items-center justify-center">
-          <h2 className="text-lg font-semibold mb-2">History Realtime</h2>
-          {history.length > 0 ? (
-            <ul className="max-h-64 overflow-y-auto w-full">
-              {history.map((h, i) => (
-                <li key={i} className="flex justify-between border-b py-2 text-sm px-2">
-                  <span>{h.time}</span>
-                  <span>{h.temperature}°C</span>
-                  <span>{categorizeTemperature(h.temperature)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-10 text-gray-400">
-              <img src={cowIcon} alt="No History" className="w-16 h-16 mb-3 opacity-70" />
-              <p>Belum ada data riwayat suhu sapi</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <RestoreModal
+        show={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        deletedCows={deletedCows}
+        onRestore={handleRestoreCow}
+        loading={restoreLoading}
+      />
     </div>
   );
 }

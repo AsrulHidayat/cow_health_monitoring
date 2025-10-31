@@ -2,14 +2,14 @@ import React, { useState, useEffect } from "react";
 import { getSensorStatus } from "../services/temperatureService";
 
 import axios from "axios";
-import Navbar from "../components/Navbar";
-import AddCowModal from "../components/AddCowModal";
-import DashboardPerSapi from "../components/sapi/DashboardPerSapi";
+import Navbar from "../components/layout/Navbar";
+import AddCowModal from "../components/dashboard/AddCowModal";
+import DashboardPerSapi from "../components/dashboard/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
-import SensorStatus from "../components/SensorStatus";
-import CowDropdown from "../components/Dropdown";
+import SensorStatus from "../components/layout/SensorStatus";
+import CowDropdown from "../components/layout/Dropdown";
 import "flowbite";
 
 export default function Sapi() {

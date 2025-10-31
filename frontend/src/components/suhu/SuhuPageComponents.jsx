@@ -12,7 +12,7 @@ export const PlusIcon = () => (
 );
 
 
-export { default as Navbar } from "../Navbar";
+export { default as Navbar } from "../layout/Navbar";
 
 export const Dropdown = ({ options, value, onChange }) => (
   <select
