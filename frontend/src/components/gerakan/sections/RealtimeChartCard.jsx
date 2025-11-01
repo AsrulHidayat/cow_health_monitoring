@@ -1,7 +1,7 @@
 
 import React from 'react';
 import DateTimeRangePicker from '../../suhu/charts/DateTimeRangePicker';
-import ChartRealtime from '../../suhu/charts/ChartRealtime';
+import LineChartGerakan from '../charts/LineChartGerakan';
 import { TIME_FILTERS, ACTIVITY_CATEGORIES } from '../utils/activityUtils';
 import { CowIcon, PlusIcon } from '../GerakanPageComponents';
 
@@ -152,7 +152,7 @@ const RealtimeChartCard = ({
         ) : cows.length > 0 ? (
           displayedData.length > 0 ? (
             <div className="w-full h-full p-6">
-              <ChartRealtime data={displayedData} />
+              <LineChartGerakan data={displayedData} />
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-500">
