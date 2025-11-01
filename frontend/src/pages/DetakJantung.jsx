@@ -218,7 +218,7 @@ export default function Suhu() {
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
-      <Navbar title="DetakJantung" cowId={cowId} cowData={selectedCow} />
+      <Navbar title="Detak Jantung" cowId={cowId} cowData={selectedCow} />
 
       <HeaderSection
         cows={cows}

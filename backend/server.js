@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import { checkConnection } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
-import cowRoutes from "./routes/cowRoutes.js"; // ✅ tambahkan ini
+import cowRoutes from "./routes/cowRoutes.js"; 
+import movementRoutes from "./routes/movementRoutes.js"
 
 dotenv.config();
 
@@ -31,7 +32,8 @@ app.get("/api/health", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/temperature", temperatureRoutes);
-app.use("/api/cows", cowRoutes); // ✅ route sapi berbasis Sequelize
+app.use("/api/cows", cowRoutes); 
+app.use("/api/movement", movementRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

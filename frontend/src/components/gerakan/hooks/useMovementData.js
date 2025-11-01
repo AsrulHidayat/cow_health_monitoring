@@ -1,25 +1,22 @@
+
 import { useState, useEffect, useRef } from "react";
-import {
-  getHistory,
-  getSensorStatus,
-  getAllCows,
-  getTemperatureStats,
-} from "../../../services/temperatureService";
+import { getAllCows } from "../../../services/temperatureService";
+import { getHistoryMovement, getMovementSensorStatus, getMovementStats } from "../../../services/movementService";
 import {
   TIME_FILTERS,
   filterDataByTimePeriod,
-  categorizeTemperature,
-} from "../utils/SuhuUtils";
+  categorizeMovement,
+} from "../utils/MovementUtils";
 
 const ITEMS_PER_PAGE = 25;
 
-export const useTemperatureData = () => {
+export const useMovementData = () => {
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
   const [rawHistory, setRawHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [displayedData, setDisplayedData] = useState([]);
-  const [avgData, setAvgData] = useState({ avg_temp: null });
+  const [avgData, setAvgData] = useState({ avg_movement: null });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
@@ -38,7 +35,7 @@ export const useTemperatureData = () => {
   const [filterCategory, setFilterCategory] = useState("ALL");
 
   const pollingRef = useRef(null);
-  const selectedCow = cows.find((cow) => cow.id === cowId);
+  const selectedCow = cows.find((c) => c.id === cowId);
 
   useEffect(() => {
     const fetchCows = async () => {
@@ -62,7 +59,7 @@ export const useTemperatureData = () => {
 
     const fetchStats = async () => {
       try {
-        const stats = await getTemperatureStats(cowId);
+        const stats = await getMovementStats(cowId);
         setDatePickerStats(stats);
       } catch (err) {
         console.error("Gagal mengambil stats data:", err);
@@ -75,7 +72,7 @@ export const useTemperatureData = () => {
     if (!cowId) {
       setRawHistory([]);
       setFilteredHistory([]);
-      setAvgData({ avg_temp: null });
+      setAvgData({ avg_movement: null });
       setSensorStatus("offline");
       return;
     }
@@ -88,14 +85,14 @@ export const useTemperatureData = () => {
       try {
         if (pollingRef.current !== currentPollId) return;
 
-        const statusResult = await getSensorStatus(cowId);
+        const statusResult = await getMovementSensorStatus(cowId);
         if (pollingRef.current !== currentPollId) return;
         setSensorStatus(statusResult.status);
 
         if (statusResult.status !== "online" && !isDateRangeMode) {
           setRawHistory([]);
           setFilteredHistory([]);
-          setAvgData({ avg_temp: null });
+          setAvgData({ avg_movement: null });
           return;
         }
 
@@ -112,7 +109,7 @@ export const useTemperatureData = () => {
         let formatted = [];
 
         if (!start || !end) {
-          const histResponse = await getHistory(cowId, limit, 0);
+          const histResponse = await getHistoryMovement(cowId, limit, 0);
           if (pollingRef.current !== currentPollId) return;
 
           formatted = histResponse.data.map((h) => ({
@@ -121,7 +118,7 @@ export const useTemperatureData = () => {
               minute: "2-digit",
               second: "2-digit",
             }),
-            temperature: parseFloat(h.temperature.toFixed(1)),
+            movement: parseFloat(h.movement.toFixed(1)),
             fullDate: h.created_at,
           }));
 
@@ -135,7 +132,7 @@ export const useTemperatureData = () => {
           end = endDateObj.toISOString().split("T")[0];
         }
 
-        const histResponse = await getHistory(cowId, limit, 0, start, end);
+        const histResponse = await getHistoryMovement(cowId, limit, 0, start, end);
         if (pollingRef.current !== currentPollId) return;
 
         formatted = histResponse.data.map((h) => ({
@@ -144,7 +141,7 @@ export const useTemperatureData = () => {
             minute: "2-digit",
             second: "2-digit",
           }),
-          temperature: parseFloat(h.temperature.toFixed(1)),
+          movement: parseFloat(h.movement.toFixed(1)),
           fullDate: h.created_at,
         }));
 
@@ -155,7 +152,7 @@ export const useTemperatureData = () => {
           setSensorStatus("offline");
           setRawHistory([]);
           setFilteredHistory([]);
-          setAvgData({ avg_temp: null });
+          setAvgData({ avg_movement: null });
         }
       }
     };
@@ -198,7 +195,7 @@ export const useTemperatureData = () => {
       filterCategory === "ALL"
         ? timeFilteredData
         : timeFilteredData.filter((item) => {
-            const categoryInfo = categorizeTemperature(item.temperature);
+            const categoryInfo = categorizeMovement(item.movement);
             return categoryInfo.value === filterCategory;
           });
 
@@ -207,12 +204,12 @@ export const useTemperatureData = () => {
 
     if (categoryFilteredData.length > 0) {
       const sum = categoryFilteredData.reduce(
-        (acc, item) => acc + item.temperature,
+        (acc, item) => acc + item.movement,
         0
       );
-      setAvgData({ avg_temp: sum / categoryFilteredData.length });
+      setAvgData({ avg_movement: sum / categoryFilteredData.length });
     } else {
-      setAvgData({ avg_temp: null });
+      setAvgData({ avg_movement: null });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
@@ -245,15 +242,15 @@ export const useTemperatureData = () => {
   const handlePageSelect = (val) => setDataOffset(Number(val));
 
   const getCowCondition = () => {
-    if (!selectedCow || avgData.avg_temp == null) return "Normal";
+    if (!selectedCow || avgData.avg_movement == null) return "Normal";
     let abnormalSensors = 0;
-    const temp = avgData.avg_temp;
-    if (temp < 37.5 || temp > 39.5) abnormalSensors++;
+    const movement = avgData.avg_movement;
+    if (movement < 10 || movement > 90) abnormalSensors++; // Example thresholds
     const heartRate = selectedCow?.heartRate;
     if (heartRate == null || heartRate < 60 || heartRate > 80)
       abnormalSensors++;
-    const activity = selectedCow?.activity;
-    if (activity == null || activity === "inactive" || activity === "abnormal")
+    const temp = selectedCow?.temperature;
+    if (temp == null || temp < 37.5 || temp > 39.5)
       abnormalSensors++;
     if (abnormalSensors === 0) return "Normal";
     if (abnormalSensors === 1) return "Perlu Diperhatikan";

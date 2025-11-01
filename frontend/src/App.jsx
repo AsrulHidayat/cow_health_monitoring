@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
@@ -18,7 +17,7 @@ import DetakJantung from "./pages/DetakJantung";
 import Gerakan from "./pages/Gerakan";
 
 // Components
-import Sidebar from "./components/Sidebar";
+import Sidebar from "./components/layout/Sidebar";
 
 /**
  * ProtectedRoute: Hanya render children jika user login
@@ -70,31 +69,36 @@ const MainLayout = () => {
  */
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <Routes>
+      {/* Public routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
-        {/* Protected routes */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/suhu" element={<Suhu />} />
-          <Route path="/sapi" element={<Sapi />} />
-          <Route path="/detak-jantung" element={<DetakJantung />} />
-          <Route path="/gerakan" element={<Gerakan />} />
-        </Route>
+      {/* Protected routes */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/suhu" element={<Suhu />} />
+        <Route path="/sapi" element={<Sapi />} />
+        <Route path="/detak-jantung" element={<DetakJantung />} />
+        <Route path="/gerakan" element={<Gerakan />} />
+      </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<h1 className="text-center mt-20 text-2xl font-semibold">404 | Halaman Tidak Ditemukan</h1>} />
-      </Routes>
-    </Router>
+      {/* Fallback */}
+      <Route
+        path="*"
+        element={
+          <h1 className="text-center mt-20 text-2xl font-semibold">
+            404 | Halaman Tidak Ditemukan
+          </h1>
+        }
+      />
+    </Routes>
   );
 }

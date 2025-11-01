@@ -1,5 +1,5 @@
 import { useState } from "react";
-import logo from "../assets/logo.png";
+import logo from "../../assets/logo.png";
 import { LayoutDashboard, Home, Thermometer, HeartPulse, Activity, LogOut, XCircle } from "lucide-react";
 
 const menus = [

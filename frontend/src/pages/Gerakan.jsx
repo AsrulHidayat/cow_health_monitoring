@@ -1,24 +1,25 @@
+
 import { useState } from "react";
 import axios from "axios";
 
 // 🔹 Import hooks
-import { useTemperatureData } from "../components/suhu/hooks/useTemperatureData";
+import { useMovementData } from "../components/gerakan/hooks/useMovementData";
 
 // 🔹 Import utilitas dan komponen UI
-import { TIME_FILTERS, categorizeTemperature, getCategoryStyles } from "../components/suhu/utils/SuhuUtils";
-import { Navbar, PlusIcon } from "../components/suhu/SuhuPageComponents";
-import SensorStatus from "../components/suhu/SensorStatus";
-import EditCheckupModal from "../components/suhu/modals/EditCheckupModal";
-import DeleteModal from "../components/suhu/modals/DeleteModal";
-import RestoreModal from "../components/suhu/modals/RestoreModal";
+import { TIME_FILTERS, categorizeMovement, getCategoryStyles } from "../components/gerakan/utils/MovementUtils";
+import { Navbar, PlusIcon } from "../components/gerakan/GerakanPageComponents";
+import SensorStatus from "../components/gerakan/SensorStatus";
+import EditCheckupModal from "../components/gerakan/modals/EditCheckupModal";
+import DeleteModal from "../components/gerakan/modals/DeleteModal";
+import RestoreModal from "../components/gerakan/modals/RestoreModal";
 
 // 🔹 Import seksi komponen
-import HeaderSection from "../components/suhu/sections/HeaderSection";
-import RealtimeChartCard from "../components/suhu/sections/RealtimeChartCard";
-import AverageCard from "../components/suhu/sections/AverageCard";
-import HistoryCard from "../components/suhu/sections/HistoryCard";
+import HeaderSection from "../components/gerakan/sections/HeaderSection";
+import RealtimeChartCard from "../components/gerakan/sections/RealtimeChartCard";
+import AverageCard from "../components/gerakan/sections/AverageCard";
+import HistoryCard from "../components/gerakan/sections/HistoryCard";
 
-export default function Suhu() {
+export default function Gerakan() {
   const {
     cows,
     cowId,
@@ -47,7 +48,7 @@ export default function Suhu() {
     getCowConditionStyle,
     ITEMS_PER_PAGE,
     setCows
-  } = useTemperatureData();
+  } = useMovementData();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -214,11 +215,11 @@ export default function Suhu() {
     return filter ? filter.label : "Data";
   };
 
-  const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
+  const avgCategory = avgData.avg_movement ? categorizeMovement(avgData.avg_movement) : null;
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
-      <Navbar title="Suhu" cowId={cowId} cowData={selectedCow} />
+      <Navbar title="Gerakan" cowId={cowId} cowData={selectedCow} />
 
       <HeaderSection
         cows={cows}
