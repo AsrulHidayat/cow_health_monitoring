@@ -51,6 +51,7 @@ void setup() {
   Serial.println("Sensor ADXL345 siap digunakan.");
 }
 
+
 // === Fungsi loop() ===
 void loop() {
   sensors_event_t event;

@@ -2,7 +2,7 @@
 import React from 'react';
 import DateTimeRangePicker from '../../suhu/charts/DateTimeRangePicker';
 import ChartRealtime from '../../suhu/charts/ChartRealtime';
-import { TIME_FILTERS, MOVEMENT_CATEGORIES } from '../utils/MovementUtils';
+import { TIME_FILTERS, ACTIVITY_CATEGORIES } from '../utils/activityUtils';
 import { CowIcon, PlusIcon } from '../GerakanPageComponents';
 
 const Pagination = ({ dataOffset, totalPages, handlePageSelect, handlePrevPage, handleNextPage, getPageOptions, getCurrentPage, filteredHistory, ITEMS_PER_PAGE }) => {
@@ -60,7 +60,6 @@ const RealtimeChartCard = ({
   ITEMS_PER_PAGE,
   dateRange,
   setDateRange,
-  appliedTimeRange,
   setAppliedTimeRange,
   datePickerStats,
   timePeriod,
@@ -111,7 +110,7 @@ const RealtimeChartCard = ({
             onChange={(e) => setFilterCategory(e.target.value)}
             className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition"
           >
-            {MOVEMENT_CATEGORIES.map(cat => (
+            {ACTIVITY_CATEGORIES.map(cat => (
               <option key={cat.value} value={cat.value}>
                 {cat.label}
               </option>

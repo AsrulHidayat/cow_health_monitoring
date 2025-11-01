@@ -1,9 +1,9 @@
 import { DataTypes } from "sequelize";
 import db from "../config/db.js";
 
-// Definisi model Movement
-const Movement = db.define(
-  "Movement",
+// Definisi model Activity
+const Activity = db.define(
+  "Activity",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -20,26 +20,40 @@ const Movement = db.define(
     },
     accel_x: {
       type: DataTypes.FLOAT,
-      allowNull: false,
+      allowNull: true,
     },
     accel_y: {
       type: DataTypes.FLOAT,
-      allowNull: false,
+      allowNull: true,
     },
     accel_z: {
       type: DataTypes.FLOAT,
-      allowNull: false,
+      allowNull: true,
+    },
+    activity: {
+      type: DataTypes.ENUM('Berbaring', 'Berdiri', 'Berjalan'),
+      allowNull: true,
+      defaultValue: 'Berdiri',
     },
     created_at: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
       defaultValue: DataTypes.NOW,
+    },
+    is_deleted: {
+      type: DataTypes.TINYINT(1),
+      allowNull: true,
+      defaultValue: 0,
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {
-    tableName: "movement_data", // nama tabel di MySQL
+    tableName: "activity_data", // nama tabel di MySQL
     timestamps: false, // kita pakai kolom created_at manual
   }
 );
 
-export default Movement;
+export default Activity;

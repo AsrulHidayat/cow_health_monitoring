@@ -3,10 +3,10 @@ import { useState } from "react";
 import axios from "axios";
 
 // 🔹 Import hooks
-import { useMovementData } from "../components/gerakan/hooks/useMovementData";
+import { useActivityData } from "../components/gerakan/hooks/useActivityData";
 
 // 🔹 Import utilitas dan komponen UI
-import { TIME_FILTERS, categorizeMovement, getCategoryStyles } from "../components/gerakan/utils/MovementUtils";
+import { TIME_FILTERS, categorizeActivity, getCategoryStyles } from "../components/gerakan/utils/activityUtils";
 import { Navbar, PlusIcon } from "../components/gerakan/GerakanPageComponents";
 import SensorStatus from "../components/gerakan/SensorStatus";
 import EditCheckupModal from "../components/gerakan/modals/EditCheckupModal";
@@ -48,7 +48,7 @@ export default function Gerakan() {
     getCowConditionStyle,
     ITEMS_PER_PAGE,
     setCows
-  } = useMovementData();
+  } = useActivityData();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -215,7 +215,7 @@ export default function Gerakan() {
     return filter ? filter.label : "Data";
   };
 
-  const avgCategory = avgData.avg_movement ? categorizeMovement(avgData.avg_movement) : null;
+  const avgCategory = avgData.avg_activity ? categorizeActivity(avgData.avg_activity) : null;
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">

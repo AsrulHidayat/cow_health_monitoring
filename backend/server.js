@@ -5,7 +5,7 @@ import { checkConnection } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
 import cowRoutes from "./routes/cowRoutes.js"; 
-import movementRoutes from "./routes/movementRoutes.js"
+import activityRoutes from "./routes/activityRoutes.js";
 
 dotenv.config();
 
@@ -33,7 +33,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/temperature", temperatureRoutes);
 app.use("/api/cows", cowRoutes); 
-app.use("/api/movement", movementRoutes);
+app.use("/api/activity", activityRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

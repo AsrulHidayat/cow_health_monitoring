@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { categorizeMovement, getCategoryStyles } from '../utils/MovementUtils';
+import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
 
 const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriodLabel }) => {
@@ -22,7 +22,7 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
         <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
           <div className="space-y-2">
             {displayedData.map((h, i) => {
-              const category = categorizeMovement(h.movement);
+              const category = categorizeActivity(h.activity);
               const actualIndex = dataOffset + i + 1;
               return (
                 <div
@@ -32,8 +32,8 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
                   <span className="text-sm font-bold text-gray-500 w-12">#{actualIndex}</span>
                   <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
                   <span className="text-lg font-bold text-gray-800">
-                    {h.movement !== null && h.movement !== undefined
-                      ? h.movement.toFixed(1)
+                    {h.activity !== null && h.activity !== undefined
+                      ? h.activity.toFixed(1)
                       : "--"}
                   </span>
                   <div className="w-[120px] flex justify-end">

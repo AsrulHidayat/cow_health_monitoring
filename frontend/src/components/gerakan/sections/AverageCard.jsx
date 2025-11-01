@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { categorizeMovement, getCategoryStyles } from '../utils/MovementUtils';
+import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
 
 const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLabel }) => {
-  const avgCategory = avgData.avg_movement ? categorizeMovement(avgData.avg_movement) : null;
+  const avgCategory = avgData.avg_activity ? categorizeActivity(avgData.avg_activity) : null;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
@@ -20,11 +20,11 @@ const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLab
         </div>
       </div>
 
-      {filteredHistory.length > 0 && avgData.avg_movement ? (
+      {filteredHistory.length > 0 && avgData.avg_activity ? (
         <div className="text-center py-8">
           <div className="relative inline-block">
             <div className="text-6xl font-bold text-gray-800 mb-3">
-              {avgData.avg_movement.toFixed(1)}
+              {avgData.avg_activity.toFixed(1)}
               <span className="text-3xl text-gray-500"></span>
             </div>
             {avgCategory && (

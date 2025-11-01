@@ -1,22 +1,25 @@
-
 import { useState, useEffect, useRef } from "react";
 import { getAllCows } from "../../../services/temperatureService";
-import { getHistoryMovement, getMovementSensorStatus, getMovementStats } from "../../../services/movementService";
+import {
+  getHistoryActivity,
+  getActivitySensorStatus,
+  getActivityStats,
+} from "../../../services/activityService";
 import {
   TIME_FILTERS,
   filterDataByTimePeriod,
-  categorizeMovement,
-} from "../utils/MovementUtils";
+  categorizeActivity,
+} from "../utils/activityUtils";
 
 const ITEMS_PER_PAGE = 25;
 
-export const useMovementData = () => {
+export const useActivityData = () => {
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
   const [rawHistory, setRawHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [displayedData, setDisplayedData] = useState([]);
-  const [avgData, setAvgData] = useState({ avg_movement: null });
+  const [avgData, setAvgData] = useState({ avg_activity: null });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
@@ -42,10 +45,19 @@ export const useMovementData = () => {
       try {
         setLoading(true);
         const allCows = await getAllCows();
+        console.log("🐄 Fetched cows:", allCows.length);
         setCows(allCows);
-        if (allCows.length > 0) setCowId(allCows[0].id);
+        if (allCows.length > 0) {
+          setCowId(allCows[0].id);
+          console.log(
+            "✅ Selected first cow:",
+            allCows[0].tag,
+            "ID:",
+            allCows[0].id
+          );
+        }
       } catch (err) {
-        console.error("Gagal mengambil data sapi:", err);
+        console.error("❌ Gagal mengambil data sapi:", err);
         setCows([]);
       } finally {
         setLoading(false);
@@ -59,10 +71,11 @@ export const useMovementData = () => {
 
     const fetchStats = async () => {
       try {
-        const stats = await getMovementStats(cowId);
+        console.log("📊 Fetching activity stats for cow:", cowId);
+        const stats = await getActivityStats(cowId);
         setDatePickerStats(stats);
       } catch (err) {
-        console.error("Gagal mengambil stats data:", err);
+        console.error("❌ Gagal mengambil stats data:", err);
       }
     };
     fetchStats();
@@ -70,9 +83,10 @@ export const useMovementData = () => {
 
   useEffect(() => {
     if (!cowId) {
+      console.log("⚠️ No cow selected, resetting data");
       setRawHistory([]);
       setFilteredHistory([]);
-      setAvgData({ avg_movement: null });
+      setAvgData({ avg_activity: null });
       setSensorStatus("offline");
       return;
     }
@@ -85,14 +99,23 @@ export const useMovementData = () => {
       try {
         if (pollingRef.current !== currentPollId) return;
 
-        const statusResult = await getMovementSensorStatus(cowId);
+        console.log("🔍 Checking sensor status for cow:", cowId);
+        const statusResult = await getActivitySensorStatus(cowId);
+
         if (pollingRef.current !== currentPollId) return;
+
+        console.log(
+          "📡 Sensor status:",
+          statusResult.status,
+          statusResult.seconds_ago ? `(${statusResult.seconds_ago}s ago)` : ""
+        );
         setSensorStatus(statusResult.status);
 
         if (statusResult.status !== "online" && !isDateRangeMode) {
+          console.log("⚠️ Sensor offline, clearing data");
           setRawHistory([]);
           setFilteredHistory([]);
-          setAvgData({ avg_movement: null });
+          setAvgData({ avg_activity: null });
           return;
         }
 
@@ -109,8 +132,19 @@ export const useMovementData = () => {
         let formatted = [];
 
         if (!start || !end) {
-          const histResponse = await getHistoryMovement(cowId, limit, 0);
+          console.log(
+            `📥 Fetching latest ${limit} activity records for cow:`,
+            cowId
+          );
+          const histResponse = await getHistoryActivity(cowId, limit, 0);
+
           if (pollingRef.current !== currentPollId) return;
+
+          console.log(
+            "✅ Received activity data:",
+            histResponse.data?.length || 0,
+            "records"
+          );
 
           formatted = histResponse.data.map((h) => ({
             time: new Date(h.created_at).toLocaleTimeString("id-ID", {
@@ -118,7 +152,7 @@ export const useMovementData = () => {
               minute: "2-digit",
               second: "2-digit",
             }),
-            movement: parseFloat(h.movement.toFixed(1)),
+            activity: parseFloat(h.activity.toFixed(1)),
             fullDate: h.created_at,
           }));
 
@@ -132,8 +166,25 @@ export const useMovementData = () => {
           end = endDateObj.toISOString().split("T")[0];
         }
 
-        const histResponse = await getHistoryMovement(cowId, limit, 0, start, end);
+        console.log(
+          `📥 Fetching activity data from ${start} to ${end} for cow:`,
+          cowId
+        );
+        const histResponse = await getHistoryActivity(
+          cowId,
+          limit,
+          0,
+          start,
+          end
+        );
+
         if (pollingRef.current !== currentPollId) return;
+
+        console.log(
+          "✅ Received date-filtered activity data:",
+          histResponse.data?.length || 0,
+          "records"
+        );
 
         formatted = histResponse.data.map((h) => ({
           time: new Date(h.created_at).toLocaleTimeString("id-ID", {
@@ -141,18 +192,18 @@ export const useMovementData = () => {
             minute: "2-digit",
             second: "2-digit",
           }),
-          movement: parseFloat(h.movement.toFixed(1)),
+          activity: parseFloat(h.activity.toFixed(1)),
           fullDate: h.created_at,
         }));
 
         setRawHistory(formatted);
       } catch (err) {
         if (pollingRef.current === currentPollId) {
-          console.error("Gagal melakukan polling data:", err);
+          console.error("❌ Gagal melakukan polling data:", err);
           setSensorStatus("offline");
           setRawHistory([]);
           setFilteredHistory([]);
-          setAvgData({ avg_movement: null });
+          setAvgData({ avg_activity: null });
         }
       }
     };
@@ -160,8 +211,12 @@ export const useMovementData = () => {
     pollData();
 
     if (!isDateRangeMode) {
+      console.log("🔄 Starting polling interval (5s) for cow:", cowId);
       const interval = setInterval(pollData, 5000);
-      return () => clearInterval(interval);
+      return () => {
+        console.log("⏹️ Stopping polling interval");
+        clearInterval(interval);
+      };
     }
   }, [cowId, timePeriod, dateRange]);
 
@@ -195,21 +250,25 @@ export const useMovementData = () => {
       filterCategory === "ALL"
         ? timeFilteredData
         : timeFilteredData.filter((item) => {
-            const categoryInfo = categorizeMovement(item.movement);
+            const categoryInfo = categorizeActivity(item.activity);
             return categoryInfo.value === filterCategory;
           });
+
+    console.log("📊 Filtered data:", categoryFilteredData.length, "records");
 
     setFilteredHistory(categoryFilteredData);
     setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
 
     if (categoryFilteredData.length > 0) {
       const sum = categoryFilteredData.reduce(
-        (acc, item) => acc + item.movement,
+        (acc, item) => acc + item.activity,
         0
       );
-      setAvgData({ avg_movement: sum / categoryFilteredData.length });
+      const avg = sum / categoryFilteredData.length;
+      console.log("📈 Average activity:", avg.toFixed(1));
+      setAvgData({ avg_activity: avg });
     } else {
-      setAvgData({ avg_movement: null });
+      setAvgData({ avg_activity: null });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
@@ -242,16 +301,15 @@ export const useMovementData = () => {
   const handlePageSelect = (val) => setDataOffset(Number(val));
 
   const getCowCondition = () => {
-    if (!selectedCow || avgData.avg_movement == null) return "Normal";
+    if (!selectedCow || avgData.avg_activity == null) return "Normal";
     let abnormalSensors = 0;
-    const movement = avgData.avg_movement;
-    if (movement < 10 || movement > 90) abnormalSensors++; // Example thresholds
+    const activity = avgData.avg_activity;
+    if (activity < 10 || activity > 90) abnormalSensors++;
     const heartRate = selectedCow?.heartRate;
     if (heartRate == null || heartRate < 60 || heartRate > 80)
       abnormalSensors++;
     const temp = selectedCow?.temperature;
-    if (temp == null || temp < 37.5 || temp > 39.5)
-      abnormalSensors++;
+    if (temp == null || temp < 37.5 || temp > 39.5) abnormalSensors++;
     if (abnormalSensors === 0) return "Normal";
     if (abnormalSensors === 1) return "Perlu Diperhatikan";
     if (abnormalSensors === 2) return "Harus Diperhatikan";
