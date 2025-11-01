@@ -10,7 +10,7 @@ const char* ssid = "KOST_PUTRA";             // Ganti dengan WiFi kamu
 const char* password = "1sampai8";
 
 // ===== URL Server API =====
-const char* serverUrl = "http://192.168.1.27:5001/api/activity";  // Endpoint backend
+const char* serverUrl = "http://192.168.1.25:5001/api/activity";  // Endpoint backend
 
 // ===== Konfigurasi Sensor ADXL345 =====
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);

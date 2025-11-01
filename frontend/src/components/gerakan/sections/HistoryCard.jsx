@@ -33,7 +33,7 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
                   <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
                   <span className="text-lg font-bold text-gray-800">
                     {h.activity !== null && h.activity !== undefined
-                      ? h.activity.toFixed(1)
+                      ? parseFloat(h.activity).toFixed(1)
                       : "--"}
                   </span>
                   <div className="w-[120px] flex justify-end">
