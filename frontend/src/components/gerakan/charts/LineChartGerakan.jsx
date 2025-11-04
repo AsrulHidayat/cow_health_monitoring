@@ -52,7 +52,7 @@ const LineChartGerakan = ({ data }) => {
       }),
       timestamp: new Date(d.fullDate).getTime()
     };
-  }).sort((a, b) => a.timestamp - b.timestamp); // Sort by time ascending
+  }).sort((a, b) => b.timestamp - a.timestamp); // Urutkan data kiri ke kanan berdasarkan waktu
 
   // === Custom Tooltip untuk format yang lebih baik ===
   const CustomTooltip = ({ active, payload, label }) => {
