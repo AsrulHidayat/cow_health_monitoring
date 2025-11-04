@@ -1,10 +1,3 @@
-// ============================================================
-// 🔹 Komponen: LineChartGerakan (Versi Fixed & Professional)
-// 🔹 Fungsi:
-//    - Mode Normal: tampilkan 1 garis "Tingkat Aktivitas"
-//    - Mode Detail: tampilkan 3 garis percepatan (X/Y/Z)
-// ============================================================
-
 import React, { useState } from "react";
 import {
   LineChart,
@@ -32,28 +25,29 @@ const LineChartGerakan = ({ data }) => {
   }
 
   // === Ambil kategori aktivitas dari data terakhir ===
+  //  PERBAIKAN: Gunakan 'magnitude' (data baru), bukan 'activity' (data lama) 
   const latest = data[data.length - 1];
-  const activityCategory = categorizeActivity(latest.activity);
+  const activityCategory = categorizeActivity(latest.magnitude); // <-- DIUBAH
   const badgeStyle = getCategoryStyles(activityCategory.color);
 
   // === ✅ PERBAIKAN: Transform data untuk memastikan semua field numerik ===
   const cleanData = data.map((d, index) => {
-    // Parsing nilai untuk memastikan format yang benar
-    const activity = d.activity != null ? Number(d.activity) : null;
-    const accel_x = d.accel_x != null ? Number(d.accel_x) : null;
-    const accel_y = d.accel_y != null ? Number(d.accel_y) : null;
-    const accel_z = d.accel_z != null ? Number(d.accel_z) : null;
+    //  PERBAIKAN: Parsing 'x', 'y', 'z', 'magnitude' (data baru) 
+    const magnitude = d.magnitude != null ? Number(d.magnitude) : null;
+    const x = d.x != null ? Number(d.x) : null;
+    const y = d.y != null ? Number(d.y) : null;
+    const z = d.z != null ? Number(d.z) : null;
 
     return {
       // Preserve original data
       ...d,
       // Index untuk referensi
       index: index + 1,
-      // Ensure numeric values (penting untuk recharts)
-      activity: activity,
-      accel_x: accel_x,
-      accel_y: accel_y,
-      accel_z: accel_z,
+      //  PERBAIKAN: Pastikan key yang benar diteruskan sebagai angka 
+      magnitude: magnitude, // Key 'activity' diganti 'magnitude'
+      x: x, // Key 'accel_x' diganti 'x'
+      y: y, // Key 'accel_y' diganti 'y'
+      z: z, // Key 'accel_z' diganti 'z'
       // Format time yang lebih baik
       timeLabel: d.time || new Date(d.fullDate).toLocaleTimeString('id-ID', {
         hour: '2-digit',
@@ -104,7 +98,8 @@ const LineChartGerakan = ({ data }) => {
           <div className="mt-3 pt-2 border-t border-gray-100">
             <div className="text-xs text-gray-600">
               Kategori: <span className="font-semibold">
-                {categorizeActivity(payload[0].payload.activity).label}
+                {/*  PERBAIKAN: Gunakan 'magnitude' untuk kategorisasi  */}
+                {categorizeActivity(payload[0].payload.magnitude).label}
               </span>
             </div>
           </div>
@@ -118,7 +113,8 @@ const LineChartGerakan = ({ data }) => {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return null;
 
-    const category = categorizeActivity(payload.activity);
+    //  PERBAIKAN: Gunakan 'magnitude' untuk kategorisasi 
+    const category = categorizeActivity(payload.magnitude);
     const colorMap = {
       blue: '#3B82F6',
       green: '#22C55E',
@@ -256,9 +252,10 @@ const LineChartGerakan = ({ data }) => {
           {isDetailMode ? (
             // MODE DETAIL: Tampilkan 3 garis percepatan
             <>
+              {/*  PERBAIKAN: Ganti dataKey ke 'x'  */}
               <Line
                 type="monotone"
-                dataKey="accel_x"
+                dataKey="x" 
                 stroke="#EF4444"
                 strokeWidth={2.5}
                 dot={false}
@@ -267,9 +264,10 @@ const LineChartGerakan = ({ data }) => {
                 animationDuration={800}
                 connectNulls
               />
+              {/*  PERBAIKAN: Ganti dataKey ke 'y'  */}
               <Line
                 type="monotone"
-                dataKey="accel_y"
+                dataKey="y"
                 stroke="#3B82F6"
                 strokeWidth={2.5}
                 dot={false}
@@ -278,9 +276,10 @@ const LineChartGerakan = ({ data }) => {
                 animationDuration={800}
                 connectNulls
               />
+              {/*  PERBAIKAN: Ganti dataKey ke 'z'  */}
               <Line
                 type="monotone"
-                dataKey="accel_z"
+                dataKey="z"
                 stroke="#10B981"
                 strokeWidth={2.5}
                 dot={false}
@@ -292,17 +291,20 @@ const LineChartGerakan = ({ data }) => {
             </>
           ) : (
             // MODE NORMAL: Tampilkan 1 garis tingkat aktivitas
-            <Line
-              type="monotone"
-              dataKey="activity"
-              stroke="#8B5CF6"
-              strokeWidth={3}
-              dot={<CustomDot />}
-              activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff" }}
-              name="Tingkat Aktivitas"
-              animationDuration={800}
-              connectNulls
-            />
+            <>
+              {/*  PERBAIKAN: Ganti dataKey ke 'magnitude'  */}
+              <Line
+                type="monotone"
+                dataKey="magnitude"
+                stroke="#8B5CF6"
+                strokeWidth={3}
+                dot={<CustomDot />}
+                activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff" }}
+                name="Tingkat Aktivitas"
+                animationDuration={800}
+                connectNulls
+              />
+            </>
           )}
         </LineChart>
       </ResponsiveContainer>

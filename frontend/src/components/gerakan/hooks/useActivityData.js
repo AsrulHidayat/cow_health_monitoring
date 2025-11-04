@@ -146,15 +146,26 @@ export const useActivityData = () => {
             "records"
           );
 
+          // ===================================
+          //  BAGIAN INI SUDAH BENAR 
+          // ===================================
           formatted = histResponse.data.map((h) => ({
-            time: new Date(h.created_at).toLocaleTimeString("id-ID", {
+            // Data untuk tabel
+            time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
               hour: "2-digit",
               minute: "2-digit",
               second: "2-digit",
             }),
-            activity: parseFloat(h.activity.toFixed(1)),
-            fullDate: h.created_at,
+            activity: parseFloat(h.magnitude.toFixed(1)),
+            fullDate: h.timestamp,
+            // Data untuk grafik
+            x: h.x,
+            y: h.y,
+            z: h.z,
+            magnitude: h.magnitude,
+            timestamp: h.timestamp,
           }));
+          // ===================================
 
           setRawHistory(formatted);
           return;
@@ -185,16 +196,27 @@ export const useActivityData = () => {
           histResponse.data?.length || 0,
           "records"
         );
-
+        
+        // ===================================
+        //  BAGIAN INI JUGA SUDAH BENAR 
+        // ===================================
         formatted = histResponse.data.map((h) => ({
-          time: new Date(h.created_at).toLocaleTimeString("id-ID", {
+          // Data untuk tabel
+          time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
           }),
-          activity: parseFloat(h.activity.toFixed(1)),
-          fullDate: h.created_at,
+          activity: parseFloat(h.magnitude.toFixed(1)),
+          fullDate: h.timestamp,
+          // Data untuk grafik
+          x: h.x,
+          y: h.y,
+          z: h.z,
+          magnitude: h.magnitude,
+          timestamp: h.timestamp,
         }));
+        // ===================================
 
         setRawHistory(formatted);
       } catch (err) {

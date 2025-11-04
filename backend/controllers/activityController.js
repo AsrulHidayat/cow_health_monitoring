@@ -49,14 +49,18 @@ export const getLatestactivity = async (req, res) => {
 
     // Hitung magnitude dari accelerometer
     const magnitude = Math.sqrt(
-      Math.pow(latest.accel_x, 2) + 
-      Math.pow(latest.accel_y, 2) + 
-      Math.pow(latest.accel_z, 2)
+      Math.pow(latest.accel_x, 2) +
+        Math.pow(latest.accel_y, 2) +
+        Math.pow(latest.accel_z, 2)
     );
-
     res.json({
-      ...latest.toJSON(),
-      activity: magnitude
+      id: latest.id,
+      cow_id: latest.cow_id,
+      x: latest.accel_x,
+      y: latest.accel_y,
+      z: latest.accel_z,
+      magnitude: magnitude,
+      timestamp: latest.created_at,
     });
   } catch (err) {
     console.error("❌ getLatestactivity error:", err);
@@ -103,21 +107,21 @@ export const getHistoryactivity = async (req, res) => {
     });
 
     // Transform data: hitung magnitude untuk setiap record
-    const transformedData = history.map(item => {
+    const transformedData = history.map((item) => {
       const magnitude = Math.sqrt(
-        Math.pow(item.accel_x, 2) + 
-        Math.pow(item.accel_y, 2) + 
-        Math.pow(item.accel_z, 2)
+        Math.pow(item.accel_x, 2) +
+          Math.pow(item.accel_y, 2) +
+          Math.pow(item.accel_z, 2)
       );
 
       return {
         id: item.id,
         cow_id: item.cow_id,
-        accel_x: item.accel_x,
-        accel_y: item.accel_y,
-        accel_z: item.accel_z,
-        activity: magnitude, // Tambahkan field activity
-        created_at: item.created_at
+        x: item.accel_x, 
+        y: item.accel_y, 
+        z: item.accel_z, 
+        magnitude: magnitude, 
+        timestamp: item.created_at,
       };
     });
 
@@ -165,11 +169,11 @@ export const getSensorStatus = async (req, res) => {
         ? "Sensor aktif"
         : "Sensor tidak aktif / tidak terhubung";
 
-    res.json({ 
-      status, 
-      message, 
+    res.json({
+      status,
+      message,
       last_update: lastUpdate,
-      seconds_ago: Math.floor(diffSeconds)
+      seconds_ago: Math.floor(diffSeconds),
     });
   } catch (err) {
     console.error("❌ getSensorStatus (gerakan) error:", err);
@@ -208,17 +212,16 @@ export const getactivityStats = async (req, res) => {
     }
 
     // Hitung magnitude untuk setiap data
-    const magnitudes = activitys.map(m => 
+    const magnitudes = activitys.map((m) =>
       Math.sqrt(
-        Math.pow(m.accel_x, 2) + 
-        Math.pow(m.accel_y, 2) + 
-        Math.pow(m.accel_z, 2)
+        Math.pow(m.accel_x, 2) + Math.pow(m.accel_y, 2) + Math.pow(m.accel_z, 2)
       )
     );
 
     const min = Math.min(...magnitudes);
     const max = Math.max(...magnitudes);
-    const avg = magnitudes.reduce((sum, val) => sum + val, 0) / magnitudes.length;
+    const avg =
+      magnitudes.reduce((sum, val) => sum + val, 0) / magnitudes.length;
 
     res.json({
       count: activitys.length,
@@ -238,14 +241,14 @@ export const getactivityStats = async (req, res) => {
 export const deleteAllactivity = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
-    
+
     const deleted = await activity.destroy({
-      where: { cow_id: cowId }
+      where: { cow_id: cowId },
     });
-    
-    res.json({ 
+
+    res.json({
       message: `Berhasil menghapus ${deleted} data gerakan`,
-      deletedCount: deleted 
+      deletedCount: deleted,
     });
   } catch (err) {
     console.error("Error deleting activity data:", err);

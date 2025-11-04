@@ -1,5 +1,5 @@
 import DateTimeRangePicker from '../../suhu/charts/DateTimeRangePicker';
-import LineChartGerakan from '../charts/LineChartGerakan';
+import LineChartGerakan from '../charts/LineChartGerakan'; // Pastikan ini di-import
 import { TIME_FILTERS, ACTIVITY_CATEGORIES } from '../utils/activityUtils';
 import { CowIcon, PlusIcon } from '../GerakanPageComponents';
 
@@ -52,7 +52,7 @@ const Pagination = ({ dataOffset, totalPages, handlePageSelect, handlePrevPage, 
 const RealtimeChartCard = ({
   loading,
   cows,
-  displayedData,
+  displayedData, // Ini adalah data yang sudah difilter dari hook
   filteredHistory,
   dataOffset,
   ITEMS_PER_PAGE,
@@ -150,7 +150,8 @@ const RealtimeChartCard = ({
         ) : cows.length > 0 ? (
           displayedData.length > 0 ? (
             <div className="w-full h-full p-6">
-              <LineChartGerakan data={displayedData} />
+              {/* Ini adalah perbaikan kuncinya: data={displayedData} */}
+              <LineChartGerakan data={displayedData} /> 
               {filteredHistory.length > ITEMS_PER_PAGE && (
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-500">
