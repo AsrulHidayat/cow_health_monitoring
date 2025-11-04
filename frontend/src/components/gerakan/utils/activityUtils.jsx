@@ -25,29 +25,38 @@ export const ACTIVITY_CATEGORIES = [
 // 🔹 KATEGORI AKTIVITAS DARI NILAI activity
 // ========================================================
 export const categorizeActivity = (activity, activityEnum = null) => {
-  // Jika ada data enum dari database, gunakan itu
+  // Jika database sudah punya enum aktivitas
   if (activityEnum) {
     const categoryMap = {
-      'Berbaring': { label: 'Berbaring', color: 'blue', value: 'Berbaring' },
-      'Berdiri': { label: 'Berdiri', color: 'green', value: 'Berdiri' },
-      'Berjalan': { label: 'Berjalan', color: 'yellow', value: 'Berjalan' },
+      Berbaring: { label: "Berbaring", color: "blue", value: "Berbaring" },
+      Berdiri: { label: "Berdiri", color: "green", value: "Berdiri" },
+      Berjalan: { label: "Berjalan", color: "yellow", value: "Berjalan" },
     };
-    return categoryMap[activityEnum] || { label: 'N/A', color: 'gray', value: 'na' };
+    return categoryMap[activityEnum] || { label: "N/A", color: "gray", value: "na" };
   }
 
-  // Fallback: klasifikasi berdasarkan magnitude activity
-  if (activity == null) {
-    return { label: 'N/A', color: 'gray', value: 'na' };
+  // Validasi nilai magnitude (m/s²)
+  if (activity == null || isNaN(activity)) {
+    return { label: "N/A", color: "gray", value: "na" };
   }
-  if (activity < 20) {
-    return { label: 'Berbaring', color: 'blue', value: 'Berbaring' };
-  } else if (activity >= 20 && activity <= 60) {
-    return { label: 'Berdiri', color: 'green', value: 'Berdiri' };
-  } else if (activity > 60) {
-    return { label: 'Berjalan', color: 'yellow', value: 'Berjalan' };
+
+  // === KLASIFIKASI BERDASARKAN NILAI MAGNITUDE (m/s²) ===
+  // Estimasi:
+  // - Berbaring: ~9.5–10.1 (sangat stabil, sedikit variasi)
+  // - Berdiri: 8.8–9.5 atau 10.1–10.8 (ada goyangan ringan kepala)
+  // - Berjalan: <8.8 atau >10.8 (pergerakan aktif kepala/leher)
+  if (activity >= 9.5 && activity <= 10.1) {
+    return { label: "Berbaring", color: "blue", value: "Berbaring" };
+  } else if ((activity >= 8.8 && activity < 9.5) || (activity > 10.1 && activity <= 10.8)) {
+    return { label: "Berdiri", color: "green", value: "Berdiri" };
+  } else if (activity < 8.8 || activity > 10.8) {
+    return { label: "Berjalan", color: "yellow", value: "Berjalan" };
   }
-  return { label: 'N/A', color: 'gray', value: 'na' };
+
+  // Fallback
+  return { label: "N/A", color: "gray", value: "na" };
 };
+
 
 // ========================================================
 // 🔹 WARNA KATEGORI
