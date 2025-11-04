@@ -1,8 +1,9 @@
 import React from 'react';
 import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
+import ActivityDistribution from '../ActivityDistribution';
 
-const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLabel }) => {
+const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLabel, activityPercentages }) => {
   const avgCategory = avgData.avg_activity ? categorizeActivity(avgData.avg_activity) : null;
 
   return (
@@ -49,6 +50,8 @@ const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLab
               <p className="text-2xl font-bold text-gray-800">{displayedData.length}</p>
             </div>
           </div>
+
+          <ActivityDistribution percentages={activityPercentages} />
 
         </div>
       ) : (

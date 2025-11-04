@@ -20,6 +20,11 @@ export const useActivityData = () => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [displayedData, setDisplayedData] = useState([]);
   const [avgData, setAvgData] = useState({ avg_activity: null });
+  const [activityPercentages, setActivityPercentages] = useState({
+    berbaring: 0,
+    berdiri: 0,
+    berjalan: 0,
+  });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
@@ -289,8 +294,28 @@ export const useActivityData = () => {
       const avg = sum / categoryFilteredData.length;
       console.log("📈 Average activity:", avg.toFixed(1));
       setAvgData({ avg_activity: avg });
+
+      // Calculate percentages
+      const categoryCounts = categoryFilteredData.reduce(
+        (acc, item) => {
+          const category = categorizeActivity(item.activity).value;
+          if (category === 'Berbaring') acc.berbaring++;
+          else if (category === 'Berdiri') acc.berdiri++;
+          else if (category === 'Berjalan') acc.berjalan++;
+          return acc;
+        },
+        { berbaring: 0, berdiri: 0, berjalan: 0 }
+      );
+
+      const total = categoryFilteredData.length;
+      setActivityPercentages({
+        berbaring: (categoryCounts.berbaring / total) * 100,
+        berdiri: (categoryCounts.berdiri / total) * 100,
+        berjalan: (categoryCounts.berjalan / total) * 100,
+      });
     } else {
       setAvgData({ avg_activity: null });
+      setActivityPercentages({ berbaring: 0, berdiri: 0, berjalan: 0 });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
@@ -359,6 +384,7 @@ export const useActivityData = () => {
     loading,
     sensorStatus,
     avgData,
+    activityPercentages,
     filteredHistory,
     displayedData,
     dateRange,

@@ -28,6 +28,7 @@ export default function Gerakan() {
     loading,
     sensorStatus,
     avgData,
+    activityPercentages,
     filteredHistory,
     displayedData,
     dateRange,
@@ -277,6 +278,7 @@ export default function Gerakan() {
             avgData={avgData}
             displayedData={displayedData}
             getTimePeriodLabel={getTimePeriodLabel}
+            activityPercentages={activityPercentages}
           />
           <HistoryCard
             filteredHistory={filteredHistory}
