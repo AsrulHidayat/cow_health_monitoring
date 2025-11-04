@@ -1,5 +1,3 @@
-
-import React from 'react';
 import DateTimeRangePicker from '../../suhu/charts/DateTimeRangePicker';
 import LineChartGerakan from '../charts/LineChartGerakan';
 import { TIME_FILTERS, ACTIVITY_CATEGORIES } from '../utils/activityUtils';
