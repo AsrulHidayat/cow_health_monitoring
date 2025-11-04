@@ -1,5 +1,5 @@
 // ============================================================
-// 🔹 Komponen: LineChartGerakan (Versi Dual Mode)
+// 🔹 Komponen: LineChartGerakan (Versi Fixed & Professional)
 // 🔹 Fungsi:
 //    - Mode Normal: tampilkan 1 garis "Tingkat Aktivitas"
 //    - Mode Detail: tampilkan 3 garis percepatan (X/Y/Z)
@@ -36,33 +36,108 @@ const LineChartGerakan = ({ data }) => {
   const activityCategory = categorizeActivity(latest.activity);
   const badgeStyle = getCategoryStyles(activityCategory.color);
 
-  // === Konversi nilai string → number (jaga-jaga backend kirim string) ===
-  const cleanData = data.map((d) => ({
-    ...d,
-    accel_x: Number(d.accel_x),
-    accel_y: Number(d.accel_y),
-    accel_z: Number(d.accel_z),
-    activity: Number(d.activity),
-  }));
+  // === ✅ PERBAIKAN: Transform data untuk memastikan semua field numerik ===
+  const cleanData = data.map((d, index) => {
+    // Parsing nilai untuk memastikan format yang benar
+    const activity = d.activity != null ? Number(d.activity) : null;
+    const accel_x = d.accel_x != null ? Number(d.accel_x) : null;
+    const accel_y = d.accel_y != null ? Number(d.accel_y) : null;
+    const accel_z = d.accel_z != null ? Number(d.accel_z) : null;
+
+    return {
+      // Preserve original data
+      ...d,
+      // Index untuk referensi
+      index: index + 1,
+      // Ensure numeric values (penting untuk recharts)
+      activity: activity,
+      accel_x: accel_x,
+      accel_y: accel_y,
+      accel_z: accel_z,
+      // Format time yang lebih baik
+      timeLabel: d.time || new Date(d.fullDate).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }),
+      // Timestamp untuk sorting
+      timestamp: new Date(d.fullDate).getTime()
+    };
+  }).sort((a, b) => a.timestamp - b.timestamp); // Sort by time ascending
 
   // === Custom Tooltip untuk format yang lebih baik ===
   const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload) return null;
+    if (!active || !payload || payload.length === 0) return null;
 
     return (
-      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-        <p className="text-sm font-semibold text-gray-700 mb-2">
-          {label ? label.split("T")[1]?.slice(0, 8) || label : ""}
+      <div className="bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-gray-200">
+        <p className="text-sm font-bold text-gray-800 mb-3 pb-2 border-b border-gray-100">
+          {label || "N/A"}
         </p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            <span className="font-medium">{entry.name}:</span>{" "}
-            {isDetailMode
-              ? `${entry.value?.toFixed(3)} m/s²`
-              : entry.value?.toFixed(2)}
-          </p>
-        ))}
+        <div className="space-y-2">
+          {payload.map((entry, index) => {
+            if (entry.value == null) return null;
+            
+            return (
+              <div key={index} className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {entry.name}:
+                  </span>
+                </div>
+                <span className="text-sm font-bold" style={{ color: entry.color }}>
+                  {isDetailMode
+                    ? `${entry.value.toFixed(3)} m/s²`
+                    : entry.value.toFixed(2)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Tambahan info kategori untuk mode normal */}
+        {!isDetailMode && payload[0]?.payload && (
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <div className="text-xs text-gray-600">
+              Kategori: <span className="font-semibold">
+                {categorizeActivity(payload[0].payload.activity).label}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
+    );
+  };
+
+  // === Custom Dot untuk mode normal (menampilkan warna berdasarkan kategori) ===
+  const CustomDot = (props) => {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null || !payload) return null;
+
+    const category = categorizeActivity(payload.activity);
+    const colorMap = {
+      blue: '#3B82F6',
+      green: '#22C55E',
+      yellow: '#EAB308',
+      orange: '#F97316',
+      red: '#EF4444',
+      gray: '#6B7280',
+    };
+    const fillColor = colorMap[category.color] || '#8B5CF6';
+
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={fillColor}
+        stroke="#fff"
+        strokeWidth={2}
+      />
     );
   };
 
@@ -73,32 +148,39 @@ const LineChartGerakan = ({ data }) => {
           =========================================================== */}
       <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-10">
         {/* Toggle Button dengan indikator mode aktif */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setIsDetailMode(!isDetailMode)}
-            className={`text-xs px-3 py-1.5 rounded-md shadow-sm transition-all ${
+            className={`text-xs px-4 py-2 rounded-lg shadow-md transition-all font-medium ${
               isDetailMode
                 ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
             }`}
           >
             {isDetailMode ? "📊 Mode Detail XYZ" : "📈 Mode Normal"}
           </button>
           
           {/* Label Mode */}
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
             {isDetailMode 
               ? "Menampilkan percepatan 3 sumbu" 
               : "Menampilkan tingkat aktivitas"}
           </span>
+
+          {/* Info jumlah data */}
+          <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
+            {cleanData.length} data point
+          </span>
         </div>
 
-        {/* Badge Kategori Aktivitas */}
-        <div
-          className={`px-3 py-1 text-sm font-medium border rounded-full ${badgeStyle}`}
-        >
-          {activityCategory.label}
-        </div>
+        {/* Badge Kategori Aktivitas (hanya untuk mode normal) */}
+        {!isDetailMode && (
+          <div
+            className={`px-4 py-2 text-sm font-semibold border rounded-xl shadow-md ${badgeStyle}`}
+          >
+            {activityCategory.label}
+          </div>
+        )}
       </div>
 
       {/* ===========================================================
@@ -107,45 +189,48 @@ const LineChartGerakan = ({ data }) => {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart 
           data={cleanData}
-          margin={{ top: 40, right: 30, left: 20, bottom: 50 }}
+          margin={{ top: 60, right: 40, left: 20, bottom: 60 }}
         >
           <CartesianGrid 
             strokeDasharray="3 3" 
             stroke="#e5e7eb"
             opacity={0.5}
+            vertical={false}
           />
 
           {/* Sumbu X - Waktu */}
           <XAxis
-            dataKey="created_at"
-            tick={{ fontSize: 11 }}
-            tickFormatter={(v) =>
-              v ? v.split("T")[1]?.slice(0, 8) || v : ""
-            }
-            stroke="#6b7280"
+            dataKey="timeLabel"
+            tick={{ fontSize: 11, fill: '#6B7280' }}
+            tickLine={{ stroke: '#d1d5db' }}
+            axisLine={{ stroke: '#d1d5db' }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
             label={{
               value: "Waktu",
               position: "insideBottomRight",
-              offset: -10,
-              style: { fontSize: 12, fill: "#374151" }
+              offset: -5,
+              style: { fontSize: 12, fill: '#374151', fontWeight: 600 }
             }}
           />
 
           {/* Sumbu Y - Dinamis berdasarkan mode */}
           <YAxis
-            stroke="#6b7280"
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 11, fill: '#6B7280' }}
+            tickLine={{ stroke: '#d1d5db' }}
+            axisLine={{ stroke: '#d1d5db' }}
             label={{
               value: isDetailMode
                 ? "Percepatan (m/s²)"
                 : "Tingkat Aktivitas",
               angle: -90,
               position: "insideLeft",
-              style: { fontSize: 12, fill: "#374151" }
+              style: { fontSize: 12, fill: '#374151', fontWeight: 600 }
             }}
             domain={isDetailMode 
-              ? ["dataMin - 0.5", "dataMax + 0.5"]
-              : ["dataMin - 1", "dataMax + 1"]
+              ? ['auto', 'auto']
+              : ['dataMin - 5', 'dataMax + 5']
             }
           />
 
@@ -156,10 +241,12 @@ const LineChartGerakan = ({ data }) => {
           {isDetailMode && (
             <Legend 
               wrapperStyle={{
-                paddingTop: "10px",
-                fontSize: "12px"
+                paddingTop: "15px",
+                fontSize: "12px",
+                fontWeight: 500
               }}
               iconType="line"
+              iconSize={16}
             />
           )}
 
@@ -172,32 +259,35 @@ const LineChartGerakan = ({ data }) => {
               <Line
                 type="monotone"
                 dataKey="accel_x"
-                stroke="#ef4444"
-                strokeWidth={2}
+                stroke="#EF4444"
+                strokeWidth={2.5}
                 dot={false}
-                activeDot={{ r: 5, fill: "#ef4444" }}
+                activeDot={{ r: 6, fill: "#EF4444", strokeWidth: 2, stroke: "#fff" }}
                 name="Sumbu X"
-                animationDuration={500}
+                animationDuration={800}
+                connectNulls
               />
               <Line
                 type="monotone"
                 dataKey="accel_y"
-                stroke="#3b82f6"
-                strokeWidth={2}
+                stroke="#3B82F6"
+                strokeWidth={2.5}
                 dot={false}
-                activeDot={{ r: 5, fill: "#3b82f6" }}
+                activeDot={{ r: 6, fill: "#3B82F6", strokeWidth: 2, stroke: "#fff" }}
                 name="Sumbu Y"
-                animationDuration={500}
+                animationDuration={800}
+                connectNulls
               />
               <Line
                 type="monotone"
                 dataKey="accel_z"
-                stroke="#10b981"
-                strokeWidth={2}
+                stroke="#10B981"
+                strokeWidth={2.5}
                 dot={false}
-                activeDot={{ r: 5, fill: "#10b981" }}
+                activeDot={{ r: 6, fill: "#10B981", strokeWidth: 2, stroke: "#fff" }}
                 name="Sumbu Z"
-                animationDuration={500}
+                animationDuration={800}
+                connectNulls
               />
             </>
           ) : (
@@ -205,26 +295,39 @@ const LineChartGerakan = ({ data }) => {
             <Line
               type="monotone"
               dataKey="activity"
-              stroke="#8b5cf6"
+              stroke="#8B5CF6"
               strokeWidth={3}
-              dot={false}
-              activeDot={{ r: 6, fill: "#8b5cf6" }}
+              dot={<CustomDot />}
+              activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff" }}
               name="Tingkat Aktivitas"
-              animationDuration={500}
+              animationDuration={800}
+              connectNulls
             />
           )}
         </LineChart>
       </ResponsiveContainer>
 
       {/* ===========================================================
-          🔸 Informasi tambahan di bawah grafik (opsional)
+          🔸 Informasi tambahan di bawah grafik
           =========================================================== */}
       {isDetailMode && (
-        <div className="absolute bottom-2 left-4 text-xs text-gray-500">
-          <span className="inline-flex items-center">
-            <span className="w-3 h-0.5 bg-red-500 mr-1"></span>X: Maju/Mundur
-            <span className="w-3 h-0.5 bg-blue-500 ml-3 mr-1"></span>Y: Kiri/Kanan
-            <span className="w-3 h-0.5 bg-green-500 ml-3 mr-1"></span>Z: Atas/Bawah
+        <div className="absolute bottom-2 left-4 right-4 flex items-center justify-between text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-200">
+          <div className="flex items-center gap-4">
+            <span className="inline-flex items-center">
+              <span className="w-4 h-0.5 bg-red-500 mr-2"></span>
+              X: Maju/Mundur
+            </span>
+            <span className="inline-flex items-center">
+              <span className="w-4 h-0.5 bg-blue-500 mr-2"></span>
+              Y: Kiri/Kanan
+            </span>
+            <span className="inline-flex items-center">
+              <span className="w-4 h-0.5 bg-green-500 mr-2"></span>
+              Z: Atas/Bawah
+            </span>
+          </div>
+          <span className="text-gray-500">
+            Accelerometer 3-Axis
           </span>
         </div>
       )}
