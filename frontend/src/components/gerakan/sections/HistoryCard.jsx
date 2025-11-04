@@ -31,11 +31,23 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
                 >
                   <span className="text-sm font-bold text-gray-500 w-12">#{actualIndex}</span>
                   <span className="text-sm font-medium text-gray-600 w-24">{h.time}</span>
-                  <span className="text-lg font-bold text-gray-800">
-                    {h.activity !== null && h.activity !== undefined
-                      ? parseFloat(h.activity).toFixed(1)
-                      : "--"}
-                  </span>
+                  <div className="flex gap-4">
+                    <span className="text-lg font-bold" style={{ color: '#EF4444' }}>
+                      {h.x !== null && h.x !== undefined
+                        ? parseFloat(h.x).toFixed(1)
+                        : "--"}
+                    </span>
+                    <span className="text-lg font-bold" style={{ color: '#3B82F6' }}>
+                      {h.y !== null && h.y !== undefined
+                        ? parseFloat(h.y).toFixed(1)
+                        : "--"}
+                    </span>
+                    <span className="text-lg font-bold" style={{ color: '#10B981' }}>
+                      {h.z !== null && h.z !== undefined
+                        ? parseFloat(h.z).toFixed(1)
+                        : "--"}
+                    </span>
+                  </div>
                   <div className="w-[120px] flex justify-end">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>
                       {category.label}

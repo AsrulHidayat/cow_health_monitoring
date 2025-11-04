@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
