@@ -21,8 +21,10 @@ export const useActivityData = () => {
   const [displayedData, setDisplayedData] = useState([]);
   const [avgData, setAvgData] = useState({ avg_activity: null });
   const [activityPercentages, setActivityPercentages] = useState({
-    berbaring: 0,
     berdiri: 0,
+    baringKanan: 0,
+    baringKiri: 0,
+    na: 0
   });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
@@ -150,11 +152,7 @@ export const useActivityData = () => {
             "records"
           );
 
-          // ===================================
-          //  BAGIAN INI SUDAH BENAR 
-          // ===================================
           formatted = histResponse.data.map((h) => ({
-            // Data untuk tabel
             time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
               hour: "2-digit",
               minute: "2-digit",
@@ -162,14 +160,12 @@ export const useActivityData = () => {
             }),
             activity: parseFloat(h.magnitude.toFixed(1)),
             fullDate: h.timestamp,
-            // Data untuk grafik
             x: h.x,
             y: h.y,
             z: h.z,
             magnitude: h.magnitude,
             timestamp: h.timestamp,
           }));
-          // ===================================
 
           setRawHistory(formatted);
           return;
@@ -201,11 +197,7 @@ export const useActivityData = () => {
           "records"
         );
         
-        // ===================================
-        //  BAGIAN INI JUGA SUDAH BENAR 
-        // ===================================
         formatted = histResponse.data.map((h) => ({
-          // Data untuk tabel
           time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
             hour: "2-digit",
             minute: "2-digit",
@@ -213,14 +205,12 @@ export const useActivityData = () => {
           }),
           activity: parseFloat(h.magnitude.toFixed(1)),
           fullDate: h.timestamp,
-          // Data untuk grafik
           x: h.x,
           y: h.y,
           z: h.z,
           magnitude: h.magnitude,
           timestamp: h.timestamp,
         }));
-        // ===================================
 
         setRawHistory(formatted);
       } catch (err) {
@@ -276,7 +266,8 @@ export const useActivityData = () => {
       filterCategory === "ALL"
         ? timeFilteredData
         : timeFilteredData.filter((item) => {
-            const categoryInfo = categorizeActivity(item.activity);
+            // Klasifikasi berdasarkan X, Y, Z
+            const categoryInfo = categorizeActivity(item.x, item.y, item.z);
             return categoryInfo.value === filterCategory;
           });
 
@@ -294,25 +285,29 @@ export const useActivityData = () => {
       console.log("📈 Average activity:", avg.toFixed(1));
       setAvgData({ avg_activity: avg });
 
-      // Calculate percentages
+      // ✅ Hitung persentase untuk 4 kategori (Berdiri, Baring Kanan, Baring Kiri, N/A)
       const categoryCounts = categoryFilteredData.reduce(
         (acc, item) => {
-          const category = categorizeActivity(item.activity).value;
-          if (category === 'Berbaring') acc.berbaring++;
-          else if (category === 'Berdiri') acc.berdiri++;
+          const category = categorizeActivity(item.x, item.y, item.z).value;
+          if (category === 'Berdiri') acc.berdiri++;
+          else if (category === 'Berbaring Kanan') acc.baringKanan++;
+          else if (category === 'Berbaring Kiri') acc.baringKiri++;
+          else acc.na++;
           return acc;
         },
-        { berbaring: 0, berdiri: 0 }
+        { berdiri: 0, baringKanan: 0, baringKiri: 0, na: 0 }
       );
 
       const total = categoryFilteredData.length;
       setActivityPercentages({
-        berbaring: (categoryCounts.berbaring / total) * 100,
         berdiri: (categoryCounts.berdiri / total) * 100,
+        baringKanan: (categoryCounts.baringKanan / total) * 100,
+        baringKiri: (categoryCounts.baringKiri / total) * 100,
+        na: (categoryCounts.na / total) * 100,
       });
     } else {
       setAvgData({ avg_activity: null });
-      setActivityPercentages({ berbaring: 0, berdiri: 0 });
+      setActivityPercentages({ berdiri: 0, baringKanan: 0, baringKiri: 0, na: 0 });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 

@@ -12,62 +12,72 @@ export const TIME_FILTERS = {
 };
 
 // ========================================================
-// 🔹 KATEGORI AKTIVITAS (sesuai enum database)
+// 🔹 KATEGORI AKTIVITAS (3 kategori + N/A)
 // ========================================================
 export const ACTIVITY_CATEGORIES = [
   { label: 'Semua Aktivitas', value: 'ALL' },
-  { label: 'Berbaring', value: 'Berbaring' },
   { label: 'Berdiri', value: 'Berdiri' },
+  { label: 'Berbaring Kanan', value: 'Berbaring Kanan' },
+  { label: 'Berbaring Kiri', value: 'Berbaring Kiri' },
+  { label: 'N/A (Tidak Normal)', value: 'N/A' },
 ];
 
 // ========================================================
-// 🔹 KATEGORI AKTIVITAS DARI NILAI activity
+// 🔹 FUNGSI KLASIFIKASI AKTIVITAS BERDASARKAN X, Y, Z
 // ========================================================
-// Fungsi untuk menentukan posisi sapi berdasarkan nilai aktivitas (misalnya dari sumbu Z)
-// ========================================================
-// 🔹 KATEGORI AKTIVITAS BERDASARKAN NILAI X, Y, Z
-// ========================================================
+/**
+ * Mengklasifikasikan posisi sapi berdasarkan nilai akselerometer X, Y, Z
+ * @param {number} x - Nilai akselerometer sumbu X
+ * @param {number} y - Nilai akselerometer sumbu Y
+ * @param {number} z - Nilai akselerometer sumbu Z
+ * @returns {object} - Object berisi label, color, dan value kategori
+ */
 export function categorizeActivity(x, y, z) {
-  // Pastikan semua nilai valid
+  // Validasi: pastikan semua nilai valid
   if ([x, y, z].some(v => v == null || isNaN(v))) {
     return { label: "N/A", color: "gray", value: "N/A" };
   }
 
-  // Pastikan semua data berupa number
+  // Konversi ke number untuk memastikan
   x = parseFloat(x);
   y = parseFloat(y);
   z = parseFloat(z);
 
   // ===============================
-  // 🐄 1️⃣ KATEGORI BERDIRI
+  // 🐄 1️⃣ SAPI BERDIRI
   // ===============================
-  // Ciri: sumbu Z besar (~10–12), Y kecil (antara -3 sampai 3)
-  if (z >= 10 && z <= 11.7 && Math.abs(y) < 3) {
+  // Rentang: X: -0.9 hingga -0.2, Y: -2.5 hingga -0.7, Z: 11.1 hingga 11.5
+  if (x >= -0.9 && x <= -0.2 && 
+      y >= -2.5 && y <= -0.7 && 
+      z >= 11.1 && z <= 11.5) {
     return { label: "Berdiri", color: "green", value: "Berdiri" };
   }
 
   // ===============================
-  // 😴 2️⃣ KATEGORI BERBARING KIRI
+  // 😴 2️⃣ SAPI BERBARING KANAN
   // ===============================
-  // Ciri: sumbu Y negatif besar (~-5 s/d -9), Z kecil (~6–8)
-  if (y <= -4.5 && y >= -9 && z >= 6 && z <= 8) {
-    return { label: "Berbaring Kiri", color: "blue", value: "Berbaring Kiri" };
+  // Rentang: X: -0.3 hingga -0.2, Y: 5.6 hingga 5.7, Z: Tepat 10.0 (toleransi ±0.1)
+  if (x >= -0.3 && x <= -0.2 && 
+      y >= 5.6 && y <= 5.7 && 
+      z >= 9.9 && z <= 10.1) {
+    return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
 
   // ===============================
-  // 😴 3️⃣ KATEGORI BERBARING KANAN
+  // 😴 3️⃣ SAPI BERBARING KIRI
   // ===============================
-  // Ciri: sumbu Y positif besar (~5 s/d 9), Z sedang (~9–10.5)
-  if (y >= 4.5 && y <= 9 && z >= 9 && z <= 10.5) {
-    return { label: "Berbaring Kanan", color: "cyan", value: "Berbaring Kanan" };
+  // Rentang: X: Tepat -0.3 (toleransi ±0.05), Y: -8.2 hingga -8.1, Z: 7.2 hingga 7.3
+  if (x >= -0.35 && x <= -0.25 && 
+      y >= -8.2 && y <= -8.1 && 
+      z >= 7.2 && z <= 7.3) {
+    return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
 
   // ===============================
-  // ❔ 4️⃣ TIDAK TERDETEKSI
+  // ❔ 4️⃣ TIDAK TERDETEKSI / TIDAK NORMAL
   // ===============================
   return { label: "N/A", color: "gray", value: "N/A" };
 }
-
 
 // ========================================================
 // 🔹 WARNA KATEGORI
@@ -76,11 +86,23 @@ export const getCategoryStyles = (color) => {
   const styles = {
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
     green: 'bg-green-100 text-green-700 border-green-200',
-    orange: 'bg-orange-100 text-orange-700 border-orange-200',
-    red: 'bg-red-100 text-red-700 border-red-200',
+    cyan: 'bg-cyan-100 text-cyan-700 border-cyan-200',
     gray: 'bg-gray-100 text-gray-700 border-gray-200',
   };
   return styles[color] || styles.green;
+};
+
+// ========================================================
+// 🔹 WARNA UNTUK DOT DAN CHART
+// ========================================================
+export const getCategoryColor = (label) => {
+  const colorMap = {
+    'Berdiri': '#22C55E',
+    'Berbaring Kanan': '#3B82F6',
+    'Berbaring Kiri': '#06B6D4',
+    'N/A': '#6B7280',
+  };
+  return colorMap[label] || '#8B5CF6';
 };
 
 // ========================================================
@@ -108,9 +130,6 @@ export const filterDataByTimePeriod = (
     });
   }
 
-  // Untuk activity, kita gunakan logic yang sama seperti activity
-  // karena kita track activity magnitude dan activity enum secara bersamaan
-
   switch (timePeriod) {
     case TIME_FILTERS.FIVE_SECONDS.value: {
       const validData = filteredData
@@ -125,6 +144,9 @@ export const filterDataByTimePeriod = (
 
       return dataToUse.map((item, index) => {
         const date = new Date(item.ts);
+        // Klasifikasikan berdasarkan X, Y, Z
+        const category = categorizeActivity(item.x, item.y, item.z);
+        
         return {
           ...item,
           index: index + 1,
@@ -136,6 +158,8 @@ export const filterDataByTimePeriod = (
             hour12: false,
           }),
           fullDate: date,
+          activityLabel: category.label, // Tambahkan label aktivitas
+          activityColor: getCategoryColor(category.label), // Tambahkan warna
         };
       });
     }
@@ -160,29 +184,30 @@ export const filterDataByTimePeriod = (
       });
 
       return Object.entries(grouped).map(([minuteKey, items], index) => {
-        // Hitung rata-rata activity
-        const activitys = items.map(i => i.activity).filter(m => m != null);
-        const avgactivity = activitys.length > 0
-          ? activitys.reduce((a, b) => a + b, 0) / activitys.length
+        // Hitung rata-rata magnitude
+        const magnitudes = items.map(i => i.magnitude).filter(m => m != null);
+        const avgMagnitude = magnitudes.length > 0
+          ? magnitudes.reduce((a, b) => a + b, 0) / magnitudes.length
           : null;
 
         // Ambil aktivitas yang paling sering muncul
         const activityCounts = {};
         items.forEach(i => {
-          if (i.activity) {
-            activityCounts[i.activity] = (activityCounts[i.activity] || 0) + 1;
-          }
+          const cat = categorizeActivity(i.x, i.y, i.z);
+          activityCounts[cat.value] = (activityCounts[cat.value] || 0) + 1;
         });
+        
         const mostCommonActivity = Object.keys(activityCounts).length > 0
           ? Object.entries(activityCounts).sort((a, b) => b[1] - a[1])[0][0]
-          : 'Berdiri';
+          : 'N/A';
 
         return {
           index: index + 1,
           displayIndex: `#${index + 1}`,
           time: minuteKey,
-          avgActivity: avgactivity ? parseFloat(avgactivity.toFixed(1)) : null, // nilai rata-rata
-          activity: mostCommonActivity, // aktivitas dominan
+          magnitude: avgMagnitude ? parseFloat(avgMagnitude.toFixed(1)) : null,
+          activityLabel: mostCommonActivity,
+          activityColor: getCategoryColor(mostCommonActivity),
           fullDate: `${minuteKey}:00`,
         };
       });

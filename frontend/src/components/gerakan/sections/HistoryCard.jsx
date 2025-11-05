@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
@@ -22,7 +21,8 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
         <div className="max-h-[680px] overflow-y-auto pr-2 custom-scrollbar">
           <div className="space-y-2">
             {displayedData.map((h, i) => {
-              const category = categorizeActivity(h.activity);
+              // ✅ Klasifikasi berdasarkan X, Y, Z (bukan magnitude)
+              const category = categorizeActivity(h.x, h.y, h.z);
               const actualIndex = dataOffset + i + 1;
               return (
                 <div
@@ -48,7 +48,7 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
                         : "--"}
                     </span>
                   </div>
-                  <div className="w-[120px] flex justify-end">
+                  <div className="w-[150px] flex justify-end">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(category.color)} border`}>
                       {category.label}
                     </span>

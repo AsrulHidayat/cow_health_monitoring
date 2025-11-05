@@ -5,20 +5,40 @@ export default function ActivityDistribution({ percentages }) {
 
   const categories = [
     {
-      key: 'berbaring',
-      label: 'Berbaring',
-      color: '#3B82F6',
-      bgColor: 'bg-blue-500',
-      description: 'Sapi dalam kondisi istirahat atau tidur.',
-      percentage: percentages.berbaring
-    },
-    {
       key: 'berdiri',
       label: 'Berdiri',
       color: '#22C55E',
       bgColor: 'bg-green-500',
-      description: 'Sapi dalam kondisi sadar namun tidak aktif bergerak.',
-      percentage: percentages.berdiri
+      range: 'X: -0.9 ~ -0.2 | Y: -2.5 ~ -0.7 | Z: 11.1 ~ 11.5',
+      description: 'Sapi dalam kondisi berdiri normal dan aktif.',
+      percentage: percentages.berdiri || 0
+    },
+    {
+      key: 'baringKanan',
+      label: 'Berbaring Kanan',
+      color: '#3B82F6',
+      bgColor: 'bg-blue-500',
+      range: 'X: -0.3 ~ -0.2 | Y: 5.6 ~ 5.7 | Z: ≈10.0',
+      description: 'Sapi berbaring dengan posisi miring ke kanan.',
+      percentage: percentages.baringKanan || 0
+    },
+    {
+      key: 'baringKiri',
+      label: 'Berbaring Kiri',
+      color: '#06B6D4',
+      bgColor: 'bg-cyan-500',
+      range: 'X: ≈-0.3 | Y: -8.2 ~ -8.1 | Z: 7.2 ~ 7.3',
+      description: 'Sapi berbaring dengan posisi miring ke kiri.',
+      percentage: percentages.baringKiri || 0
+    },
+    {
+      key: 'na',
+      label: 'N/A (Tidak Normal)',
+      color: '#6B7280',
+      bgColor: 'bg-gray-500',
+      range: 'Di luar rentang nilai normal',
+      description: 'Data tidak normal atau posisi tidak teridentifikasi.',
+      percentage: percentages.na || 0
     }
   ];
 
