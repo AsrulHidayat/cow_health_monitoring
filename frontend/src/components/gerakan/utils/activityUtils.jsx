@@ -12,7 +12,7 @@ export const TIME_FILTERS = {
 };
 
 // ========================================================
-// 🔹 KATEGORI AKTIVITAS (3 kategori + N/A)
+// 🔹 KATEGORI AKTIVITAS (4 kategori)
 // ========================================================
 export const ACTIVITY_CATEGORIES = [
   { label: 'Semua Aktivitas', value: 'ALL' },
@@ -23,59 +23,91 @@ export const ACTIVITY_CATEGORIES = [
 ];
 
 // ========================================================
-// 🔹 FUNGSI KLASIFIKASI AKTIVITAS BERDASARKAN X, Y, Z
+// 🔹 FUNGSI KLASIFIKASI AKTIVITAS - DIPERBAIKI
 // ========================================================
 /**
  * Mengklasifikasikan posisi sapi berdasarkan nilai akselerometer X, Y, Z
+ * dengan rentang yang lebih fleksibel dan toleransi error sensor
+ * 
  * @param {number} x - Nilai akselerometer sumbu X
- * @param {number} y - Nilai akselerometer sumbu Y
+ * @param {number} y - Nilai akselerometer sumbu Y  
  * @param {number} z - Nilai akselerometer sumbu Z
  * @returns {object} - Object berisi label, color, dan value kategori
  */
 export function categorizeActivity(x, y, z) {
-  // Validasi: pastikan semua nilai valid
+  // ✅ Validasi: pastikan semua nilai valid
   if ([x, y, z].some(v => v == null || isNaN(v))) {
     return { label: "N/A", color: "gray", value: "N/A" };
   }
 
-  // Konversi ke number untuk memastikan
-  x = parseFloat(x);
-  y = parseFloat(y);
-  z = parseFloat(z);
+  // ✅ Konversi ke number dan pastikan presisi 2 desimal
+  x = parseFloat(Number(x).toFixed(2));
+  y = parseFloat(Number(y).toFixed(2));
+  z = parseFloat(Number(z).toFixed(2));
 
   // ===============================
   // 🐄 1️⃣ SAPI BERDIRI
   // ===============================
-  // Rentang: X: -0.9 hingga -0.2, Y: -2.5 hingga -0.7, Z: 11.1 hingga 11.5
-  if (x >= -0.9 && x <= -0.2 && 
-      y >= -2.5 && y <= -0.7 && 
-      z >= 11.1 && z <= 11.5) {
+  // Karakteristik: Z tinggi (gravitasi kebawah), X dan Y relatif kecil
+  // Rentang diperlebar dengan toleransi ±15%
+  if (
+    x >= -1.2 && x <= 0.1 &&      // X: -1.2 hingga 0.1
+    y >= -3.0 && y <= 0.0 &&      // Y: -3.0 hingga 0.0  
+    z >= 10.5 && z <= 12.0        // Z: 10.5 hingga 12.0
+  ) {
     return { label: "Berdiri", color: "green", value: "Berdiri" };
   }
 
   // ===============================
   // 😴 2️⃣ SAPI BERBARING KANAN
   // ===============================
-  // Rentang: X: -0.3 hingga -0.2, Y: 5.6 hingga 5.7, Z: Tepat 10.0 (toleransi ±0.1)
-  if (x >= -0.3 && x <= -0.2 && 
-      y >= 5.6 && y <= 5.7 && 
-      z >= 9.9 && z <= 10.1) {
+  // Karakteristik: Y positif tinggi (miring kanan), Z moderate
+  // Rentang diperlebar dengan toleransi ±20%
+  if (
+    x >= -0.5 && x <= 0.1 &&      // X: -0.5 hingga 0.1
+    y >= 4.5 && y <= 6.5 &&       // Y: 4.5 hingga 6.5 (positif = kanan)
+    z >= 9.0 && z <= 11.0         // Z: 9.0 hingga 11.0
+  ) {
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
 
   // ===============================
-  // 😴 3️⃣ SAPI BERBARING KIRI
+  // 😴 3️⃣ SAPI BERBARING KIRI  
   // ===============================
-  // Rentang: X: Tepat -0.3 (toleransi ±0.05), Y: -8.2 hingga -8.1, Z: 7.2 hingga 7.3
-  if (x >= -0.35 && x <= -0.25 && 
-      y >= -8.2 && y <= -8.1 && 
-      z >= 7.2 && z <= 7.3) {
+  // Karakteristik: Y negatif tinggi (miring kiri), Z lebih rendah
+  // Rentang diperlebar dengan toleransi ±20%
+  if (
+    x >= -0.5 && x <= 0.1 &&      // X: -0.5 hingga 0.1
+    y >= -9.0 && y <= -7.0 &&     // Y: -9.0 hingga -7.0 (negatif = kiri)
+    z >= 6.5 && z <= 8.0          // Z: 6.5 hingga 8.0
+  ) {
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
 
   // ===============================
-  // ❔ 4️⃣ TIDAK TERDETEKSI / TIDAK NORMAL
+  // 🔄 4️⃣ DETEKSI TAMBAHAN BERDASARKAN DOMINASI SUMBU
   // ===============================
+  // Jika tidak masuk kategori ketat di atas, gunakan logika dominasi sumbu
+  
+  // Jika Z dominan tinggi (>9) dan Y kecil = kemungkinan berdiri
+  if (z > 9.0 && Math.abs(y) < 4.0) {
+    return { label: "Berdiri", color: "green", value: "Berdiri" };
+  }
+  
+  // Jika Y positif dominan (>4) = kemungkinan berbaring kanan
+  if (y > 4.0 && z > 7.0) {
+    return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
+  }
+  
+  // Jika Y negatif dominan (<-6) = kemungkinan berbaring kiri  
+  if (y < -6.0 && z > 5.0) {
+    return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
+  }
+
+  // ===============================
+  // ❔ 5️⃣ TIDAK TERDETEKSI / TRANSISI
+  // ===============================
+  // Kemungkinan: sedang bergerak, transisi posisi, atau sensor error
   return { label: "N/A", color: "gray", value: "N/A" };
 }
 
@@ -144,7 +176,6 @@ export const filterDataByTimePeriod = (
 
       return dataToUse.map((item, index) => {
         const date = new Date(item.ts);
-        // Klasifikasikan berdasarkan X, Y, Z
         const category = categorizeActivity(item.x, item.y, item.z);
         
         return {
@@ -158,8 +189,8 @@ export const filterDataByTimePeriod = (
             hour12: false,
           }),
           fullDate: date,
-          activityLabel: category.label, // Tambahkan label aktivitas
-          activityColor: getCategoryColor(category.label), // Tambahkan warna
+          activityLabel: category.label,
+          activityColor: getCategoryColor(category.label),
         };
       });
     }
@@ -184,13 +215,11 @@ export const filterDataByTimePeriod = (
       });
 
       return Object.entries(grouped).map(([minuteKey, items], index) => {
-        // Hitung rata-rata magnitude
         const magnitudes = items.map(i => i.magnitude).filter(m => m != null);
         const avgMagnitude = magnitudes.length > 0
           ? magnitudes.reduce((a, b) => a + b, 0) / magnitudes.length
           : null;
 
-        // Ambil aktivitas yang paling sering muncul
         const activityCounts = {};
         items.forEach(i => {
           const cat = categorizeActivity(i.x, i.y, i.z);
@@ -216,4 +245,4 @@ export const filterDataByTimePeriod = (
     default:
       return filteredData.slice(-25);
   }
-};
+}
