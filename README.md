@@ -16,7 +16,7 @@ Visi jangka panjangnya adalah untuk memantau tiga parameter kesehatan utama: **S
   * ✅ Fungsionalitas penuh untuk monitoring **Aktivitas/Gerakan**.
   * ⏳ Modul dan *endpoint* untuk **Detak Jantung** sedang dalam pengembangan dan akan diintegrasikan pada rilis berikutnya.
 
-## 🚀 Fitur Utama
+## Fitur Utama
 
   * **Autentikasi Pengguna:** Sistem registrasi dan login yang aman menggunakan JSON Web Tokens (JWT) dengan *password hashing* (Bcrypt).
   * **Manajemen Data Master:** Operasi CRUD (Create, Read, Update, Delete) penuh untuk data ternak (Sapi).
@@ -25,7 +25,7 @@ Visi jangka panjangnya adalah untuk memantau tiga parameter kesehatan utama: **S
   * **(Roadmap) Dasbor Detak Jantung:** Modul yang sedang disiapkan untuk memantau BPM (*beats per minute*) ternak.
   * **Manajemen Data Sensor:** Fitur untuk mengelola (edit/hapus) data riwayat sensor jika terjadi anomali atau kesalahan input.
 
-## 🏛️ Arsitektur Sistem
+## Arsitektur Sistem
 
 Sistem ini dibagi menjadi tiga komponen utama:
 
@@ -48,7 +48,7 @@ Sistem ini dibagi menjadi tiga komponen utama:
       * Kode purwarupa (`.ino`) disediakan dalam folder `arduino/`.
       * Dirancang untuk mikrokontroler (seperti ESP32/ESP8266) yang dilengkapi sensor untuk membaca data dan mengirimkannya ke *endpoint* backend.
 
-## 🛠️ Tumpukan Teknologi (Tech Stack)
+## Tumpukan Teknologi (Tech Stack)
 
 | Kategori | Teknologi | Deskripsi |
 | :--- | :--- | :--- |
@@ -68,7 +68,7 @@ Sistem ini dibagi menjadi tiga komponen utama:
 | | CORS | Middleware untuk mengaktifkan *Cross-Origin Resource Sharing*. |
 | **Hardware** | C++/Arduino | Bahasa pemrograman untuk logika mikrokontroler/sensor. |
 
-## 📦 Panduan Instalasi & Konfigurasi
+## Panduan Instalasi & Konfigurasi
 
 Untuk menjalankan proyek ini di lingkungan lokal, Anda perlu menjalankan `backend` dan `frontend` secara terpisah.
 
@@ -178,7 +178,7 @@ Folder `arduino/` berisi kode sampel untuk pembacaan sensor.
 
 *(Pastikan perangkat IoT Anda terhubung ke jaringan yang sama dengan server backend dan menargetkan IP lokal server Anda, bukan `localhost`)*
 
-## 🤝 Kontribusi
+## Kontribusi
 
 Kontribusi, *issues*, dan *pull requests* sangat kami hargai untuk pengembangan lebih lanjut.
 
@@ -191,3 +191,4 @@ Kontribusi, *issues*, dan *pull requests* sangat kami hargai untuk pengembangan 
 -----
 
 *Didistribusikan di bawah Lisensi MIT. Lihat `LICENSE.txt` untuk informasi lebih lanjut.*
+
