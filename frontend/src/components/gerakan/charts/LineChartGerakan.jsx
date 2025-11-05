@@ -29,13 +29,15 @@ const LineChartGerakan = ({ data }) => {
   const activityCategory = categorizeActivity(latest.magnitude);
   const badgeStyle = getCategoryStyles(activityCategory.color);
 
-  // === Transformasi data (menambah 'activityLabel', 'timeLabel', dll.) ===
+// === Transformasi data (menambah 'activityLabel', 'timeLabel', dll.) ===
   const cleanData = data.map((d, index) => {
     const magnitude = d.magnitude != null ? Number(d.magnitude) : null;
     const x = d.x != null ? Number(d.x) : null;
     const y = d.y != null ? Number(d.y) : null;
     const z = d.z != null ? Number(d.z) : null;
-    const categoryInfo = categorizeActivity(magnitude);
+    
+    // ✅ Klasifikasi berdasarkan X, Y, Z (bukan magnitude)
+    const categoryInfo = categorizeActivity(x, y, z);
 
     return {
       ...d,
@@ -45,6 +47,8 @@ const LineChartGerakan = ({ data }) => {
       y: y,
       z: z,
       activityLabel: categoryInfo.label, // Untuk Sumbu Y Mode Normal
+      activityValue: categoryInfo.value, // Untuk filtering
+      activityColor: categoryInfo.color, // Untuk warna
       timeLabel: d.time || new Date(d.fullDate).toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
