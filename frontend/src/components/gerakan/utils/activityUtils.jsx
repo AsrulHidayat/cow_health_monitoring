@@ -28,7 +28,6 @@ export const ACTIVITY_CATEGORIES = [
 /**
  * Mengklasifikasikan posisi sapi berdasarkan nilai akselerometer X, Y, Z
  * dengan rentang yang lebih fleksibel dan toleransi error sensor
- * 
  * @param {number} x - Nilai akselerometer sumbu X
  * @param {number} y - Nilai akselerometer sumbu Y  
  * @param {number} z - Nilai akselerometer sumbu Z
@@ -48,38 +47,56 @@ export function categorizeActivity(x, y, z) {
   // ===============================
   // 🐄 1️⃣ SAPI BERDIRI
   // ===============================
-  // Karakteristik: Z tinggi (gravitasi kebawah), X dan Y relatif kecil
-  // Rentang diperlebar dengan toleransi ±15%
   if (
-    x >= -1.2 && x <= 0.1 &&      // X: -1.2 hingga 0.1
-    y >= -3.0 && y <= 0.0 &&      // Y: -3.0 hingga 0.0  
-    z >= 10.5 && z <= 12.0        // Z: 10.5 hingga 12.0
+    x >= -1.2 && x <= 0.1 &&    // X: -1.2 hingga 0.1
+    y >= -3.0 && y <= 0.0 &&    // Y: -3.0 hingga 0.0  
+    z >= 10.5 && z <= 12.0      // Z: 10.5 hingga 12.0
   ) {
     return { label: "Berdiri", color: "green", value: "Berdiri" };
   }
 
   // ===============================
-  // 😴 2️⃣ SAPI BERBARING KANAN
+  // 😴 2️⃣ SAPI BERBARING KANAN (Posisi 1 - Agak Miring)
   // ===============================
-  // Karakteristik: Y positif tinggi (miring kanan), Z moderate
-  // Rentang diperlebar dengan toleransi ±20%
   if (
-    x >= -0.5 && x <= 0.1 &&      // X: -0.5 hingga 0.1
-    y >= 4.5 && y <= 6.5 &&       // Y: 4.5 hingga 6.5 (positif = kanan)
-    z >= 9.0 && z <= 11.0         // Z: 9.0 hingga 11.0
+    x >= -0.5 && x <= 0.1 &&    // X: -0.5 hingga 0.1
+    y >= 4.2 && y <= 7.0 &&     // Y: 4.2 hingga 7.0 
+    z >= 7.5 && z <= 11.0       // Z: 7.5 hingga 11.0
   ) {
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
 
   // ===============================
-  // 😴 3️⃣ SAPI BERBARING KIRI  
+  // 😴 2b️⃣ SAPI BERBARING KANAN (Posisi 2 - Sangat Miring / Nyaris Rata)
   // ===============================
-  // Karakteristik: Y negatif tinggi (miring kiri), Z lebih rendah
-  // Rentang diperlebar dengan toleransi ±20%
+  // **BLOK BARU** untuk data gambar terakhir (image_423d4e.png)
+  // Karakteristik: Z sangat rendah, Y sangat tinggi (positif)
   if (
-    x >= -0.5 && x <= 0.1 &&      // X: -0.5 hingga 0.1
-    y >= -9.0 && y <= -7.0 &&     // Y: -9.0 hingga -7.0 (negatif = kiri)
-    z >= 6.5 && z <= 8.0          // Z: 6.5 hingga 8.0
+    x >= 0.1 && x <= 0.3 &&      // X: 0.1 hingga 0.3 (Positif kecil)
+    y >= 10.0 && y <= 10.5 &&   // Y: 10.0 hingga 10.5 (Sangat Positif)
+    z >= 3.8 && z <= 4.1        // Z: 3.8 hingga 4.1 (Rendah)
+  ) {
+    return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
+  }
+
+  // ===============================
+  // 😴 3️⃣ SAPI BERBARING KIRI (Posisi 1 - Agak Miring)
+  // ===============================
+  if (
+    x >= -0.5 && x <= 0.1 &&    // X: -0.5 hingga 0.1
+    y >= -10.0 && y <= -6.5 &&  // Y: -10.0 hingga -6.5
+    z >= 5.5 && z <= 8.5        // Z: 5.5 hingga 8.5
+  ) {
+    return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
+  }
+
+  // ===============================
+  // 😴 3b️⃣ SAPI BERBARING KIRI (Posisi 2 - Sangat Miring / Nyaris Rata)
+  // ===============================
+  if (
+    x >= 0.3 && x <= 0.7 &&      // X: 0.3 hingga 0.7 (Positif)
+    y >= -10.5 && y <= -9.8 &&   // Y: -10.5 hingga -9.8 (Sangat Negatif)
+    z >= 0.2 && z <= 2.5         // Z: 0.2 hingga 2.5 (Sangat Rendah)
   ) {
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
@@ -87,7 +104,7 @@ export function categorizeActivity(x, y, z) {
   // ===============================
   // 🔄 4️⃣ DETEKSI TAMBAHAN BERDASARKAN DOMINASI SUMBU
   // ===============================
-  // Jika tidak masuk kategori ketat di atas, gunakan logika dominasi sumbu
+  // Logika ini tetap ada sebagai jaring pengaman
   
   // Jika Z dominan tinggi (>9) dan Y kecil = kemungkinan berdiri
   if (z > 9.0 && Math.abs(y) < 4.0) {
@@ -95,19 +112,18 @@ export function categorizeActivity(x, y, z) {
   }
   
   // Jika Y positif dominan (>4) = kemungkinan berbaring kanan
-  if (y > 4.0 && z > 7.0) {
+  if (y > 4.0 && z > 7.0) { // z > 7.0 agar tidak tumpang tindih dengan blok 2b
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
   
   // Jika Y negatif dominan (<-6) = kemungkinan berbaring kiri  
-  if (y < -6.0 && z > 5.0) {
+  if (y < -6.0 && z > 5.0) { // z > 5.0 agar tidak tumpang tindih dengan blok 3b
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
 
   // ===============================
   // ❔ 5️⃣ TIDAK TERDETEKSI / TRANSISI
   // ===============================
-  // Kemungkinan: sedang bergerak, transisi posisi, atau sensor error
   return { label: "N/A", color: "gray", value: "N/A" };
 }
 
