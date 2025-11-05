@@ -19,14 +19,6 @@ export default function ActivityDistribution({ percentages }) {
       bgColor: 'bg-green-500',
       description: 'Sapi dalam kondisi sadar namun tidak aktif bergerak.',
       percentage: percentages.berdiri
-    },
-    {
-      key: 'berjalan',
-      label: 'Berjalan',
-      color: '#EAB308',
-      bgColor: 'bg-yellow-500',
-      description: 'Sapi aktif bergerak atau berjalan.',
-      percentage: percentages.berjalan
     }
   ];
 

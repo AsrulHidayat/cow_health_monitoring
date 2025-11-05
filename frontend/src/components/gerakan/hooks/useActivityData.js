@@ -23,7 +23,6 @@ export const useActivityData = () => {
   const [activityPercentages, setActivityPercentages] = useState({
     berbaring: 0,
     berdiri: 0,
-    berjalan: 0,
   });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
@@ -301,21 +300,19 @@ export const useActivityData = () => {
           const category = categorizeActivity(item.activity).value;
           if (category === 'Berbaring') acc.berbaring++;
           else if (category === 'Berdiri') acc.berdiri++;
-          else if (category === 'Berjalan') acc.berjalan++;
           return acc;
         },
-        { berbaring: 0, berdiri: 0, berjalan: 0 }
+        { berbaring: 0, berdiri: 0 }
       );
 
       const total = categoryFilteredData.length;
       setActivityPercentages({
         berbaring: (categoryCounts.berbaring / total) * 100,
         berdiri: (categoryCounts.berdiri / total) * 100,
-        berjalan: (categoryCounts.berjalan / total) * 100,
       });
     } else {
       setAvgData({ avg_activity: null });
-      setActivityPercentages({ berbaring: 0, berdiri: 0, berjalan: 0 });
+      setActivityPercentages({ berbaring: 0, berdiri: 0 });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 

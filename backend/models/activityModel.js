@@ -31,7 +31,7 @@ const Activity = db.define(
       allowNull: true,
     },
     activity: {
-      type: DataTypes.ENUM('Berbaring', 'Berdiri', 'Berjalan'),
+      type: DataTypes.ENUM('Berbaring', 'Berdiri'),
       allowNull: true,
       defaultValue: 'Berdiri',
     },

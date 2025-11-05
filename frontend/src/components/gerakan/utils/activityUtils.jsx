@@ -18,44 +18,55 @@ export const ACTIVITY_CATEGORIES = [
   { label: 'Semua Aktivitas', value: 'ALL' },
   { label: 'Berbaring', value: 'Berbaring' },
   { label: 'Berdiri', value: 'Berdiri' },
-  { label: 'Berjalan', value: 'Berjalan' },
 ];
 
 // ========================================================
 // 🔹 KATEGORI AKTIVITAS DARI NILAI activity
 // ========================================================
-export const categorizeActivity = (activity, activityEnum = null) => {
-  // Jika database sudah punya enum aktivitas
-  if (activityEnum) {
-    const categoryMap = {
-      Berbaring: { label: "Berbaring", color: "blue", value: "Berbaring" },
-      Berdiri: { label: "Berdiri", color: "green", value: "Berdiri" },
-      Berjalan: { label: "Berjalan", color: "yellow", value: "Berjalan" },
-    };
-    return categoryMap[activityEnum] || { label: "N/A", color: "gray", value: "na" };
+// Fungsi untuk menentukan posisi sapi berdasarkan nilai aktivitas (misalnya dari sumbu Z)
+// ========================================================
+// 🔹 KATEGORI AKTIVITAS BERDASARKAN NILAI X, Y, Z
+// ========================================================
+export function categorizeActivity(x, y, z) {
+  // Pastikan semua nilai valid
+  if ([x, y, z].some(v => v == null || isNaN(v))) {
+    return { label: "N/A", color: "gray", value: "N/A" };
   }
 
-  // Validasi nilai magnitude (m/s²)
-  if (activity == null || isNaN(activity)) {
-    return { label: "N/A", color: "gray", value: "na" };
-  }
+  // Pastikan semua data berupa number
+  x = parseFloat(x);
+  y = parseFloat(y);
+  z = parseFloat(z);
 
-  // === KLASIFIKASI BERDASARKAN NILAI MAGNITUDE (m/s²) ===
-  // Estimasi:
-  // - Berbaring: ~9.5–10.1 (sangat stabil, sedikit variasi)
-  // - Berdiri: 8.8–9.5 atau 10.1–10.8 (ada goyangan ringan kepala)
-  // - Berjalan: <8.8 atau >10.8 (pergerakan aktif kepala/leher)
-  if (activity >= 9.5 && activity <= 10.1) {
-    return { label: "Berbaring", color: "blue", value: "Berbaring" };
-  } else if ((activity >= 8.8 && activity < 9.5) || (activity > 10.1 && activity <= 10.8)) {
+  // ===============================
+  // 🐄 1️⃣ KATEGORI BERDIRI
+  // ===============================
+  // Ciri: sumbu Z besar (~10–12), Y kecil (antara -3 sampai 3)
+  if (z >= 10 && z <= 11.7 && Math.abs(y) < 3) {
     return { label: "Berdiri", color: "green", value: "Berdiri" };
-  } else if (activity < 8.8 || activity > 10.8) {
-    return { label: "Berjalan", color: "yellow", value: "Berjalan" };
   }
 
-  // Fallback
-  return { label: "N/A", color: "gray", value: "na" };
-};
+  // ===============================
+  // 😴 2️⃣ KATEGORI BERBARING KIRI
+  // ===============================
+  // Ciri: sumbu Y negatif besar (~-5 s/d -9), Z kecil (~6–8)
+  if (y <= -4.5 && y >= -9 && z >= 6 && z <= 8) {
+    return { label: "Berbaring Kiri", color: "blue", value: "Berbaring Kiri" };
+  }
+
+  // ===============================
+  // 😴 3️⃣ KATEGORI BERBARING KANAN
+  // ===============================
+  // Ciri: sumbu Y positif besar (~5 s/d 9), Z sedang (~9–10.5)
+  if (y >= 4.5 && y <= 9 && z >= 9 && z <= 10.5) {
+    return { label: "Berbaring Kanan", color: "cyan", value: "Berbaring Kanan" };
+  }
+
+  // ===============================
+  // ❔ 4️⃣ TIDAK TERDETEKSI
+  // ===============================
+  return { label: "N/A", color: "gray", value: "N/A" };
+}
 
 
 // ========================================================
@@ -65,7 +76,6 @@ export const getCategoryStyles = (color) => {
   const styles = {
     blue: 'bg-blue-100 text-blue-700 border-blue-200',
     green: 'bg-green-100 text-green-700 border-green-200',
-    yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     orange: 'bg-orange-100 text-orange-700 border-orange-200',
     red: 'bg-red-100 text-red-700 border-red-200',
     gray: 'bg-gray-100 text-gray-700 border-gray-200',
