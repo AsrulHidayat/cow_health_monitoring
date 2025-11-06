@@ -26,16 +26,16 @@ const LineChartGerakan = ({ data }) => {
 
   // === Ambil kategori aktivitas dari data terakhir ===
   const latest = data[data.length - 1];
-  const activityCategory = categorizeActivity(latest.magnitude);
+  const activityCategory = categorizeActivity(latest.x, latest.y, latest.z);
   const badgeStyle = getCategoryStyles(activityCategory.color);
 
-// === Transformasi data (menambah 'activityLabel', 'timeLabel', dll.) ===
+  // === Transformasi data (menambah 'activityLabel', 'timeLabel', dll.) ===
   const cleanData = data.map((d, index) => {
     const magnitude = d.magnitude != null ? Number(d.magnitude) : null;
     const x = d.x != null ? Number(d.x) : null;
     const y = d.y != null ? Number(d.y) : null;
     const z = d.z != null ? Number(d.z) : null;
-    
+
     // ✅ Klasifikasi berdasarkan X, Y, Z (bukan magnitude)
     const categoryInfo = categorizeActivity(x, y, z);
 
@@ -61,7 +61,7 @@ const LineChartGerakan = ({ data }) => {
   // === Custom Tooltip untuk format yang lebih baik ===
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || payload.length === 0) return null;
-    
+
     const dataPoint = payload[0].payload;
 
     return (
@@ -77,8 +77,8 @@ const LineChartGerakan = ({ data }) => {
               return (
                 <div key={index} className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: entry.color }}
                     />
                     <span className="text-sm font-medium text-gray-700">
@@ -131,16 +131,7 @@ const LineChartGerakan = ({ data }) => {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null || !payload) return null;
 
-    const category = categorizeActivity(payload.magnitude); // Tetap pakai magnitude untuk warna
-    const colorMap = {
-      blue: '#3B82F6',
-      green: '#22C55E',
-      yellow: '#EAB308',
-      orange: '#F97316',
-      red: '#EF4444',
-      gray: '#6B7280',
-    };
-    const fillColor = colorMap[category.color] || '#8B5CF6';
+    const fillColor = payload.activityColor || '#8B5CF6';
 
     return (
       <circle
@@ -163,12 +154,12 @@ const LineChartGerakan = ({ data }) => {
           🔸 Header Controls - Mode Toggle & Badge
           =========================================================== */}
       <div className="absolute top-3 left-4 right-4 flex justify-between items-center z-10">
-        
+
         {/* === Bagian Kiri: Label & Info Data === */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
-            {isDetailMode 
-              ? "Menampilkan percepatan 3 sumbu" 
+            {isDetailMode
+              ? "Menampilkan percepatan 3 sumbu"
               : "Menampilkan kategori aktivitas"}
           </span>
           <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200">
@@ -190,11 +181,10 @@ const LineChartGerakan = ({ data }) => {
           {/* Tombol Toggle Button */}
           <button
             onClick={() => setIsDetailMode(!isDetailMode)}
-            className={`text-xs px-4 py-2 rounded-lg shadow-md transition-all font-medium ${
-              isDetailMode
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+            className={`text-xs px-4 py-2 rounded-lg shadow-md transition-all font-medium ${isDetailMode
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
           >
             {isDetailMode ? "Mode Detail XYZ" : "Mode Normal"}
           </button>
@@ -205,12 +195,12 @@ const LineChartGerakan = ({ data }) => {
           🔸 Grafik Utama (Conditional)
           =========================================================== */}
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart 
-          data={chartData} 
+        <LineChart
+          data={chartData}
           margin={{ top: 60, right: 40, left: 20, bottom: 60 }}
         >
-          <CartesianGrid 
-            strokeDasharray="3 3" 
+          <CartesianGrid
+            strokeDasharray="3 3"
             stroke="#e5e7eb"
             opacity={0.5}
             vertical={false}
@@ -218,7 +208,7 @@ const LineChartGerakan = ({ data }) => {
 
           {/* Sumbu X - Waktu (Sama untuk kedua mode) */}
           <XAxis
-            dataKey="timeLabel" 
+            dataKey="timeLabel"
             tick={{ fontSize: 11, fill: '#6B7280' }}
             tickLine={{ stroke: '#d1d5db' }}
             axisLine={{ stroke: '#d1d5db' }}
@@ -226,7 +216,7 @@ const LineChartGerakan = ({ data }) => {
             textAnchor="end"
             height={80}
             label={{
-              value: "Waktu", 
+              value: "Waktu",
               position: "insideBottomRight",
               offset: -5,
               style: { fontSize: 12, fill: '#374151', fontWeight: 600 }
@@ -251,9 +241,9 @@ const LineChartGerakan = ({ data }) => {
           ) : (
             // Sumbu Y untuk MODE NORMAL (Kategorikal)
             <YAxis
-              type="category" 
-              dataKey="activityLabel" 
-              domain={['Berbaring', 'Berdiri', 'Berjalan']} 
+              type="category"
+              dataKey="activityLabel"
+              domain={['N/A', 'Berbaring Kiri', 'Berbaring Kanan', 'Berdiri']}
               tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }}
               tickLine={{ stroke: '#d1d5db' }}
               axisLine={{ stroke: '#d1d5db' }}
@@ -271,7 +261,7 @@ const LineChartGerakan = ({ data }) => {
 
           {/* Legend - hanya tampil di mode detail */}
           {isDetailMode && (
-            <Legend 
+            <Legend
               wrapperStyle={{
                 paddingTop: "15px",
                 fontSize: "12px",
@@ -288,7 +278,7 @@ const LineChartGerakan = ({ data }) => {
             <>
               <Line
                 type="monotone"
-                dataKey="x" 
+                dataKey="x"
                 stroke="#EF4444"
                 strokeWidth={2.5}
                 dot={false}

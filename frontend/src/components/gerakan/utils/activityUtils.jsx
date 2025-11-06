@@ -48,9 +48,9 @@ export function categorizeActivity(x, y, z) {
   // 🐄 1️⃣ SAPI BERDIRI
   // ===============================
   if (
-    x >= -1.2 && x <= 0.1 &&    // X: -1.2 hingga 0.1
-    y >= -3.0 && y <= 0.0 &&    // Y: -3.0 hingga 0.0  
-    z >= 10.5 && z <= 12.0      // Z: 10.5 hingga 12.0
+    x >= -1.2 && x <= 0.1 &&    
+    y >= -3.0 && y <= 0.0 &&    
+    z >= 10.5 && z <= 12.0      
   ) {
     return { label: "Berdiri", color: "green", value: "Berdiri" };
   }
@@ -59,9 +59,9 @@ export function categorizeActivity(x, y, z) {
   // 😴 2️⃣ SAPI BERBARING KANAN (Posisi 1 - Agak Miring)
   // ===============================
   if (
-    x >= -0.5 && x <= 0.1 &&    // X: -0.5 hingga 0.1
-    y >= 4.2 && y <= 7.0 &&     // Y: 4.2 hingga 7.0 
-    z >= 7.5 && z <= 11.0       // Z: 7.5 hingga 11.0
+    x >= -0.6 && x <= 0.2 &&   
+    y >= 4.0 && y <= 7.2 &&     
+    z >= 7.3 && z <= 11.2      
   ) {
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
@@ -69,12 +69,10 @@ export function categorizeActivity(x, y, z) {
   // ===============================
   // 😴 2b️⃣ SAPI BERBARING KANAN (Posisi 2 - Sangat Miring / Nyaris Rata)
   // ===============================
-  // **BLOK BARU** untuk data gambar terakhir (image_423d4e.png)
-  // Karakteristik: Z sangat rendah, Y sangat tinggi (positif)
   if (
-    x >= 0.1 && x <= 0.3 &&      // X: 0.1 hingga 0.3 (Positif kecil)
-    y >= 10.0 && y <= 10.5 &&   // Y: 10.0 hingga 10.5 (Sangat Positif)
-    z >= 3.8 && z <= 4.1        // Z: 3.8 hingga 4.1 (Rendah)
+    x >= 0.0 && x <= 0.4 &&    
+    y >= 9.8 && y <= 10.8 &&   
+    z >= 2.8 && z <= 4.3       
   ) {
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
@@ -83,20 +81,20 @@ export function categorizeActivity(x, y, z) {
   // 😴 3️⃣ SAPI BERBARING KIRI (Posisi 1 - Agak Miring)
   // ===============================
   if (
-    x >= -0.5 && x <= 0.1 &&    // X: -0.5 hingga 0.1
-    y >= -10.0 && y <= -6.5 &&  // Y: -10.0 hingga -6.5
-    z >= 5.5 && z <= 8.5        // Z: 5.5 hingga 8.5
+    x >= -0.6 && x <= 0.2 &&   
+    y >= -10.2 && y <= -6.3 &&  
+    z >= 5.3 && z <= 8.7        
   ) {
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
 
   // ===============================
-  // 😴 3b️⃣ SAPI BERBARING KIRI (Posisi 2 - Sangat Miring / Nyaris Rata)
+  // 😴 3b️ SAPI BERBARING KIRI (Posisi 2 - Sangat Miring / Nyaris Rata)
   // ===============================
   if (
-    x >= 0.3 && x <= 0.7 &&      // X: 0.3 hingga 0.7 (Positif)
-    y >= -10.5 && y <= -9.8 &&   // Y: -10.5 hingga -9.8 (Sangat Negatif)
-    z >= 0.2 && z <= 2.5         // Z: 0.2 hingga 2.5 (Sangat Rendah)
+    x >= 0.2 && x <= 0.8 &&      
+    y >= -10.8 && y <= -9.6 &&   
+    z >= -0.1 && z <= 2.7        
   ) {
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
@@ -104,7 +102,7 @@ export function categorizeActivity(x, y, z) {
   // ===============================
   // 🔄 4️⃣ DETEKSI TAMBAHAN BERDASARKAN DOMINASI SUMBU
   // ===============================
-  // Logika ini tetap ada sebagai jaring pengaman
+  // Logika fallback ini tetap penting sebagai jaring pengaman
   
   // Jika Z dominan tinggi (>9) dan Y kecil = kemungkinan berdiri
   if (z > 9.0 && Math.abs(y) < 4.0) {
@@ -112,12 +110,14 @@ export function categorizeActivity(x, y, z) {
   }
   
   // Jika Y positif dominan (>4) = kemungkinan berbaring kanan
-  if (y > 4.0 && z > 7.0) { // z > 7.0 agar tidak tumpang tindih dengan blok 2b
+  // Batas Z disesuaikan agar tidak tumpang tindih dengan blok 2b
+  if (y > 4.0 && z > 4.3) { 
     return { label: "Berbaring Kanan", color: "blue", value: "Berbaring Kanan" };
   }
   
   // Jika Y negatif dominan (<-6) = kemungkinan berbaring kiri  
-  if (y < -6.0 && z > 5.0) { // z > 5.0 agar tidak tumpang tindih dengan blok 3b
+  // Batas Z disesuaikan agar tidak tumpang tindih dengan blok 3b
+  if (y < -6.0 && z > 2.7) { 
     return { label: "Berbaring Kiri", color: "cyan", value: "Berbaring Kiri" };
   }
 

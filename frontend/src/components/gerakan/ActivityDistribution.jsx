@@ -37,7 +37,7 @@ export default function ActivityDistribution({ percentages }) {
       color: '#6B7280',
       bgColor: 'bg-gray-500',
       range: 'Di luar rentang nilai normal',
-      description: 'Data tidak normal atau posisi tidak teridentifikasi.',
+      description: 'Data tidak normal atau posisi tidak teridentifikasi - Bisa jadi sapi sedang jungkir balik atau sensornya yang kebalik',
       percentage: percentages.na || 0
     }
   ];
