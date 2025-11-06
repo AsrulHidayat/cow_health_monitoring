@@ -202,7 +202,7 @@ export default function Gerakan() {
     }
   };
 
- const getTimePeriodLabel = () => {
+  const getTimePeriodLabel = () => {
     if (dateRange.startDate && dateRange.endDate) {
       try {
         const start = new Date(dateRange.startDate).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
@@ -216,21 +216,21 @@ export default function Gerakan() {
     return filter ? filter.label : "Data";
   };
 
-  // Cari kategori dominan berdasarkan persentase terbesar
-  const getDominantCategory = () => {
+  // ✅ Cari kategori dominan berdasarkan persentase tertinggi untuk header
+  const getHeaderDominantCategory = () => {
     if (!activityPercentages || filteredHistory.length === 0) return null;
-    
+
     const categories = [
       { key: 'berdiri', label: 'Berdiri', color: 'green', percentage: activityPercentages.berdiri },
       { key: 'baringKanan', label: 'Berbaring Kanan', color: 'blue', percentage: activityPercentages.baringKanan },
       { key: 'baringKiri', label: 'Berbaring Kiri', color: 'cyan', percentage: activityPercentages.baringKiri },
       { key: 'na', label: 'N/A', color: 'gray', percentage: activityPercentages.na }
     ];
-    
+
     return categories.reduce((max, cat) => cat.percentage > max.percentage ? cat : max);
   };
 
-  const avgCategory = getDominantCategory();
+  const avgCategory = getHeaderDominantCategory();
 
 
   return (

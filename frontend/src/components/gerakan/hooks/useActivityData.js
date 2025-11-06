@@ -24,7 +24,7 @@ export const useActivityData = () => {
     berdiri: 0,
     baringKanan: 0,
     baringKiri: 0,
-    na: 0
+    na: 0,
   });
   const [sensorStatus, setSensorStatus] = useState("checking");
   const [loading, setLoading] = useState(true);
@@ -196,7 +196,7 @@ export const useActivityData = () => {
           histResponse.data?.length || 0,
           "records"
         );
-        
+
         formatted = histResponse.data.map((h) => ({
           time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
             hour: "2-digit",
@@ -277,21 +277,13 @@ export const useActivityData = () => {
     setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
 
     if (categoryFilteredData.length > 0) {
-      const sum = categoryFilteredData.reduce(
-        (acc, item) => acc + item.activity,
-        0
-      );
-      const avg = sum / categoryFilteredData.length;
-      console.log("📈 Average activity:", avg.toFixed(1));
-      setAvgData({ avg_activity: avg });
-
-      // ✅ Hitung persentase untuk 4 kategori (Berdiri, Baring Kanan, Baring Kiri, N/A)
+      // ✅ Hitung persentase untuk 4 kategori
       const categoryCounts = categoryFilteredData.reduce(
         (acc, item) => {
           const category = categorizeActivity(item.x, item.y, item.z).value;
-          if (category === 'Berdiri') acc.berdiri++;
-          else if (category === 'Berbaring Kanan') acc.baringKanan++;
-          else if (category === 'Berbaring Kiri') acc.baringKiri++;
+          if (category === "Berdiri") acc.berdiri++;
+          else if (category === "Berbaring Kanan") acc.baringKanan++;
+          else if (category === "Berbaring Kiri") acc.baringKiri++;
           else acc.na++;
           return acc;
         },
@@ -306,8 +298,12 @@ export const useActivityData = () => {
         na: (categoryCounts.na / total) * 100,
       });
     } else {
-      setAvgData({ avg_activity: null });
-      setActivityPercentages({ berdiri: 0, baringKanan: 0, baringKiri: 0, na: 0 });
+      setActivityPercentages({
+        berdiri: 0,
+        baringKanan: 0,
+        baringKiri: 0,
+        na: 0,
+      });
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 

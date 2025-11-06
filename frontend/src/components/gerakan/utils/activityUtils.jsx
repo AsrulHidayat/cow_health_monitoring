@@ -211,49 +211,80 @@ export const filterDataByTimePeriod = (
       });
     }
 
-    case TIME_FILTERS.MINUTE.value: {
-      const now = new Date();
-      const start = new Date(now.getTime() - 60 * 60 * 1000);
-      const filtered = data.filter(item => {
-        const t = new Date(item.fullDate);
-        return t >= start && t <= now;
-      });
+case TIME_FILTERS.MINUTE.value: {
+      // ✅ Jika date range aktif, gunakan data dari rentang tersebut
+      const dataSource = isDateRangeActive ? filteredData : data;
+      
+      // ✅ Jika tidak ada date range, batasi ke 1 jam terakhir
+      let timeFilteredData = dataSource;
+      if (!isDateRangeActive) {
+        const now = new Date();
+        const start = new Date(now.getTime() - 60 * 60 * 1000); // 1 jam terakhir
+        timeFilteredData = dataSource.filter(item => {
+          const t = new Date(item.fullDate);
+          return t >= start && t <= now;
+        });
+      }
 
+      // ✅ Kelompokkan data per menit
       const grouped = {};
-      filtered.forEach(item => {
+      timeFilteredData.forEach(item => {
         const d = new Date(item.fullDate);
-        const key = `${d.getHours().toString().padStart(2, '0')}:${d
-          .getMinutes()
-          .toString()
-          .padStart(2, '0')}`;
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(item);
+        const minuteKey = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        
+        if (!grouped[minuteKey]) {
+          grouped[minuteKey] = {
+            items: [],
+            timestamp: new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), 0)
+          };
+        }
+        grouped[minuteKey].items.push(item);
       });
 
-      return Object.entries(grouped).map(([minuteKey, items], index) => {
+      // ✅ Konversi ke array dan urutkan berdasarkan waktu
+      const sortedMinutes = Object.entries(grouped)
+        .map(([minuteKey, data]) => ({
+          minuteKey,
+          items: data.items,
+          timestamp: data.timestamp.getTime()
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+      // ✅ Transform data per menit
+      return sortedMinutes.map((minuteData, index) => {
+        const { minuteKey, items } = minuteData;
+        
+        // Hitung rata-rata magnitude
         const magnitudes = items.map(i => i.magnitude).filter(m => m != null);
         const avgMagnitude = magnitudes.length > 0
           ? magnitudes.reduce((a, b) => a + b, 0) / magnitudes.length
           : null;
 
-        const activityCounts = {};
-        items.forEach(i => {
-          const cat = categorizeActivity(i.x, i.y, i.z);
-          activityCounts[cat.value] = (activityCounts[cat.value] || 0) + 1;
-        });
+        // Hitung rata-rata X, Y, Z untuk menentukan kategori dominan
+        const avgX = items.reduce((sum, i) => sum + (i.x || 0), 0) / items.length;
+        const avgY = items.reduce((sum, i) => sum + (i.y || 0), 0) / items.length;
+        const avgZ = items.reduce((sum, i) => sum + (i.z || 0), 0) / items.length;
         
-        const mostCommonActivity = Object.keys(activityCounts).length > 0
-          ? Object.entries(activityCounts).sort((a, b) => b[1] - a[1])[0][0]
-          : 'N/A';
+        // Klasifikasi berdasarkan rata-rata X, Y, Z
+        const category = categorizeActivity(avgX, avgY, avgZ);
+
+        // Buat timestamp yang benar
+        const minuteDate = new Date(minuteData.timestamp);
 
         return {
           index: index + 1,
           displayIndex: `#${index + 1}`,
           time: minuteKey,
+          x: parseFloat(avgX.toFixed(2)),
+          y: parseFloat(avgY.toFixed(2)),
+          z: parseFloat(avgZ.toFixed(2)),
           magnitude: avgMagnitude ? parseFloat(avgMagnitude.toFixed(1)) : null,
-          activityLabel: mostCommonActivity,
-          activityColor: getCategoryColor(mostCommonActivity),
-          fullDate: `${minuteKey}:00`,
+          activityLabel: category.label,
+          activityValue: category.value,
+          activityColor: getCategoryColor(category.label),
+          fullDate: minuteDate.toISOString(),
+          timestamp: minuteDate.getTime(),
+          dataCount: items.length // Jumlah data dalam 1 menit
         };
       });
     }

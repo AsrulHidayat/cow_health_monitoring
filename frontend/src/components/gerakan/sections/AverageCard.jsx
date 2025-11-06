@@ -1,10 +1,24 @@
 import React from 'react';
-import { categorizeActivity, getCategoryStyles } from '../utils/activityUtils';
+import { getCategoryStyles } from '../utils/activityUtils';
 import { CowIcon } from '../GerakanPageComponents';
 import ActivityDistribution from '../ActivityDistribution';
 
-const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLabel, activityPercentages }) => {
-  const avgCategory = avgData.avg_activity ? categorizeActivity(avgData.avg_activity) : null;
+const AverageCard = ({ filteredHistory, displayedData, getTimePeriodLabel, activityPercentages }) => {
+  // ✅ Cari kategori dengan persentase tertinggi
+  const getDominantCategory = () => {
+    if (!activityPercentages) return null;
+    
+    const categories = [
+      { key: 'berdiri', label: 'Berdiri', color: 'green', percentage: activityPercentages.berdiri },
+      { key: 'baringKanan', label: 'Berbaring Kanan', color: 'blue', percentage: activityPercentages.baringKanan },
+      { key: 'baringKiri', label: 'Berbaring Kiri', color: 'cyan', percentage: activityPercentages.baringKiri },
+      { key: 'na', label: 'N/A', color: 'gray', percentage: activityPercentages.na }
+    ];
+    
+    return categories.reduce((max, cat) => cat.percentage > max.percentage ? cat : max);
+  };
+
+  const dominantCategory = getDominantCategory();
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
@@ -20,30 +34,26 @@ const AverageCard = ({ filteredHistory, avgData, displayedData, getTimePeriodLab
         </div>
       </div>
 
-      {filteredHistory.length > 0 && avgData.avg_activity ? (
+      {filteredHistory.length > 0 && dominantCategory ? (
         <div className="text-center py-8">
           <div className="relative inline-block">
             <div className="text-6xl font-bold text-gray-800 mb-3">
-              {avgData.avg_activity.toFixed(1)}
-              <span className="text-3xl text-gray-500"></span>
+              {dominantCategory.percentage.toFixed(1)}
+              <span className="text-3xl text-gray-500">%</span>
             </div>
-            {avgCategory && (
-              <div className="absolute -top-2 -right-12">
-                <div className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(avgCategory.color)} border`}>
-                  {avgCategory.label}
-                </div>
+            <div className="absolute -top-2 -right-16">
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${getCategoryStyles(dominantCategory.color)} border`}>
+                {dominantCategory.label}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-1">Status</p>
-              {avgCategory && (
-                <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${getCategoryStyles(avgCategory.color)}`}>
-                  {avgCategory.label}
-                </div>
-              )}
+              <p className="text-sm text-gray-500 mb-1">Status Dominan</p>
+              <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${getCategoryStyles(dominantCategory.color)}`}>
+                {dominantCategory.label}
+              </div>
             </div>
             <div className="text-center">
               <p className="text-sm text-gray-500 mb-1">Sampel Data</p>
