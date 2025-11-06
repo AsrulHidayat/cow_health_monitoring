@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getSensorStatus } from "../services/temperatureService";
+import { getActivitySensorStatus } from "../services/activityService";
 
 import axios from "axios";
 import Navbar from "../components/layout/Navbar";
@@ -8,7 +9,6 @@ import DashboardPerSapi from "../components/dashboard/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
-import SensorStatus from "../components/layout/SensorStatus";
 import CowDropdown from "../components/layout/Dropdown";
 import "flowbite";
 
@@ -18,7 +18,11 @@ export default function Sapi() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedCow, setSelectedCow] = useState(null);
-  const [sensorStatus, setSensorStatus] = useState("loading");
+  const [sensorStatuses, setSensorStatuses] = useState({
+    temperature: "loading",
+    activity: "loading",
+    heartbeat: "loading"
+  });
 
   // ✅ Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
@@ -75,7 +79,50 @@ export default function Sapi() {
     }
   }, [cowId, cows]);
 
-  // ✅ Tambah sapi baru (disesuaikan dengan Dashboard.jsx)
+  // ✅ Cek Status Semua Sensor
+  useEffect(() => {
+    if (!selectedCow) {
+      setSensorStatuses({
+        temperature: "offline",
+        activity: "offline",
+        heartbeat: "offline"
+      });
+      return;
+    }
+
+    const checkAllSensorStatus = async () => {
+      try {
+        // Temperature sensor
+        const tempStatus = await getSensorStatus(selectedCow.id);
+        
+        // Activity sensor
+        const activityStatus = await getActivitySensorStatus(selectedCow.id);
+
+        setSensorStatuses({
+          temperature: tempStatus.status,
+          activity: activityStatus.status,
+          heartbeat: "development" // Masih dalam tahap pengembangan
+        });
+      } catch (err) {
+        console.error("⚠️ Gagal memeriksa status sensor:", err);
+        setSensorStatuses({
+          temperature: "offline",
+          activity: "offline",
+          heartbeat: "development"
+        });
+      }
+    };
+
+    // Cek status pertama kali
+    checkAllSensorStatus();
+
+    // Polling setiap 5 detik untuk update status sensor
+    const interval = setInterval(checkAllSensorStatus, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedCow]);
+
+  // ✅ Tambah sapi baru
   const handleAddCow = async (newCow) => {
     try {
       const token = localStorage.getItem("token");
@@ -86,13 +133,11 @@ export default function Sapi() {
         return;
       }
 
-      // Validasi umur
       if (!newCow.umur || newCow.umur.trim() === "") {
         alert("Umur sapi harus diisi!");
         return;
       }
-      // 🔢 Cari ID yang kosong (gap filling)
-      // Ambil semua nomor ID yang sudah ada
+
       const existingNumbers = cows
         .map(cow => {
           const match = cow.tag.match(/SAPI-(\d+)/);
@@ -100,7 +145,6 @@ export default function Sapi() {
         })
         .sort((a, b) => a - b);
 
-      // Cari nomor terkecil yang belum terpakai
       let nextNumber = 1;
       for (const num of existingNumbers) {
         if (num === nextNumber) {
@@ -111,12 +155,6 @@ export default function Sapi() {
       }
 
       const newTag = `SAPI-${String(nextNumber).padStart(3, "0")}`;
-
-      console.log("📤 Data yang akan dikirim:", {
-        tag: newTag,
-        umur: newCow.umur,
-        user_id: user._id
-      });
 
       const payload = {
         tag: newTag,
@@ -131,8 +169,6 @@ export default function Sapi() {
         },
       });
 
-      console.log("✅ Response dari server:", res.data);
-
       const addedCow = res.data;
       setCows((prev) => [...prev, addedCow]);
       setSelectedCow(addedCow);
@@ -145,42 +181,13 @@ export default function Sapi() {
     }
   };
 
-  // ✅ Cek Status Sensor - menggunakan endpoint temperature/status
-  useEffect(() => {
-    // Jika belum ada sapi yang dipilih → anggap sensor offline
-    if (!selectedCow) {
-      setSensorStatus("offline");
-      return;
-    }
-
-    const checkSensorStatus = async () => {
-      try {
-        const statusResult = await getSensorStatus(selectedCow.id);
-        setSensorStatus(statusResult.status);
-      } catch (err) {
-        console.error("⚠️ Gagal memeriksa status sensor:", err);
-        setSensorStatus("offline");
-      }
-    };
-
-    // Cek status pertama kali
-    checkSensorStatus();
-
-    // Polling setiap 5 detik untuk update status sensor
-    const interval = setInterval(checkSensorStatus, 5000);
-
-    return () => clearInterval(interval);
-  }, [selectedCow]);
-
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar title="Dashboard Persapi" />
 
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
-          {/* ========================== */}
           {/* KOLOM 1: Tambah + Grafik */}
-          {/* ========================== */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <button
@@ -191,7 +198,6 @@ export default function Sapi() {
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
 
-              {/* Dropdown hanya tampil jika ada sapi */}
               {cows.length > 0 && (
                 <div className="flex items-center gap-6">
                   <CowDropdown
@@ -203,29 +209,97 @@ export default function Sapi() {
               )}
             </div>
 
-            {/* Status Sensor */}
+            {/* Status Sensor - Tampilkan untuk ketiga sensor */}
             {cows.length > 0 && (
-              <div>
-                <SensorStatus sensorStatus={sensorStatus} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Sensor Suhu */}
+                <div className={`rounded-xl p-4 border-l-4 ${
+                  sensorStatuses.temperature === "online" 
+                    ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500" 
+                    : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                          sensorStatuses.temperature === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
+                        }`}></div>
+                        <h3 className={`text-sm font-bold ${
+                          sensorStatuses.temperature === "online" ? "text-green-700" : "text-red-700"
+                        }`}>Sensor Suhu</h3>
+                      </div>
+                      <p className={`text-xs ${
+                        sensorStatuses.temperature === "online" ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {sensorStatuses.temperature === "online" ? "Aktif" : "Tidak Aktif"}
+                      </p>
+                    </div>
+                    <svg className={`w-8 h-8 ${
+                      sensorStatuses.temperature === "online" ? "text-green-500" : "text-red-500"
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Sensor Gerakan */}
+                <div className={`rounded-xl p-4 border-l-4 ${
+                  sensorStatuses.activity === "online" 
+                    ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500" 
+                    : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                          sensorStatuses.activity === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
+                        }`}></div>
+                        <h3 className={`text-sm font-bold ${
+                          sensorStatuses.activity === "online" ? "text-green-700" : "text-red-700"
+                        }`}>Sensor Gerakan</h3>
+                      </div>
+                      <p className={`text-xs ${
+                        sensorStatuses.activity === "online" ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {sensorStatuses.activity === "online" ? "Aktif" : "Tidak Aktif"}
+                      </p>
+                    </div>
+                    <svg className={`w-8 h-8 ${
+                      sensorStatuses.activity === "online" ? "text-green-500" : "text-red-500"
+                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Sensor Detak Jantung */}
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                        <h3 className="text-sm font-bold text-yellow-700">Detak Jantung</h3>
+                      </div>
+                      <p className="text-xs text-yellow-600">Tahap Pengembangan</p>
+                    </div>
+                    <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* ========================== */}
             {/* CARD REALTIME GRAPHICS */}
-            {/* ========================== */}
             <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-800">Realtime Graphics</h2>
+                  <h2 className="text-lg font-semibold text-gray-800">Realtime Monitoring</h2>
                   <span className="text-gray-400 cursor-help text-sm">ℹ︎</span>
                 </div>
-                <select className="border border-gray-300 rounded-lg text-gray-600 px-3 py-2 text-sm hover:border-blue-400 hover:shadow transition">
-                  <option>Per Menit</option>
-                  <option>Per Jam</option>
-                </select>
               </div>
 
-              <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50">
+              <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50 overflow-auto">
                 {loading ? (
                   <div className="text-gray-400">Memuat data sapi...</div>
                 ) : cows.length === 0 ? (
@@ -237,15 +311,13 @@ export default function Sapi() {
                     </p>
                   </div>
                 ) : (
-                  <DashboardPerSapi cow={selectedCow} />
+                  <DashboardPerSapi cow={selectedCow} sensorStatuses={sensorStatuses} />
                 )}
               </div>
             </div>
           </div>
 
-          {/* ========================== */}
           {/* KOLOM 2: Notifikasi */}
-          {/* ========================== */}
           <div className="lg:col-span-2 bg-green-50 rounded-xl p-6 flex flex-col border border-green-100 h-full">
             <div className="flex justify-between mb-2">
               <h3 className="text-gray-800 font-semibold">Notifikasi</h3>
@@ -266,7 +338,7 @@ export default function Sapi() {
         <AddCowModal
           onClose={() => setShowModal(false)}
           onAdd={handleAddCow}
-          cows={cows}
+          cowCount={cows.length}
         />
       )}
     </div>
