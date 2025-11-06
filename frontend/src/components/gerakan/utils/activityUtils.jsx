@@ -248,7 +248,7 @@ case TIME_FILTERS.MINUTE.value: {
           items: data.items,
           timestamp: data.timestamp.getTime()
         }))
-        .sort((a, b) => a.timestamp - b.timestamp);
+        .sort((a, b) => b.timestamp  -  a.timestamp);
 
       // ✅ Transform data per menit
       return sortedMinutes.map((minuteData, index) => {
