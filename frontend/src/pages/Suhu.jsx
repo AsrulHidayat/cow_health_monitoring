@@ -1,10 +1,10 @@
 import { useState } from "react";
 import axios from "axios";
 
-// 🔹 Import hooks
+// 🔹 Import hooks utama yang mengatur semua data dan logika suhu sapi
 import { useTemperatureData } from "../components/suhu/hooks/useTemperatureData";
 
-// 🔹 Import utilitas dan komponen UI
+// 🔹 Import utilitas dan komponen UI pendukung
 import { TIME_FILTERS, categorizeTemperature, getCategoryStyles } from "../components/suhu/utils/SuhuUtils";
 import { Navbar, PlusIcon } from "../components/suhu/SuhuPageComponents";
 import SensorStatus from "../components/suhu/SensorStatus";
@@ -12,13 +12,14 @@ import EditCheckupModal from "../components/suhu/modals/EditCheckupModal";
 import DeleteModal from "../components/suhu/modals/DeleteModal";
 import RestoreModal from "../components/suhu/modals/RestoreModal";
 
-// 🔹 Import seksi komponen
+// 🔹 Import bagian-bagian layout halaman suhu
 import HeaderSection from "../components/suhu/sections/HeaderSection";
 import RealtimeChartCard from "../components/suhu/sections/RealtimeChartCard";
 import AverageCard from "../components/suhu/sections/AverageCard";
 import HistoryCard from "../components/suhu/sections/HistoryCard";
 
 export default function Suhu() {
+  // 🔹 Ambil seluruh data dan fungsi dari hook khusus suhu sapi
   const {
     cows,
     cowId,
@@ -49,12 +50,14 @@ export default function Suhu() {
     setCows
   } = useTemperatureData();
 
+  // 🔹 State untuk kontrol modal dan data sapi yang dihapus
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [deletedCows, setDeletedCows] = useState([]);
   const [restoreLoading, setRestoreLoading] = useState(false);
 
+  // 🔹 Fungsi untuk ubah status pemeriksaan sapi
   const handleEditCheckup = async (status) => {
     if (!cowId) return;
     try {
@@ -64,6 +67,7 @@ export default function Suhu() {
         { checkupStatus: status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Perbarui status di daftar sapi
       setCows(prevCows =>
         prevCows.map(cow =>
           cow.id === cowId
@@ -79,13 +83,14 @@ export default function Suhu() {
     }
   };
 
+  // 🔹 Fungsi untuk menghapus data sapi (soft delete)
   const handleDelete = async () => {
     if (!cowId || !selectedCow) return;
 
     try {
       const token = localStorage.getItem("token");
 
-      // Hapus ID sapi (soft delete)
+      // Kirim request hapus ke backend
       const response = await axios.delete(
         `http://localhost:5001/api/cows/${cowId}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -93,10 +98,10 @@ export default function Suhu() {
 
       console.log("✅ Response delete:", response.data);
 
-      // Update state: hapus dari daftar cows
+      // Hapus dari daftar sapi di state
       setCows(prevCows => prevCows.filter(cow => cow.id !== cowId));
 
-      // Reset selected cow
+      // Pilih sapi berikutnya jika masih ada
       const remainingCows = cows.filter(cow => cow.id !== cowId);
       if (remainingCows.length > 0) {
         setCowId(remainingCows[0].id);
@@ -115,6 +120,7 @@ export default function Suhu() {
     }
   };
 
+  // 🔹 Fungsi untuk menampilkan modal restore dan memuat daftar sapi yang dihapus
   const handleShowRestoreModal = async () => {
     setRestoreLoading(true);
     setShowRestoreModal(true);
@@ -133,13 +139,14 @@ export default function Suhu() {
     }
   };
 
+  // 🔹 Fungsi untuk me-restore data sapi yang dihapus
   const handleRestoreCow = async (cowToRestore) => {
     try {
       const token = localStorage.getItem("token");
 
       console.log(`🔄 Mengirim request restore untuk sapi ID: ${cowToRestore.id}`);
 
-      // ✅ Perbaikan: Gunakan endpoint yang benar sesuai backend
+      // Kirim permintaan restore ke backend
       const response = await axios.put(
         `http://localhost:5001/api/cows/restore/${cowToRestore.id}`,
         {},
@@ -155,7 +162,7 @@ export default function Suhu() {
 
       const restoredCow = response.data.cow;
 
-      // Update state: Tambahkan sapi yang di-restore ke daftar aktif
+      // Tambahkan sapi yang di-restore ke daftar aktif
       setCows(prevCows => {
         const updated = [...prevCows, {
           id: restoredCow.id,
@@ -173,14 +180,14 @@ export default function Suhu() {
         return updated.sort((a, b) => a.tag.localeCompare(b.tag));
       });
 
-      // Hapus dari daftar deleted
+      // Hapus dari daftar sapi yang dihapus
       setDeletedCows(prevDeleted =>
         prevDeleted.filter(cow => cow.id !== cowToRestore.id)
       );
 
       alert(`✅ Sapi berhasil di-restore!\n\nTag Lama: ${restoredCow.oldTag || cowToRestore.tag}\nTag Baru: ${restoredCow.tag}\n\nSemua data monitoring tetap tersimpan.`);
 
-      // Jika tidak ada lagi sapi yang dihapus, tutup modal
+      // Tutup modal jika semua sapi sudah direstore
       if (deletedCows.length === 1) {
         setShowRestoreModal(false);
       }
@@ -200,6 +207,7 @@ export default function Suhu() {
     }
   };
 
+  // 🔹 Menentukan label periode waktu yang sedang dipilih
   const getTimePeriodLabel = () => {
     if (dateRange.startDate && dateRange.endDate) {
       try {
@@ -214,12 +222,15 @@ export default function Suhu() {
     return filter ? filter.label : "Data";
   };
 
+  // 🔹 Tentukan kategori suhu rata-rata untuk tampilan status
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
+      {/* 🔹 Navigasi utama halaman */}
       <Navbar title="Suhu" cowId={cowId} cowData={selectedCow} />
 
+      {/* 🔹 Header berisi info sapi dan tombol aksi (edit, hapus, restore) */}
       <HeaderSection
         cows={cows}
         cowId={cowId}
@@ -234,13 +245,16 @@ export default function Suhu() {
         getCategoryStyles={getCategoryStyles}
       />
 
+      {/* 🔹 Status koneksi sensor suhu */}
       {cows.length > 0 && (
         <div className="px-6 pt-6">
           <SensorStatus sensorStatus={sensorStatus} />
         </div>
       )}
 
+      {/* 🔹 Konten utama halaman */}
       <div className="px-6 py-6 space-y-6">
+        {/* 🔹 Tampilkan tombol tambah sapi jika belum ada data */}
         {cows.length === 0 && !loading && (
           <button className="flex items-center gap-2 px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-all font-medium">
             <PlusIcon />
@@ -248,6 +262,7 @@ export default function Suhu() {
           </button>
         )}
 
+        {/* 🔹 Kartu grafik realtime suhu sapi */}
         <RealtimeChartCard
           loading={loading}
           cows={cows}
@@ -270,6 +285,7 @@ export default function Suhu() {
           handleNextPage={handleNextPage}
         />
 
+        {/* 🔹 Kartu statistik rata-rata dan riwayat data suhu */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AverageCard
             filteredHistory={filteredHistory}
@@ -286,6 +302,7 @@ export default function Suhu() {
         </div>
       </div>
 
+      {/* 🔹 Style tambahan untuk scrollbar dan animasi */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -310,18 +327,21 @@ export default function Suhu() {
         }
       `}</style>
 
+      {/* 🔹 Modal edit status pemeriksaan */}
       <EditCheckupModal
         show={showEditModal}
         onClose={() => setShowEditModal(false)}
         onConfirm={handleEditCheckup}
       />
 
+      {/* 🔹 Modal konfirmasi hapus sapi */}
       <DeleteModal
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
       />
 
+      {/* 🔹 Modal restore data sapi */}
       <RestoreModal
         show={showRestoreModal}
         onClose={() => setShowRestoreModal(false)}
