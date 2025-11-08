@@ -10,6 +10,11 @@ import cowIcon from "../assets/cow.png";
 import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
 import CowDropdown from "../components/layout/Dropdown";
+
+// 🔔 IMPORT KOMPONEN NOTIFIKASI BARU
+import NotificationBadge from "../components/notifications/NotificationBadge";
+import NotificationPanel from "../components/notifications/NotificationPanel";
+
 import "flowbite";
 
 export default function Sapi({ onNavigate }) {
@@ -24,6 +29,13 @@ export default function Sapi({ onNavigate }) {
     activity: "loading",
     heartbeat: "loading"
   });
+
+  // 🔔 STATE NOTIFIKASI
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  // 🔔 CUSTOM HOOK UNTUK NOTIFIKASI (opsional, atau pakai state biasa)
+  // const { notifications, unreadCount, handleMarkAsRead, handleDelete } = useNotifications(userId);
 
   // 🔹 Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
@@ -72,6 +84,108 @@ export default function Sapi({ onNavigate }) {
     fetchCows();
     return () => controller.abort();
   }, []);
+
+  // 🔔 FETCH NOTIFIKASI UNTUK SAPI YANG DIPILIH
+  useEffect(() => {
+    if (!selectedCow) {
+      setNotifications([]);
+      return;
+    }
+
+    // Simulasi fetch notifikasi dari API
+    const fetchNotifications = async () => {
+      try {
+        // TODO: Ganti dengan API call sebenarnya
+        // const res = await axios.get(`http://localhost:5001/api/notifications?cowId=${selectedCow.id}`);
+        // setNotifications(res.data);
+
+        // Mock data untuk demo
+        const mockNotifications = [
+          {
+            id: 1,
+            sapiId: selectedCow.id,
+            sapiName: selectedCow.tag,
+            type: 'urgent',
+            parameters: ['suhu', 'detak jantung'],
+            severity: 'Segera Tindaki',
+            message: 'Suhu tubuh mencapai 40.5°C dan detak jantung 110 bpm (abnormal)',
+            timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 menit lalu
+            isRead: false
+          },
+          {
+            id: 2,
+            sapiId: selectedCow.id,
+            sapiName: selectedCow.tag,
+            type: 'warning',
+            parameters: ['gerakan'],
+            severity: 'Harus Diperhatikan',
+            message: 'Aktivitas gerakan menurun drastis dalam 2 jam terakhir',
+            timestamp: new Date(Date.now() - 1000 * 60 * 120), // 2 jam lalu
+            isRead: false
+          },
+          {
+            id: 3,
+            sapiId: selectedCow.id,
+            sapiName: selectedCow.tag,
+            type: 'urgent',
+            parameters: ['suhu'],
+            severity: 'Segera Tindaki',
+            message: 'Suhu tubuh tidak stabil, variasi 38-41°C dalam 1 jam',
+            timestamp: new Date(Date.now() - 1000 * 60 * 180), // 3 jam lalu
+            isRead: true
+          }
+        ];
+
+        // Filter hanya notifikasi untuk sapi yang dipilih
+        const filteredNotifications = mockNotifications.filter(
+          n => n.sapiId === selectedCow.id
+        );
+        
+        setNotifications(filteredNotifications);
+      } catch (error) {
+        console.error("❌ Gagal memuat notifikasi:", error);
+      }
+    };
+
+    fetchNotifications();
+    
+    // Auto-refresh setiap 30 detik
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [selectedCow]);
+
+  // 🔔 HANDLER NOTIFIKASI
+  const handleMarkAsRead = (notifId) => {
+    setNotifications(prev =>
+      prev.map(notif =>
+        notif.id === notifId ? { ...notif, isRead: true } : notif
+      )
+    );
+    
+    // TODO: Panggil API untuk update status
+    // axios.patch(`http://localhost:5001/api/notifications/${notifId}/read`);
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notif => ({ ...notif, isRead: true }))
+    );
+    
+    // TODO: Panggil API untuk update semua status
+  };
+
+  const handleDeleteNotification = (notifId) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notifId));
+    
+    // TODO: Panggil API untuk hapus notifikasi
+    // axios.delete(`http://localhost:5001/api/notifications/${notifId}`);
+  };
+
+  const handleViewDetail = () => {
+    // Tutup panel notifikasi dan navigasi ke detail sapi
+    setIsNotificationOpen(false);
+    // Logic untuk navigasi ke detail sapi bisa ditambahkan di sini
+  };
 
   // 🔹 Update sapi yang dipilih ketika cowId berubah
   useEffect(() => {
@@ -187,6 +301,9 @@ export default function Sapi({ onNavigate }) {
     }
   };
 
+  // 🔔 HITUNG UNREAD COUNT
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   // 🔹 UI utama halaman dashboard sapi
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -213,6 +330,12 @@ export default function Sapi({ onNavigate }) {
                     options={cows
                       .sort((a, b) => a.tag.localeCompare(b.tag))
                       .map((c) => ({ id: c.id, name: c.tag }))}
+                  />
+                  
+                  {/* 🔔 NOTIFICATION BADGE - DITAMBAHKAN DI SINI */}
+                  <NotificationBadge 
+                    count={unreadCount}
+                    onClick={() => setIsNotificationOpen(true)}
                   />
                 </div>
               )}
@@ -320,23 +443,62 @@ export default function Sapi({ onNavigate }) {
             </div>
           </div>
 
-          {/* KOLOM 2: Notifikasi */}
+          {/* KOLOM 2: Notifikasi - SECTION INI BISA DIHAPUS ATAU DIUBAH */}
           <div className="lg:col-span-2 bg-green-50 rounded-xl p-6 flex flex-col border border-green-100 h-full">
             <div className="flex justify-between mb-2">
               <h3 className="text-gray-800 font-semibold">Notifikasi</h3>
-              <span className="text-sm text-gray-500 cursor-pointer hover:text-green-600 transition">
-                Mark as read
-              </span>
+              <button 
+                onClick={() => setIsNotificationOpen(true)}
+                className="text-sm text-blue-600 cursor-pointer hover:text-blue-800 transition font-medium"
+              >
+                Lihat Semua
+              </button>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <img src={notifIcon} alt="Notif" className="w-64 h-64 opacity-70 mb-4" />
-              <h3 className="text-green-600 font-semibold text-sm">BELUM ADA NOTIF</h3>
+            {/* Preview Notifikasi */}
+            <div className="flex-1 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center h-full">
+                  <img src={notifIcon} alt="Notif" className="w-64 h-64 opacity-70 mb-4" />
+                  <h3 className="text-green-600 font-semibold text-sm">BELUM ADA NOTIF</h3>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Preview 3 notifikasi terbaru */}
+                  {notifications.slice(0, 3).map((notif) => (
+                    <div 
+                      key={notif.id}
+                      className={`bg-white rounded-lg p-3 border-l-4 ${
+                        notif.type === 'urgent' ? 'border-red-500' : 'border-yellow-500'
+                      } ${!notif.isRead ? 'bg-blue-50' : ''} cursor-pointer hover:shadow-md transition`}
+                      onClick={() => setIsNotificationOpen(true)}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-xl">{notif.type === 'urgent' ? '🚨' : '⚠️'}</span>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm text-gray-900">{notif.severity}</h4>
+                          <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {notifications.length > 3 && (
+                    <button 
+                      onClick={() => setIsNotificationOpen(true)}
+                      className="w-full text-center text-sm text-blue-600 hover:text-blue-800 py-2"
+                    >
+                      Lihat {notifications.length - 3} notifikasi lainnya
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
 
+      {/* MODAL TAMBAH SAPI */}
       {showModal && (
         <AddCowModal
           onClose={() => setShowModal(false)}
@@ -344,6 +506,18 @@ export default function Sapi({ onNavigate }) {
           cowCount={cows.length}
         />
       )}
+
+      {/* 🔔 NOTIFICATION PANEL - OVERLAY PENUH */}
+      <NotificationPanel 
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        sapiName={selectedCow?.tag || 'Sapi'}
+        notifications={notifications}
+        onMarkAsRead={handleMarkAsRead}
+        onDelete={handleDeleteNotification}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onViewDetail={handleViewDetail}
+      />
     </div>
   );
 }
