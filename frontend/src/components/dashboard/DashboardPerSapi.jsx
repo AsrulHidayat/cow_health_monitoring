@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   XAxis,
@@ -7,6 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell
 } from "recharts";
 
 export default function DashboardPerSapi({ cow, sensorStatuses }) {
@@ -15,61 +18,122 @@ export default function DashboardPerSapi({ cow, sensorStatuses }) {
   const [loading, setLoading] = useState(true);
 
   // ========================================================
-  // 🔹 Mengambil data dari API setiap 5 detik
+  // 🔹 Fungsi klasifikasi aktivitas (dari halaman Gerakan)
   // ========================================================
-useEffect(() => {
-  if (!cow) return;
-  let isFirst = true;
-
-  const fetchData = async () => {
-    try {
-      if (isFirst) setLoading(true);
-      const token = localStorage.getItem("token");
-
-      const [tempRes, actRes] = await Promise.all([
-        fetch(`http://localhost:5001/api/temperature/${cow.id}/history?limit=30`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://localhost:5001/api/activity/${cow.id}/history?limit=30`),
-      ]);
-
-      const tempJson = await tempRes.json();
-      const actJson = await actRes.json();
-
-      const tempFormatted = tempJson.data.map((item) => ({
-        time: new Date(item.created_at).toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        temperature: parseFloat(item.temperature.toFixed(1)),
-        fullDate: item.created_at,
-      })).reverse();
-
-      const actFormatted = actJson.data.map((item) => ({
-        time: new Date(item.timestamp).toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        value: parseFloat(item.magnitude.toFixed(1)),
-        fullDate: item.timestamp,
-      })).reverse();
-
-      setTemperatureData(tempFormatted);
-      setActivityData(actFormatted);
-    } catch (error) {
-      console.error("Gagal memuat data sensor:", error);
-    } finally {
-      if (isFirst) {
-        setLoading(false);
-        isFirst = false;
-      }
+  const categorizeActivity = (x, y, z) => {
+    if ([x, y, z].some(v => v == null || isNaN(v))) {
+      return { label: "N/A", color: "#6B7280", value: "N/A" };
     }
+
+    x = parseFloat(Number(x).toFixed(2));
+    y = parseFloat(Number(y).toFixed(2));
+    z = parseFloat(Number(z).toFixed(2));
+
+    // Berdiri
+    if (x >= -1.2 && x <= 0.1 && y >= -3.0 && y <= 0.0 && z >= 10.5 && z <= 12.0) {
+      return { label: "Berdiri", color: "#22C55E", value: "Berdiri" };
+    }
+
+    // Berbaring Kanan (Posisi 1)
+    if (x >= -0.6 && x <= 0.2 && y >= 4.0 && y <= 7.2 && z >= 7.3 && z <= 11.2) {
+      return { label: "Berbaring Kanan", color: "#3B82F6", value: "Berbaring Kanan" };
+    }
+
+    // Berbaring Kanan (Posisi 2)
+    if (x >= 0.0 && x <= 0.4 && y >= 9.8 && y <= 10.8 && z >= 2.8 && z <= 4.3) {
+      return { label: "Berbaring Kanan", color: "#3B82F6", value: "Berbaring Kanan" };
+    }
+
+    // Berbaring Kiri (Posisi 1)
+    if (x >= -0.6 && x <= 0.2 && y >= -10.2 && y <= -6.3 && z >= 5.3 && z <= 8.7) {
+      return { label: "Berbaring Kiri", color: "#06B6D4", value: "Berbaring Kiri" };
+    }
+
+    // Berbaring Kiri (Posisi 2)
+    if (x >= 0.2 && x <= 0.8 && y >= -10.8 && y <= -9.6 && z >= -0.1 && z <= 2.7) {
+      return { label: "Berbaring Kiri", color: "#06B6D4", value: "Berbaring Kiri" };
+    }
+
+    // Fallback berdasarkan dominasi sumbu
+    if (z > 9.0 && Math.abs(y) < 4.0) {
+      return { label: "Berdiri", color: "#22C55E", value: "Berdiri" };
+    }
+    if (y > 4.0 && z > 4.3) {
+      return { label: "Berbaring Kanan", color: "#3B82F6", value: "Berbaring Kanan" };
+    }
+    if (y < -6.0 && z > 2.7) {
+      return { label: "Berbaring Kiri", color: "#06B6D4", value: "Berbaring Kiri" };
+    }
+
+    return { label: "N/A", color: "#6B7280", value: "N/A" };
   };
 
-  fetchData();
-  const interval = setInterval(fetchData, 5000);
-  return () => clearInterval(interval);
-}, [cow]);
+  // ========================================================
+  // 🔹 Mengambil data dari API setiap 5 detik
+  // ========================================================
+  useEffect(() => {
+    if (!cow) return;
+    let isFirst = true;
+
+    const fetchData = async () => {
+      try {
+        if (isFirst) setLoading(true);
+        const token = localStorage.getItem("token");
+
+        const [tempRes, actRes] = await Promise.all([
+          fetch(`http://localhost:5001/api/temperature/${cow.id}/history?limit=30`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`http://localhost:5001/api/activity/${cow.id}/history?limit=30`),
+        ]);
+
+        const tempJson = await tempRes.json();
+        const actJson = await actRes.json();
+
+        // Format data suhu untuk BarChart
+        const tempFormatted = tempJson.data.map((item) => ({
+          time: new Date(item.created_at).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          temperature: parseFloat(item.temperature.toFixed(1)),
+          fullDate: item.created_at,
+        })).reverse();
+
+        // Format data aktivitas dengan kategori
+        const actFormatted = actJson.data.map((item) => {
+          const category = categorizeActivity(item.x, item.y, item.z);
+          return {
+            time: new Date(item.timestamp).toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            activityLabel: category.label,
+            activityColor: category.color,
+            x: item.x,
+            y: item.y,
+            z: item.z,
+            magnitude: item.magnitude,
+            fullDate: item.timestamp,
+          };
+        }).reverse();
+
+        setTemperatureData(tempFormatted);
+        setActivityData(actFormatted);
+      } catch (error) {
+        console.error("Gagal memuat data sensor:", error);
+      } finally {
+        if (isFirst) {
+          setLoading(false);
+          isFirst = false;
+        }
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [cow]);
 
   // ========================================================
   // 🔹 Loading State
@@ -86,32 +150,25 @@ useEffect(() => {
   }
 
   // ========================================================
-  // 🔹 Fungsi kategori suhu dan aktivitas
+  // 🔹 Fungsi kategori suhu
   // ========================================================
   const getTempCategory = (temp) => {
     if (!temp) return { label: "N/A", color: "gray" };
     if (temp < 37.5) return { label: "Hipotermia", color: "blue" };
-    if (temp >= 37.5 && temp <= 39.5)
-      return { label: "Normal", color: "green" };
-    if (temp > 39.5 && temp <= 40.5)
-      return { label: "Demam Ringan", color: "yellow" };
-    if (temp > 40.5 && temp <= 41.5)
-      return { label: "Demam Tinggi", color: "orange" };
+    if (temp >= 37.5 && temp <= 39.5) return { label: "Normal", color: "green" };
+    if (temp > 39.5 && temp <= 40.5) return { label: "Demam Ringan", color: "yellow" };
+    if (temp > 40.5 && temp <= 41.5) return { label: "Demam Tinggi", color: "orange" };
     return { label: "Kritis", color: "red" };
   };
 
-  const getActivityCategory = (value) => {
-    if (value == null) return { label: "N/A", color: "gray" };
-    if (value < 9.5) return { label: "Berbaring", color: "blue" };
-    if (value >= 9.5 && value <= 11.0)
-      return { label: "Berdiri", color: "green" };
-    return { label: "Aktif Bergerak", color: "orange" };
+  const getBarColor = (temp) => {
+    if (temp == null) return "transparent";
+    if (temp < 37.5) return "#3B82F6";
+    if (temp >= 37.5 && temp <= 39.5) return "#22C55E";
+    if (temp > 39.5 && temp <= 40.5) return "#EAB308";
+    if (temp > 40.5 && temp <= 41.5) return "#F97316";
+    return "#EF4444";
   };
-
-  const latestTemp = temperatureData[temperatureData.length - 1];
-  const latestActivity = activityData[activityData.length - 1];
-  const tempCategory = getTempCategory(latestTemp?.temperature);
-  const activityCategory = getActivityCategory(latestActivity?.value);
 
   const colorClasses = {
     blue: "bg-blue-100 text-blue-700 border-blue-300",
@@ -128,19 +185,26 @@ useEffect(() => {
   const TempTooltip = ({ active, payload }) => {
     if (!active || !payload || payload.length === 0) return null;
     const data = payload[0].payload;
-    const category = getTempCategory(data.temperature);
+    const temp = payload[0].value;
+    if (temp == null) return null;
+
+    const category = getTempCategory(temp);
 
     return (
       <div className="bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-gray-200">
-        <p className="text-sm font-bold text-gray-800 mb-2">
-          {data.temperature?.toFixed(1)}°C
+        <p className="text-base font-bold text-gray-800 mb-1">
+          {temp.toFixed(1)}°C - {category.label}
         </p>
-        <div
-          className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${colorClasses[category.color]}`}
-        >
-          {category.label}
+        <div className="border-t border-gray-100 pt-2 mt-2">
+          <p className="text-sm text-gray-600">
+            {new Date(data.fullDate).toLocaleString("id-ID", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+          <p className="text-sm font-medium text-gray-700">{data.time}</p>
         </div>
-        <p className="text-xs text-gray-600">{data.time}</p>
       </div>
     );
   };
@@ -148,36 +212,40 @@ useEffect(() => {
   const ActivityTooltip = ({ active, payload }) => {
     if (!active || !payload || payload.length === 0) return null;
     const data = payload[0].payload;
-    const category = getActivityCategory(data.value);
 
     return (
       <div className="bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-gray-200">
         <p className="text-sm font-bold text-gray-800 mb-2">
-          {data.value?.toFixed(1)} m/s²
+          {data.activityLabel}
         </p>
-        <div
-          className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${colorClasses[category.color]}`}
-        >
-          {category.label}
+        <div className="text-xs text-gray-600 space-y-1">
+          <p>X: {data.x?.toFixed(2)} m/s²</p>
+          <p>Y: {data.y?.toFixed(2)} m/s²</p>
+          <p>Z: {data.z?.toFixed(2)} m/s²</p>
         </div>
-        <p className="text-xs text-gray-600">{data.time}</p>
+        <p className="text-xs text-gray-600 mt-2">{data.time}</p>
       </div>
     );
   };
 
+  const latestTemp = temperatureData[temperatureData.length - 1];
+  const latestActivity = activityData[activityData.length - 1];
+  const tempCategory = getTempCategory(latestTemp?.temperature);
+
   // ========================================================
   // 🔹 Tampilan Dashboard Utama
   // ========================================================
-
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Grafik Suhu */}
+      
+      {/* ============================================ */}
+      {/* GRAFIK SUHU - BarChart */}
+      {/* ============================================ */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-left">
-              <h3 className="text-white font-bold text-lg leading-tigh">Grafik Suhu Tubuh Real-time</h3>
+              <h3 className="text-white font-bold text-lg leading-tight">Grafik Suhu Tubuh Real-time</h3>
               <p className="text-white/80 text-xs mt-1">Monitoring suhu dalam 30 data terakhir</p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 ml-4">
@@ -188,7 +256,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {sensorStatuses.temperature === "online" && temperatureData.length > 0 ? (
             <>
@@ -208,35 +275,36 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Chart */}
+              {/* BarChart */}
               <div className="w-full overflow-x-auto">
                 <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={temperatureData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <BarChart data={temperatureData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} horizontal={true} vertical={false} />
                     <XAxis
                       dataKey="time"
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
-                      tickLine={{ stroke: '#d1d5db' }}
-                      axisLine={{ stroke: '#d1d5db' }}
+                      tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
+                      stroke="#d1d5db"
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                     />
                     <YAxis
                       domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
-                      tickLine={{ stroke: '#d1d5db' }}
-                      axisLine={{ stroke: '#d1d5db' }}
-                      tickFormatter={(value) => `${value.toFixed(1)}°`}
-                      width={50}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      stroke="#d1d5db"
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value) => `${value.toFixed(1)}°C`}
                     />
-                    <Tooltip content={<TempTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="temperature"
-                      stroke="#EF4444"
-                      strokeWidth={3}
-                      dot={{ r: 3, fill: '#EF4444', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 5, strokeWidth: 2 }}
-                    />
-                  </LineChart>
+                    <Tooltip content={<TempTooltip />} cursor={{ fill: "rgba(34, 197, 94, 0.1)" }} />
+                    <Bar dataKey="temperature" radius={[8, 8, 0, 0]} barSize={35}>
+                      {temperatureData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getBarColor(entry.temperature)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
 
@@ -270,14 +338,15 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Grafik Aktivitas */}
+      {/* ============================================ */}
+      {/* GRAFIK AKTIVITAS - LineChart Kategori */}
+      {/* ============================================ */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-left">
-              <h3 className="text-white font-bold text-lg leading-tigh">Grafik Aktivitas Real-time</h3>
-              <p className="text-white/80 text-xs mt-1">Monitoring gerakan dalam 30 data terakhir</p>
+              <h3 className="text-white font-bold text-lg leading-tight">Grafik Aktivitas Real-time</h3>
+              <p className="text-white/80 text-xs mt-1">Monitoring aktivitas dalam 30 data terakhir</p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 ml-4">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,18 +356,24 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {sensorStatuses.activity === "online" && activityData.length > 0 ? (
             <>
               {/* Status Bar */}
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className="text-3xl sm:text-4xl font-bold text-gray-800">
-                    {latestActivity?.value?.toFixed(1)} m/s²
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-800">
+                    {latestActivity?.activityLabel || "N/A"}
                   </div>
-                  <div className={`px-3 py-1.5 rounded-full text-sm font-semibold ${colorClasses[activityCategory.color]}`}>
-                    {activityCategory.label}
+                  <div
+                    className="px-3 py-1.5 rounded-full text-sm font-semibold border"
+                    style={{
+                      backgroundColor: `${latestActivity?.activityColor}20`,
+                      color: latestActivity?.activityColor,
+                      borderColor: latestActivity?.activityColor,
+                    }}
+                  >
+                    Status Terkini
                   </div>
                 </div>
                 <div className="text-right">
@@ -307,52 +382,70 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Chart */}
+              {/* LineChart dengan Kategori pada Y-Axis */}
               <div className="w-full overflow-x-auto">
                 <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <LineChart data={activityData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} vertical={false} />
                     <XAxis
                       dataKey="time"
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
-                      tickLine={{ stroke: '#d1d5db' }}
-                      axisLine={{ stroke: '#d1d5db' }}
+                      tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
+                      stroke="#d1d5db"
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                     />
                     <YAxis
-                      domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                      tick={{ fontSize: 10, fill: '#6B7280' }}
+                      type="category"
+                      dataKey="activityLabel"
+                      domain={['N/A', 'Berbaring Kiri', 'Berbaring Kanan', 'Berdiri']}
+                      tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 500 }}
                       tickLine={{ stroke: '#d1d5db' }}
                       axisLine={{ stroke: '#d1d5db' }}
-                      tickFormatter={(value) => `${value.toFixed(1)}`}
-                      width={50}
                     />
                     <Tooltip content={<ActivityTooltip />} />
                     <Line
-                      type="monotone"
-                      dataKey="value"
+                      type="step"
+                      dataKey="activityLabel"
                       stroke="#8B5CF6"
                       strokeWidth={3}
-                      dot={{ r: 3, fill: '#8B5CF6', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 5, strokeWidth: 2 }}
+                      dot={(props) => {
+                        const { cx, cy, payload } = props;
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={4}
+                            fill={payload.activityColor}
+                            stroke="#fff"
+                            strokeWidth={2}
+                          />
+                        );
+                      }}
+                      activeDot={{ r: 7, strokeWidth: 3, stroke: "#fff" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Stats */}
-              <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Aktivitas Minimum</p>
-                  <p className="text-lg font-bold text-blue-600">
-                    {Math.min(...activityData.map(d => d.value)).toFixed(1)} m/s²
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Aktivitas Maximum</p>
-                  <p className="text-lg font-bold text-purple-600">
-                    {Math.max(...activityData.map(d => d.value)).toFixed(1)} m/s²
-                  </p>
-                </div>
+              {/* Legend */}
+              <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-center gap-4">
+                {[
+                  { label: "Berdiri", color: "#22C55E" },
+                  { label: "Berbaring Kanan", color: "#3B82F6" },
+                  { label: "Berbaring Kiri", color: "#06B6D4" },
+                  { label: "N/A", color: "#6B7280" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-xs text-gray-600 font-medium">{item.label}</span>
+                  </div>
+                ))}
               </div>
             </>
           ) : (
@@ -371,8 +464,6 @@ useEffect(() => {
 
       {/* Grafik Detak Jantung - Coming Soon */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-
-        {/* Header */}
         <div className="bg-gradient-to-r from-pink-500 to-red-600 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-left">
@@ -388,7 +479,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
             <div className="animate-pulse text-center">
