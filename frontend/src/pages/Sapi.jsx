@@ -12,7 +12,7 @@ import plusIcon from "../assets/plus-icon.svg";
 import CowDropdown from "../components/layout/Dropdown";
 import "flowbite";
 
-export default function Sapi() {
+export default function Sapi({ onNavigate }) {
   // 🔹 State utama untuk menyimpan data sapi dan status sensor
   const [cows, setCows] = useState([]);
   const [cowId, setCowId] = useState(null);
@@ -27,12 +27,12 @@ export default function Sapi() {
 
   // 🔹 Ambil data sapi dari backend saat halaman pertama kali dibuka
   useEffect(() => {
-    const controller = new AbortController(); // untuk membatalkan fetch bila komponen di-unmount
+    const controller = new AbortController();
 
     const fetchCows = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token"); // ambil token login
+        const token = localStorage.getItem("token");
         if (!token) {
           setCows([]);
           setSelectedCow(null);
@@ -40,14 +40,14 @@ export default function Sapi() {
           return;
         }
 
-        // 🔹 Request ke API untuk ambil daftar sapi
         const res = await axios.get("http://localhost:5001/api/cows", {
           signal: controller.signal,
           headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = res.data;
-        // 🔹 Jika ada data sapi, urutkan berdasarkan tag dan pilih sapi pertama sebagai default
+        console.log("🐮 Data sapi dari backend:", data);
+
         if (Array.isArray(data) && data.length > 0) {
           const sortedCows = data.sort((a, b) => a.tag.localeCompare(b.tag));
           setCows(sortedCows);
@@ -59,7 +59,6 @@ export default function Sapi() {
           setCowId(null);
         }
       } catch (error) {
-        // 🔹 Tangani error bila request dibatalkan atau gagal
         if (error.name === "CanceledError" || axios.isCancel?.(error)) {
           console.log("fetchCows canceled");
         } else {
@@ -71,7 +70,7 @@ export default function Sapi() {
     };
 
     fetchCows();
-    return () => controller.abort(); // bersihkan fetch bila keluar dari halaman
+    return () => controller.abort();
   }, []);
 
   // 🔹 Update sapi yang dipilih ketika cowId berubah
@@ -87,7 +86,6 @@ export default function Sapi() {
   // 🔹 Cek status semua sensor (suhu, gerakan, detak jantung)
   useEffect(() => {
     if (!selectedCow) {
-      // Jika belum ada sapi dipilih → semua sensor dianggap offline
       setSensorStatuses({
         temperature: "offline",
         activity: "offline",
@@ -98,15 +96,13 @@ export default function Sapi() {
 
     const checkAllSensorStatus = async () => {
       try {
-        // 🔹 Ambil status sensor suhu & gerakan dari service
         const tempStatus = await getSensorStatus(selectedCow.id);
         const activityStatus = await getActivitySensorStatus(selectedCow.id);
 
-        // 🔹 Simpan status sensor ke state
         setSensorStatuses({
           temperature: tempStatus.status,
           activity: activityStatus.status,
-          heartbeat: "development" // belum aktif, masih tahap pengembangan
+          heartbeat: "development"
         });
       } catch (err) {
         console.error("⚠️ Gagal memeriksa status sensor:", err);
@@ -118,13 +114,10 @@ export default function Sapi() {
       }
     };
 
-    // 🔹 Jalankan pertama kali
     checkAllSensorStatus();
-
-    // 🔹 Cek ulang setiap 5 detik (polling)
     const interval = setInterval(checkAllSensorStatus, 5000);
 
-    return () => clearInterval(interval); // hentikan interval jika komponen di-unmount
+    return () => clearInterval(interval);
   }, [selectedCow]);
 
   // 🔹 Fungsi untuk menambah sapi baru
@@ -143,7 +136,6 @@ export default function Sapi() {
         return;
       }
 
-      // 🔹 Hitung nomor tag sapi berikutnya
       const existingNumbers = cows
         .map(cow => {
           const match = cow.tag.match(/SAPI-(\d+)/);
@@ -168,7 +160,6 @@ export default function Sapi() {
         user_id: user._id,
       };
 
-      // 🔹 Kirim data sapi baru ke backend
       const res = await axios.post("http://localhost:5001/api/cows", payload, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -177,14 +168,22 @@ export default function Sapi() {
       });
 
       const addedCow = res.data;
-      setCows((prev) => [...prev, addedCow]); // tambahkan ke daftar sapi
-      setSelectedCow(addedCow); // jadikan sapi baru sebagai yang aktif
+      setCows((prev) => [...prev, addedCow]);
+      setSelectedCow(addedCow);
       setCowId(addedCow.id);
       alert("✅ Sapi berhasil ditambahkan!");
     } catch (error) {
       console.error("❌ Gagal menambahkan sapi:", error.response?.data || error.message);
       const errorMsg = error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.";
       alert(errorMsg);
+    }
+  };
+
+  // 🔹 Fungsi navigasi ke halaman sensor detail
+  const handleNavigateToSensor = (sensorType) => {
+    console.log(`🔄 Navigasi ke halaman ${sensorType}`);
+    if (onNavigate) {
+      onNavigate(sensorType);
     }
   };
 
@@ -198,7 +197,6 @@ export default function Sapi() {
           {/* KOLOM 1: Tambah + Grafik */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              {/* Tombol tambah sapi */}
               <button
                 onClick={() => setShowModal(true)}
                 className="flex items-center gap-2 px-4 py-3 mb-2 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition"
@@ -207,7 +205,6 @@ export default function Sapi() {
                 <span className="text-blue-600 font-medium">Tambah Sapi</span>
               </button>
 
-              {/* Dropdown pilih sapi */}
               {cows.length > 0 && (
                 <div className="flex items-center gap-6">
                   <CowDropdown
@@ -221,7 +218,7 @@ export default function Sapi() {
               )}
             </div>
 
-            {/* Status Sensor - tampilkan tiga sensor */}
+            {/* Status Sensor */}
             {cows.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Sensor Suhu */}
@@ -274,7 +271,7 @@ export default function Sapi() {
                   </div>
                 </div>
 
-                {/* Sensor Detak Jantung (belum aktif) */}
+                {/* Sensor Detak Jantung */}
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -294,7 +291,6 @@ export default function Sapi() {
 
             {/* CARD REALTIME GRAPHICS */}
             <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 overflow-hidden">
-              {/* Header realtime */}
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-gray-800">Realtime Monitoring</h2>
@@ -302,7 +298,6 @@ export default function Sapi() {
                 </div>
               </div>
 
-              {/* Isi konten realtime */}
               <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50 overflow-auto">
                 {loading ? (
                   <div className="text-gray-400">Memuat data sapi...</div>
@@ -315,7 +310,11 @@ export default function Sapi() {
                     </p>
                   </div>
                 ) : (
-                  <DashboardPerSapi cow={selectedCow} sensorStatuses={sensorStatuses} />
+                  <DashboardPerSapi 
+                    cow={selectedCow} 
+                    sensorStatuses={sensorStatuses}
+                    onNavigate={handleNavigateToSensor}
+                  />
                 )}
               </div>
             </div>
@@ -338,7 +337,6 @@ export default function Sapi() {
         </div>
       </main>
 
-      {/* Modal tambah sapi */}
       {showModal && (
         <AddCowModal
           onClose={() => setShowModal(false)}
