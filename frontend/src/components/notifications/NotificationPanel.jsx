@@ -6,16 +6,12 @@ const formatTimeAgo = (timestamp) => {
   const now = new Date();
   const time = new Date(timestamp);
   const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-  
   if (diffInMinutes < 1) return 'Baru saja';
   if (diffInMinutes < 60) return `${diffInMinutes} menit lalu`;
-  
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) return `${diffInHours} jam lalu`;
-  
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) return `${diffInDays} hari lalu`;
-  
   return `${Math.floor(diffInDays / 7)} minggu lalu`;
 };
 
@@ -247,24 +243,21 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
 };
 
 // Komponen utama NotificationPanel - IMPROVED UI
-const NotificationPanel = ({ 
-  isOpen, 
-  onClose, 
-  sapiName, 
-  notifications, 
-  onMarkAsRead, 
-  onDelete, 
+const NotificationPanel = ({
+  isOpen,
+  onClose,
+  sapiName,
+  notifications,
+  onMarkAsRead,
+  onDelete,
   onMarkAllAsRead,
-  onViewDetail 
+  onViewDetail,
 }) => {
-  const [filter, setFilter] = useState('all'); // all, urgent, warning, unread
-
+  const [filter, setFilter] = useState('all');
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const urgentCount = notifications.filter(n => n.type === 'urgent' && !n.isRead).length;
-
-  // Filter notifications
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notif.isRead;
@@ -272,63 +265,67 @@ const NotificationPanel = ({
   });
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex justify-end animate-fade-in"
+    <div
+      // 🔧 FIXED: ubah latar agar tidak terlalu hitam, lebih buram dan lembut
+      className="fixed inset-0 bg-gray-900/30 backdrop-blur-md z-50 flex justify-end animate-fade-in"
       onClick={onClose}
     >
-      <div 
-        className="bg-gradient-to-b from-white to-gray-50 w-full max-w-lg h-full flex flex-col shadow-2xl animate-slide-in"
+      <div
+        // 🔧 FIXED: lebar diperbesar dari max-w-lg → max-w-xl
+        className="bg-gradient-to-b from-white/90 to-gray-50/90 backdrop-blur-xl w-full max-w-xl h-full flex flex-col shadow-2xl animate-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Enhanced */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 shadow-lg">
+        {/* Header */}
+        <div
+          // 🔧 FIXED: gradient header dibuat lebih lembut dan teks kontras lebih baik
+          className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 p-6 shadow-lg"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center backdrop-blur-sm">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">
-                  Notifikasi
-                </h3>
+                <h3 className="text-xl font-bold text-white">Notifikasi</h3>
                 <p className="text-blue-100 text-sm">{sapiName}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
-              className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all"
+              className="text-white hover:bg-white/20 rounded-full p-2 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-          
+
           {/* Stats & Actions */}
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
-              <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-3 py-2">
+              {/* 🔧 FIXED: ubah latar agar tidak terlalu putih, sedikit transparan */}
+              <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-2">
                 <div className="text-2xl font-bold text-white">{notifications.length}</div>
                 <div className="text-xs text-blue-100">Total</div>
               </div>
-              <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-3 py-2">
+              <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-2">
                 <div className="text-2xl font-bold text-white">{unreadCount}</div>
                 <div className="text-xs text-blue-100">Belum dibaca</div>
               </div>
               {urgentCount > 0 && (
-                <div className="bg-red-500 bg-opacity-90 backdrop-blur-sm rounded-lg px-3 py-2 animate-pulse">
+                <div className="bg-red-600/80 backdrop-blur-md rounded-lg px-3 py-2 animate-pulse">
                   <div className="text-2xl font-bold text-white">{urgentCount}</div>
                   <div className="text-xs text-red-100">Mendesak</div>
                 </div>
               )}
             </div>
-            
+
             {notifications.length > 0 && unreadCount > 0 && (
-              <button 
+              <button
                 onClick={onMarkAllAsRead}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                className="bg-white/90 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-md hover:shadow-lg"
               >
                 Tandai Semua
               </button>
@@ -366,11 +363,10 @@ const NotificationPanel = ({
             ))}
           </div>
         )}
-        
-        {/* Content - Scrollable */}
+
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {filteredNotifications.length === 0 ? (
-            // Empty State - Enhanced
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6 shadow-lg">
                 <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -381,14 +377,12 @@ const NotificationPanel = ({
                 {filter === 'all' ? 'Tidak Ada Notifikasi' : 'Tidak Ada Hasil'}
               </h3>
               <p className="text-sm text-gray-600 max-w-xs leading-relaxed">
-                {filter === 'all' 
-                  ? `${sapiName} dalam kondisi baik. Anda akan mendapat pemberitahuan jika ada parameter yang bermasalah.`
-                  : `Tidak ada notifikasi untuk filter "${filter === 'unread' ? 'Belum Dibaca' : filter === 'urgent' ? 'Mendesak' : 'Peringatan'}".`
-                }
+                {filter === 'all'
+                  ? `${sapiName} dalam kondisi baik.`
+                  : `Tidak ada notifikasi untuk filter ini.`}
               </p>
             </div>
           ) : (
-            // Notification List
             <div>
               {filteredNotifications.map(notification => (
                 <NotificationItem
@@ -403,23 +397,20 @@ const NotificationPanel = ({
           )}
         </div>
       </div>
-      
-      {/* Styles untuk animasi */}
+
+      {/* Animations */}
       <style jsx>{`
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        
         @keyframes slide-in {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
-        
         .animate-fade-in {
           animation: fade-in 0.2s ease-out;
         }
-        
         .animate-slide-in {
           animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
