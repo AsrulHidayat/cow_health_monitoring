@@ -7,13 +7,13 @@ import Navbar from "../components/layout/Navbar";
 import AddCowModal from "../components/dashboard/AddCowModal";
 import DashboardPerSapi from "../components/dashboard/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
-import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
 import CowDropdown from "../components/layout/Dropdown";
 
 // 🔔 IMPORT KOMPONEN NOTIFIKASI BARU
 import NotificationBadge from "../components/notifications/NotificationBadge";
 import NotificationPanel from "../components/notifications/NotificationPanel";
+import NotificationPreview from "../components/notifications/NotificationPreview";
 
 import "flowbite";
 
@@ -443,58 +443,12 @@ export default function Sapi({ onNavigate }) {
             </div>
           </div>
 
-          {/* KOLOM 2: Notifikasi - SECTION INI BISA DIHAPUS ATAU DIUBAH */}
-          <div className="lg:col-span-2 bg-green-50 rounded-xl p-6 flex flex-col border border-green-100 h-full">
-            <div className="flex justify-between mb-2">
-              <h3 className="text-gray-800 font-semibold">Notifikasi</h3>
-              <button 
-                onClick={() => setIsNotificationOpen(true)}
-                className="text-sm text-blue-600 cursor-pointer hover:text-blue-800 transition font-medium"
-              >
-                Lihat Semua
-              </button>
-            </div>
-
-            {/* Preview Notifikasi */}
-            <div className="flex-1 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center h-full">
-                  <img src={notifIcon} alt="Notif" className="w-64 h-64 opacity-70 mb-4" />
-                  <h3 className="text-green-600 font-semibold text-sm">BELUM ADA NOTIF</h3>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* Preview 3 notifikasi terbaru */}
-                  {notifications.slice(0, 3).map((notif) => (
-                    <div 
-                      key={notif.id}
-                      className={`bg-white rounded-lg p-3 border-l-4 ${
-                        notif.type === 'urgent' ? 'border-red-500' : 'border-yellow-500'
-                      } ${!notif.isRead ? 'bg-blue-50' : ''} cursor-pointer hover:shadow-md transition`}
-                      onClick={() => setIsNotificationOpen(true)}
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className="text-xl">{notif.type === 'urgent' ? '🚨' : '⚠️'}</span>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-sm text-gray-900">{notif.severity}</h4>
-                          <p className="text-xs text-gray-600 line-clamp-2">{notif.message}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {notifications.length > 3 && (
-                    <button 
-                      onClick={() => setIsNotificationOpen(true)}
-                      className="w-full text-center text-sm text-blue-600 hover:text-blue-800 py-2"
-                    >
-                      Lihat {notifications.length - 3} notifikasi lainnya
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* KOLOM 2: Notifikasi - GUNAKAN KOMPONEN PREVIEW */}
+          <NotificationPreview 
+            notifications={notifications}
+            onOpenPanel={() => setIsNotificationOpen(true)}
+            onMarkAsRead={handleMarkAsRead}
+          />
         </div>
       </main>
 
