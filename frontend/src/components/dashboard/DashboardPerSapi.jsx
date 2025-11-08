@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -12,7 +13,8 @@ import {
   Cell
 } from "recharts";
 
-export default function DashboardPerSapi({ cow, sensorStatuses, onNavigate }) {
+export default function DashboardPerSapi({ cow, sensorStatuses }) {
+  const navigate = useNavigate();
   const [temperatureData, setTemperatureData] = useState([]);
   const [activityData, setActivityData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -249,7 +251,7 @@ export default function DashboardPerSapi({ cow, sensorStatuses, onNavigate }) {
               <p className="text-white/80 text-xs mt-1">Monitoring suhu dalam 30 data terakhir</p>
             </div>
             <button
-              onClick={() => onNavigate?.('suhu')}
+              onClick={() => navigate("/suhu")}
               className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg px-4 py-2 ml-4 transition-all duration-200 flex items-center gap-2 group"
             >
               <span className="text-white text-sm font-medium">Detail</span>
@@ -353,7 +355,7 @@ export default function DashboardPerSapi({ cow, sensorStatuses, onNavigate }) {
               <p className="text-white/80 text-xs mt-1">Monitoring aktivitas dalam 30 data terakhir</p>
             </div>
             <button
-              onClick={() => onNavigate?.('gerakan')}
+              onClick={() => navigate("/gerakan")}
               className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg px-4 py-2 ml-4 transition-all duration-200 flex items-center gap-2 group"
             >
               <span className="text-white text-sm font-medium">Detail</span>
@@ -479,7 +481,7 @@ export default function DashboardPerSapi({ cow, sensorStatuses, onNavigate }) {
               <p className="text-white/80 text-xs mt-1">Coming Soon - fitur sedang dikembangkan</p>
             </div>
             <button
-              onClick={() => onNavigate?.('detak')}
+              onClick={() => navigate("/detak-jantung")}
               className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg px-4 py-2 ml-4 transition-all duration-200 flex items-center gap-2 group"
             >
               <span className="text-white text-sm font-medium">Detail</span>

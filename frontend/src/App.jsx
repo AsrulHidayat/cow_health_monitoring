@@ -19,21 +19,17 @@ import Gerakan from "./pages/Gerakan";
 // Components
 import Sidebar from "./components/layout/Sidebar";
 
-/* ============================================================
-   🔒 ProtectedRoute: hanya render children jika user sudah login
-=============================================================== */
+/* 🔒ProtectedRoute: hanya render children jika user sudah login*/
 const ProtectedRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   return user ? children : <Navigate to="/login" replace />;
 };
 
-/* ============================================================
-   🧭 MainLayout: Layout utama dengan sidebar + navigasi
-=============================================================== */
+/* MainLayout: layout utama dengan sidebar dan konten utama */
 const MainLayout = () => {
   const navigate = useNavigate();
 
-  // Fungsi navigasi berdasarkan key menu di sidebar
+  // Fungsi navigasi halaman
   const handleSelect = (menuKey) => {
     const routes = {
       dashboard: "/dashboard",
@@ -42,7 +38,7 @@ const MainLayout = () => {
       detak: "/detak-jantung",
       gerakan: "/gerakan",
     };
-    console.log(`🔄 Navigasi ke halaman: ${menuKey}`);
+    console.log(`Navigasi ke halaman: ${menuKey}`);
     navigate(routes[menuKey] || "/dashboard");
   };
 
@@ -58,9 +54,9 @@ const MainLayout = () => {
       {/* Sidebar */}
       <Sidebar onSelect={handleSelect} onExit={handleExit} />
 
-      {/* Konten Utama */}
+      {/* Konten utama */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
-        <div className="min-h-full w-full">
+        <div className="min-h-full w-full p-4">
           <Outlet />
         </div>
       </main>
@@ -68,17 +64,15 @@ const MainLayout = () => {
   );
 };
 
-/* ============================================================
-   🧩 App Component: Mengatur Routing Utama
-=============================================================== */
+/* App Component: mengatur routing utama aplikasi */
 export default function App() {
   return (
     <Routes>
-      {/* 🔓 Public Routes */}
+      {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* 🔒 Protected Routes */}
+      {/* Protected routes */}
       <Route
         element={
           <ProtectedRoute>
@@ -94,7 +88,7 @@ export default function App() {
         <Route path="/gerakan" element={<Gerakan />} />
       </Route>
 
-      {/* 🧱 Fallback */}
+      {/* Fallback jika route tidak ditemukan */}
       <Route
         path="*"
         element={
