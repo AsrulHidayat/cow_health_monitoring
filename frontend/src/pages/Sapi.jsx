@@ -47,11 +47,12 @@ export default function Sapi() {
         });
 
         const data = res.data;
-        // 🔹 Jika ada data sapi, pilih sapi pertama sebagai default
+        // 🔹 Jika ada data sapi, urutkan berdasarkan tag dan pilih sapi pertama sebagai default
         if (Array.isArray(data) && data.length > 0) {
-          setCows(data);
-          setSelectedCow(data[0]);
-          setCowId(data[0].id);
+          const sortedCows = data.sort((a, b) => a.tag.localeCompare(b.tag));
+          setCows(sortedCows);
+          setSelectedCow(sortedCows[0]);
+          setCowId(sortedCows[0].id);
         } else {
           setCows([]);
           setSelectedCow(null);
