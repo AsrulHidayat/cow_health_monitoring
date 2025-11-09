@@ -3,15 +3,14 @@ import {
   getHistory,
   getSensorStatus,
   getTemperatureStats,
-  getLatestTemperature, // <-- PASTIKAN ANDA MEMBUAT FUNGSI INI DI SERVICE
+  getLatestTemperature, 
 } from "../../../services/temperatureService";
 import {
   TIME_FILTERS,
   filterDataByTimePeriod,
   categorizeTemperature,
 } from "../utils/SuhuUtils";
-// --- PERUBAHAN: Impor store global ---
-import { useCowStore } from "../../../store/cowStore"; // <-- Sesuaikan path ke store Anda
+import { useCowStore } from "../../../store/cowStore"; 
 
 const ITEMS_PER_PAGE = 25;
 
