@@ -301,9 +301,6 @@ export default function Sapi({ onNavigate }) {
     }
   };
 
-  // 🔔 HITUNG UNREAD COUNT
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   // 🔹 UI utama halaman dashboard sapi
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -330,12 +327,6 @@ export default function Sapi({ onNavigate }) {
                     options={cows
                       .sort((a, b) => a.tag.localeCompare(b.tag))
                       .map((c) => ({ id: c.id, name: c.tag }))}
-                  />
-                  
-                  {/* 🔔 NOTIFICATION BADGE - DITAMBAHKAN DI SINI */}
-                  <NotificationBadge 
-                    count={unreadCount}
-                    onClick={() => setIsNotificationOpen(true)}
                   />
                 </div>
               )}

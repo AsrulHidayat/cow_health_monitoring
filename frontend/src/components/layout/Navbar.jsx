@@ -1,3 +1,9 @@
+// Ganti path-path ini agar sesuai dengan struktur folder Anda
+import { useNotifications } from "../hooks/useNotifications";
+import NotificationBadge from "../notifications/NotificationBadge";
+import NotificationPanel from "../notifications/NotificationPanel";
+
+// Impor Anda yang sudah ada
 import React, { useState } from "react";
 import {
   ArrowUpTrayIcon,
@@ -9,15 +15,33 @@ import {
 import * as XLSX from "xlsx";
 
 export default function Navbar({ title, cowId, cowData }) {
-  // ================= 
-  // 🔹 STATE 
   // =================
-  const [isExporting, setIsExporting] = useState(false);       // Menandai proses export sedang berlangsung
-  const [isImporting, setIsImporting] = useState(false);       // Menandai proses import sedang berlangsung
+  // 🔹 STATE NOTIFIKASI (BARU)
+  // =================
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // =================
+  // 🔹 HOOK NOTIFIKASI (BARU)
+  // =================
+  // Memanggil hook TANPA cowId untuk mendapatkan notifikasi GLOBAL
+  // (Menggunakan alias agar tidak bentrok jika ada state 'notifications' lain)
+  const {
+    notifications: globalNotifications,
+    unreadCount: globalUnreadCount,
+    markAsRead: markGlobalAsRead,
+    markAllAsRead: markAllGlobalAsRead,
+    deleteNotification: deleteGlobalNotification,
+  } = useNotifications(); // <-- Dipanggil tanpa parameter
+
+  // =================
+  // 🔹 STATE (LAMA)
+  // =================
+  const [isExporting, setIsExporting] = useState(false); // Menandai proses export sedang berlangsung
+  const [isImporting, setIsImporting] = useState(false); // Menandai proses import sedang berlangsung
   const [showExportMenu, setShowExportMenu] = useState(false); // Menampilkan/menyembunyikan dropdown export
 
-  // ================= 
-  // 🔹 HANDLE EXPORT 
+  // =================
+  // 🔹 HANDLE EXPORT (LAMA)
   // =================
   const handleExport = async (format) => {
     if (!cowId) {
@@ -25,13 +49,15 @@ export default function Navbar({ title, cowId, cowData }) {
       return;
     }
 
-    setIsExporting(true);       // Menandai sedang mengekspor
-    setShowExportMenu(false);   // Menutup dropdown export
+    setIsExporting(true); // Menandai sedang mengekspor
+    setShowExportMenu(false); // Menutup dropdown export
 
     try {
       // Ambil data history suhu sapi dari API
-      const response = await fetch( `http://localhost:5001/api/temperature/${cowId}/history?limit=10000`);
-      const result   = await response.json();
+      const response = await fetch(
+        `http://localhost:5001/api/temperature/${cowId}/history?limit=10000`
+      );
+      const result = await response.json();
 
       if (!result.data || result.data.length === 0) {
         alert("Tidak ada data untuk diekspor");
@@ -40,14 +66,17 @@ export default function Navbar({ title, cowId, cowData }) {
 
       // Mapping data agar sesuai format Excel / CSV
       const excelData = result.data.map((item, index) => ({
-        No      : index + 1,"ID Sapi": cowData?.tag || `Sapi ${cowId}`,
-        Tanggal : new Date(item.created_at).toLocaleDateString("id-ID"),
-        Waktu   : new Date(item.created_at).toLocaleTimeString("id-ID"),"Suhu (°C)": item.temperature,
-        Status  : categorizeTemperature(item.temperature),
+        No: index + 1,
+        "ID Sapi": cowData?.tag || `Sapi ${cowId}`,
+        Tanggal: new Date(item.created_at).toLocaleDateString("id-ID"),
+        Waktu: new Date(item.created_at).toLocaleTimeString("id-ID"),
+        "Suhu (°C)": item.temperature,
+        Status: categorizeTemperature(item.temperature),
       }));
 
-      const timestamp    = new Date().toISOString().split("T")[0];
-      const filenameBase = `Data_Suhu_${cowData?.tag || `Sapi_${cowId}`}_${timestamp}`;
+      const timestamp = new Date().toISOString().split("T")[0];
+      const filenameBase = `Data_Suhu_${cowData?.tag || `Sapi_${cowId}`
+        }_${timestamp}`;
 
       if (format === "excel") {
         // 🔹 Buat file Excel
@@ -68,10 +97,12 @@ export default function Navbar({ title, cowId, cowData }) {
 
       if (format === "csv") {
         // 🔹 Buat file CSV
-        const csv     = XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(excelData));
-        const blob    = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const link    = document.createElement("a");
-        link.href     = URL.createObjectURL(blob);
+        const csv = XLSX.utils.sheet_to_csv(
+          XLSX.utils.json_to_sheet(excelData)
+        );
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
         link.download = `${filenameBase}.csv`;
         link.click();
         alert(`✅ Berhasil mengekspor ${result.data.length} data ke CSV!`);
@@ -84,8 +115,8 @@ export default function Navbar({ title, cowId, cowData }) {
     }
   };
 
-  // ================= 
-  // 🔹 HANDLE IMPORT 
+  // =================
+  // 🔹 HANDLE IMPORT (LAMA)
   // =================
   const handleImport = async (event) => {
     const file = event.target.files[0];
@@ -93,21 +124,24 @@ export default function Navbar({ title, cowId, cowData }) {
 
     // 🔸 Cek apakah file Excel atau CSV
     const isExcel =
-      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       file.type === "application/vnd.ms-excel" ||
       file.name.endsWith(".xlsx") ||
       file.name.endsWith(".xls");
     const isCSV = file.type === "text/csv" || file.name.endsWith(".csv");
 
     if (!isExcel && !isCSV) {
-      alert("Format file tidak valid. Gunakan file Excel (.xlsx, .xls) atau CSV (.csv)");
+      alert(
+        "Format file tidak valid. Gunakan file Excel (.xlsx, .xls) atau CSV (.csv)"
+      );
       return;
     }
 
     setIsImporting(true); // Menandai proses import
 
     try {
-      const reader  = new FileReader();
+      const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           let jsonData = [];
@@ -131,19 +165,25 @@ export default function Navbar({ title, cowId, cowData }) {
           }
 
           // 🔸 Validasi kolom wajib
-          const requiredColumns    = ["ID Sapi", "Tanggal", "Waktu", "Suhu (°C)"];
-          const firstRow           = jsonData[0];
-          const hasRequiredColumns = requiredColumns.every((col) => col in firstRow);
+          const requiredColumns = ["ID Sapi", "Tanggal", "Waktu", "Suhu (°C)"];
+          const firstRow = jsonData[0];
+          const hasRequiredColumns = requiredColumns.every(
+            (col) => col in firstRow
+          );
 
           if (!hasRequiredColumns) {
-            alert(`Format file tidak sesuai. Pastikan memiliki kolom: ${requiredColumns.join(", ")}`);
+            alert(
+              `Format file tidak sesuai. Pastikan memiliki kolom: ${requiredColumns.join(
+                ", "
+              )}`
+            );
             return;
           }
 
           // 🔸 Simpan data ke database
           let successCount = 0;
-          let errorCount   = 0;
-          const errors     = [];
+          let errorCount = 0;
+          const errors = [];
 
           for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
@@ -154,23 +194,26 @@ export default function Navbar({ title, cowId, cowData }) {
                 throw new Error(`Suhu tidak valid: ${row["Suhu (°C)"]}`);
               }
 
-              const dateStr  = row["Tanggal"];
-              const timeStr  = row["Waktu"];
+              const dateStr = row["Tanggal"];
+              const timeStr = row["Waktu"];
               const dateTime = new Date(`${dateStr} ${timeStr}`);
 
               if (isNaN(dateTime.getTime())) {
                 throw new Error(`Format tanggal/waktu tidak valid`);
               }
 
-              const response = await fetch("http://localhost:5001/api/temperature", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  cow_id: cowId,
-                  temperature,
-                  created_at: dateTime.toISOString(),
-                }),
-              });
+              const response = await fetch(
+                "http://localhost:5001/api/temperature",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    cow_id: cowId,
+                    temperature,
+                    created_at: dateTime.toISOString(),
+                  }),
+                }
+              );
 
               if (response.ok) successCount++;
               else throw new Error("Gagal menyimpan ke database");
@@ -209,9 +252,9 @@ export default function Navbar({ title, cowId, cowData }) {
     event.target.value = ""; // Reset input file
   };
 
-  // ========================  
-  // 🔹 CATEGORIZE TEMPERATURE 
-  // ======================== 
+  // ========================
+  // 🔹 CATEGORIZE TEMPERATURE (LAMA)
+  // ========================
   const categorizeTemperature = (temp) => {
     if (temp < 37.5) return "Hipotermia";
     if (temp <= 39.5) return "Normal";
@@ -220,84 +263,108 @@ export default function Navbar({ title, cowId, cowData }) {
     return "Kritis";
   };
 
-  // ================= 
-  // 🔹 JSX NAVBAR 
+  // =================
+  // 🔹 JSX NAVBAR
   // =================
   return (
-    <div className="w-full border-b border-gray-200 bg-white px-8 py-5 flex justify-between items-center relative">
-      {/* TITLE */}
-      <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+    <>
+      <div className="w-full border-b border-gray-200 bg-white px-8 py-5 flex justify-between items-center relative">
+        {/* TITLE */}
+        <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
 
-      {/* EXPORT & IMPORT CONTROLS */}
-      {cowId && (
-        <div className="flex gap-3 items-center">
+        {/* --- AREA KANAN --- */}
+        <div className="flex items-center gap-4">
 
-          {/* ================= EXPORT DROPDOWN ================= */}
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              disabled={isExporting}
-              className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isExporting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Exporting...</span>
-                </>
-              ) : (
-                <>
-                  <ArrowUpTrayIcon className="w-5 h-5" />
-                  <span>Export</span>
-                  <ChevronDownIcon className="w-4 h-4" />
-                </>
-              )}
-            </button>
-
-            {/* ================= EXPORT MENU ================= */}
-            {showExportMenu && !isExporting && (
-              <div className="absolute right-0 mt-2 bg-white shadow-md border border-gray-200 rounded-lg z-50 w-44 py-1 animate-fadeIn">
+          {/* ================= KONTROL EKSPOR/IMPOR (LAMA) ================= */}
+          {/* Kontrol ini tetap kondisional berdasarkan cowId */}
+          {cowId && (
+            <div className="flex gap-3 items-center">
+              {/* ================= EXPORT DROPDOWN ================= */}
+              <div className="relative">
                 <button
-                  onClick={() => handleExport("excel")}
-                  className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <TableCellsIcon className="w-5 h-5 text-green-500" />
-                  <span>Excel (.xlsx)</span>
+                  {isExporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpTrayIcon className="w-5 h-5" />
+                      <span>Export</span>
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
-                <button
-                  onClick={() => handleExport("csv")}
-                  className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
-                >
-                  <DocumentArrowDownIcon className="w-5 h-5 text-orange-500" />
-                  <span>CSV (.csv)</span>
-                </button>
+
+                {/* ================= EXPORT MENU ================= */}
+                {showExportMenu && !isExporting && (
+                  <div className="absolute right-0 mt-2 bg-white shadow-md border border-gray-200 rounded-lg z-50 w-44 py-1 animate-fadeIn">
+                    <button
+                      onClick={() => handleExport("excel")}
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                    >
+                      <TableCellsIcon className="w-5 h-5 text-green-500" />
+                      <span>Excel (.xlsx)</span>
+                    </button>
+                    <button
+                      onClick={() => handleExport("csv")}
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                    >
+                      <DocumentArrowDownIcon className="w-5 h-5 text-orange-500" />
+                      <span>CSV (.csv)</span>
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* ================= IMPORT BUTTON ================= */}
-          <label className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all cursor-pointer">
-            {isImporting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span>Importing...</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownTrayIcon className="w-5 h-5" />
-                <span>Import</span>
-              </>
-            )}
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleImport}
-              disabled={isImporting}
-              className="hidden"
+              {/* ================= IMPORT BUTTON ================= */}
+              <label className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all cursor-pointer">
+                {isImporting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Importing...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownTrayIcon className="w-5 h-5" />
+                    <span>Import</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleImport}
+                  disabled={isImporting}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+
+          {/* ================= NOTIFIKASI GLOBAL (BARU) ================= */}
+          <div className="relative">
+            <NotificationBadge
+              count={globalUnreadCount}
+              onClick={() => setIsPanelOpen(true)}
             />
-          </label>
-
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* ================= PANEL NOTIFIKASI (BARU) ================= */}
+      {/* Ditempatkan di luar div utama untuk overlay yang benar */}
+      <NotificationPanel
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        notifications={globalNotifications}
+        onMarkAsRead={markGlobalAsRead}
+        onMarkAllAsRead={markAllGlobalAsRead}
+        onDelete={deleteGlobalNotification}
+      />
+    </>
   );
 }

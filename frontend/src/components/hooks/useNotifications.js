@@ -4,53 +4,65 @@ import axios from 'axios';
 
 /**
  * Custom hook untuk mengelola notifikasi sapi
- * @param {string} cowId - ID sapi yang dipilih
+ * @param {string | null} cowId - ID sapi yang dipilih, atau null untuk notifikasi global
  * @returns {Object} - State dan functions untuk notifikasi
  */
-export const useNotifications = (cowId) => {
+// --- MODIFIKASI ---
+// Beri nilai default null pada cowId
+export const useNotifications = (cowId = null) => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Fetch notifikasi dari API
   const fetchNotifications = useCallback(async () => {
-    if (!cowId) {
-      setNotifications([]);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const token = localStorage.getItem('token');
-      
-      // TODO: Ganti dengan endpoint API sebenarnya
+
+      // --- MODIFIKASI ---
+      // Tentukan endpoint secara dinamis
+      // Jika cowId ada, pakai endpoint LAMA (spesifik per sapi)
+      // Jika cowId null, pakai endpoint BARU (global untuk user)
+      const endpoint = cowId
+        ? `http://localhost:5001/api/notifications?cowId=${cowId}`
+        : `http://localhost:5001/api/notifications/user`; // <-- Ganti ini jika endpoint global Anda berbeda
+
       const response = await axios.get(
-        `http://localhost:5001/api/notifications?cowId=${cowId}`,
+        endpoint, // <-- Gunakan endpoint dinamis
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+
       setNotifications(response.data);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
-      
-      // Fallback ke mock data untuk development
-      setNotifications(getMockNotifications(cowId));
+
+      // --- MODIFIKASI ---
+      // Hanya gunakan mock data jika kita BERADA di halaman DashboardPerSapi (ada cowId)
+      if (cowId) {
+        // Fallback ke mock data untuk development
+        setNotifications(getMockNotifications(cowId));
+      } else {
+        // Jika gagal di Navbar (global), jangan tampilkan mock data,
+        // biarkan array kosong.
+        setNotifications([]);
+      }
     } finally {
       setIsLoading(false);
     }
   }, [cowId]);
 
   // Mark notification as read
+  // (Tidak perlu diubah, sudah bekerja berdasarkan notificationId)
   const markAsRead = useCallback(async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
-      
+
       // Update di backend
       await axios.patch(
         `http://localhost:5001/api/notifications/${notificationId}/read`,
@@ -59,7 +71,7 @@ export const useNotifications = (cowId) => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+
       // Update state lokal
       setNotifications(prev =>
         prev.map(notif =>
@@ -78,13 +90,14 @@ export const useNotifications = (cowId) => {
   }, []);
 
   // Mark all as read
+  // (Tidak perlu diubah)
   const markAllAsRead = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const unreadIds = notifications
         .filter(n => !n.isRead)
         .map(n => n.id);
-      
+
       // Update di backend
       await Promise.all(
         unreadIds.map(id =>
@@ -97,7 +110,7 @@ export const useNotifications = (cowId) => {
           )
         )
       );
-      
+
       // Update state lokal
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, isRead: true }))
@@ -112,10 +125,11 @@ export const useNotifications = (cowId) => {
   }, [notifications]);
 
   // Delete notification
+  // (Tidak perlu diubah)
   const deleteNotification = useCallback(async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
-      
+
       // Hapus di backend
       await axios.delete(
         `http://localhost:5001/api/notifications/${notificationId}`,
@@ -123,7 +137,7 @@ export const useNotifications = (cowId) => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+
       // Update state lokal
       setNotifications(prev =>
         prev.filter(notif => notif.id !== notificationId)
@@ -140,7 +154,7 @@ export const useNotifications = (cowId) => {
   // Auto-refresh notifications setiap 30 detik
   useEffect(() => {
     fetchNotifications();
-    
+
     const interval = setInterval(() => {
       fetchNotifications();
     }, 30000); // 30 detik
