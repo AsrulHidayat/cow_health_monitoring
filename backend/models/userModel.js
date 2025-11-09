@@ -1,7 +1,6 @@
 // models/userModel.js
 import { DataTypes } from "sequelize";
 import db from "../config/db.js";
-import Notification from "./notificationModel.js";
 
 const User = db.define(
 "User",{
@@ -27,7 +26,5 @@ const User = db.define(
     tableName: "users", // nama tabel di database
     timestamps: false,  // ubah ke true jika kamu pakai createdAt, updatedAt
   });
-
-User.hasMany(Notification, { foreignKey: 'userId' });
 
 export default User;

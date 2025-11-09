@@ -37,7 +37,7 @@ export const useNotifications = (cowId = null) => {
         }
       );
 
-      setNotifications(response.data);
+      setNotifications(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
