@@ -1,9 +1,12 @@
+// frontend/src/components/gerakan/hooks/useActivityData.js
+
 import { useState, useEffect, useRef } from "react";
-import { getAllCows } from "../../../services/temperatureService";
+// --- PERUBAHAN: Impor service yang TEPAT ---
 import {
   getHistoryActivity,
-  getActivitySensorStatus,
+  getActivitySensorStatus, // Nama ini sudah benar
   getActivityStats,
+  getLatestActivity, // <-- KITA AKAN TAMBAHKAN INI
 } from "../../../services/activityService";
 import {
   TIME_FILTERS,
@@ -11,15 +14,38 @@ import {
   categorizeActivity,
 } from "../utils/activityUtils";
 
+// --- PERUBAHAN: Impor store global ---
+import { useCowStore } from "../../../store/cowStore"; // <-- Sesuaikan path
+
 const ITEMS_PER_PAGE = 25;
 
+// --- FUNGSI HELPER: Untuk memformat data ---
+const formatDataPoint = (h) => ({
+  time: new Date(h.timestamp || h.created_at).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }),
+  // 'activity' di file Anda adalah 'magnitude'
+  activity: parseFloat(h.magnitude.toFixed(1)), 
+  fullDate: h.timestamp || h.created_at,
+  x: h.x,
+  y: h.y,
+  z: h.z,
+  magnitude: h.magnitude,
+  timestamp: h.timestamp || h.created_at,
+});
+
 export const useActivityData = () => {
-  const [cows, setCows] = useState([]);
+  // --- PERUBAHAN: State 'cows' dan 'loading' diambil dari global store ---
+  const { cows, loading } = useCowStore();
+
   const [cowId, setCowId] = useState(null);
   const [rawHistory, setRawHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [displayedData, setDisplayedData] = useState([]);
-  const [avgData, setAvgData] = useState({ avg_activity: null });
+  // avgData tidak digunakan di file Anda, tapi kita biarkan dulu
+  const [avgData] = useState({ avg_activity: null }); 
   const [activityPercentages, setActivityPercentages] = useState({
     berdiri: 0,
     baringKanan: 0,
@@ -27,7 +53,6 @@ export const useActivityData = () => {
     na: 0,
   });
   const [sensorStatus, setSensorStatus] = useState("checking");
-  const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
   const [dataOffset, setDataOffset] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -46,38 +71,19 @@ export const useActivityData = () => {
   const pollingRef = useRef(null);
   const selectedCow = cows.find((c) => c.id === cowId);
 
+  // --- PERUBAHAN: useEffect ini diganti untuk MENGGUNAKAN data dari store ---
   useEffect(() => {
-    const fetchCows = async () => {
-      try {
-        setLoading(true);
-        const allCows = await getAllCows();
-        console.log("🐄 Fetched cows:", allCows.length);
-        setCows(allCows);
-        if (allCows.length > 0) {
-          setCowId(allCows[0].id);
-          console.log(
-            "✅ Selected first cow:",
-            allCows[0].tag,
-            "ID:",
-            allCows[0].id
-          );
-        }
-      } catch (err) {
-        console.error("❌ Gagal mengambil data sapi:", err);
-        setCows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCows();
-  }, []);
+    if (!loading && cows.length > 0 && !cowId) {
+      setCowId(cows[0].id);
+    }
+  }, [cows, loading, cowId]); // Bergantung pada store
 
+  // useEffect untuk mengambil stats (tidak berubah)
   useEffect(() => {
     if (!cowId) return;
 
     const fetchStats = async () => {
       try {
-        console.log("📊 Fetching activity stats for cow:", cowId);
         const stats = await getActivityStats(cowId);
         setDatePickerStats(stats);
       } catch (err) {
@@ -87,43 +93,23 @@ export const useActivityData = () => {
     fetchStats();
   }, [cowId]);
 
+
+  // --- PERUBAHAN: useEffect ini HANYA untuk memuat RIWAYAT (dijalankan sekali) ---
   useEffect(() => {
     if (!cowId) {
-      console.log("⚠️ No cow selected, resetting data");
       setRawHistory([]);
       setFilteredHistory([]);
-      setAvgData({ avg_activity: null });
       setSensorStatus("offline");
       return;
     }
 
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
-    const currentPollId = Date.now();
-    pollingRef.current = currentPollId;
+    const currentFetchId = Date.now();
+    pollingRef.current = currentFetchId;
 
-    const pollData = async () => {
+    const fetchHistoryData = async () => {
       try {
-        if (pollingRef.current !== currentPollId) return;
-
-        console.log("🔍 Checking sensor status for cow:", cowId);
-        const statusResult = await getActivitySensorStatus(cowId);
-
-        if (pollingRef.current !== currentPollId) return;
-
-        console.log(
-          "📡 Sensor status:",
-          statusResult.status,
-          statusResult.seconds_ago ? `(${statusResult.seconds_ago}s ago)` : ""
-        );
-        setSensorStatus(statusResult.status);
-
-        if (statusResult.status !== "online" && !isDateRangeMode) {
-          console.log("⚠️ Sensor offline, clearing data");
-          setRawHistory([]);
-          setFilteredHistory([]);
-          setAvgData({ avg_activity: null });
-          return;
-        }
+        if (pollingRef.current !== currentFetchId) return;
 
         const limit = isDateRangeMode
           ? 10000
@@ -135,107 +121,72 @@ export const useActivityData = () => {
 
         let start = dateRange.startDate;
         let end = dateRange.endDate;
-        let formatted = [];
-
-        if (!start || !end) {
-          console.log(
-            `📥 Fetching latest ${limit} activity records for cow:`,
-            cowId
-          );
-          const histResponse = await getHistoryActivity(cowId, limit, 0);
-
-          if (pollingRef.current !== currentPollId) return;
-
-          console.log(
-            "✅ Received activity data:",
-            histResponse.data?.length || 0,
-            "records"
-          );
-
-          formatted = histResponse.data.map((h) => ({
-            time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            }),
-            activity: parseFloat(h.magnitude.toFixed(1)),
-            fullDate: h.timestamp,
-            x: h.x,
-            y: h.y,
-            z: h.z,
-            magnitude: h.magnitude,
-            timestamp: h.timestamp,
-          }));
-
-          setRawHistory(formatted);
-          return;
+        
+        if (isDateRangeMode && start === end) {
+            const endDateObj = new Date(end);
+            endDateObj.setDate(endDateObj.getDate() + 1);
+            end = endDateObj.toISOString().split("T")[0];
         }
 
-        if (start === end) {
-          const endDateObj = new Date(end);
-          endDateObj.setDate(endDateObj.getDate() + 1);
-          end = endDateObj.toISOString().split("T")[0];
-        }
+        const histResponse = await getHistoryActivity(cowId, limit, 0, start, end);
+        if (pollingRef.current !== currentFetchId) return;
 
-        console.log(
-          `📥 Fetching activity data from ${start} to ${end} for cow:`,
-          cowId
-        );
-        const histResponse = await getHistoryActivity(
-          cowId,
-          limit,
-          0,
-          start,
-          end
-        );
-
-        if (pollingRef.current !== currentPollId) return;
-
-        console.log(
-          "✅ Received date-filtered activity data:",
-          histResponse.data?.length || 0,
-          "records"
-        );
-
-        formatted = histResponse.data.map((h) => ({
-          time: new Date(h.timestamp).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          activity: parseFloat(h.magnitude.toFixed(1)),
-          fullDate: h.timestamp,
-          x: h.x,
-          y: h.y,
-          z: h.z,
-          magnitude: h.magnitude,
-          timestamp: h.timestamp,
-        }));
-
+        const formatted = histResponse.data.map(formatDataPoint);
         setRawHistory(formatted);
+
       } catch (err) {
-        if (pollingRef.current === currentPollId) {
-          console.error("❌ Gagal melakukan polling data:", err);
-          setSensorStatus("offline");
+        if (pollingRef.current === currentFetchId) {
+          console.error("❌ Gagal memuat data riwayat gerakan:", err);
           setRawHistory([]);
           setFilteredHistory([]);
-          setAvgData({ avg_activity: null });
         }
       }
     };
 
-    pollData();
+    fetchHistoryData(); // Panggil sekali
 
-    if (!isDateRangeMode) {
-      console.log("🔄 Starting polling interval (5s) for cow:", cowId);
-      const interval = setInterval(pollData, 5000);
-      return () => {
-        console.log("⏹️ Stopping polling interval");
-        clearInterval(interval);
-      };
+  }, [cowId, timePeriod, dateRange]); // Tetap re-fetch jika filter ini berubah
+
+
+  // --- PERUBAHAN: useEffect BARU untuk POLLING REALTIME (data terbaru & status) ---
+  useEffect(() => {
+    if (!cowId || (dateRange.startDate && dateRange.endDate)) {
+      setSensorStatus("offline");
+      return;
     }
-  }, [cowId, timePeriod, dateRange]);
 
+    const pollLatestData = async () => {
+      try {
+        const statusResult = await getActivitySensorStatus(cowId);
+        setSensorStatus(statusResult.status);
+
+        if (statusResult.status === "online") {
+          const latestData = await getLatestActivity(cowId); // Panggil fungsi baru
+          if (latestData) {
+            const formattedData = formatDataPoint(latestData);
+            
+            setRawHistory((prevHistory) => {
+              if (prevHistory.length > 0 && prevHistory[0].fullDate === formattedData.fullDate) {
+                return prevHistory;
+              }
+              return [formattedData, ...prevHistory];
+            });
+          }
+        }
+      } catch (err) {
+        console.error("❌ Gagal polling data gerakan terbaru:", err);
+        setSensorStatus("offline");
+      }
+    };
+
+    pollLatestData();
+    const interval = setInterval(pollLatestData, 5000); // Set interval polling
+
+    return () => clearInterval(interval);
+  }, [cowId, dateRange.startDate, dateRange.endDate]);
+
+
+  // useEffect untuk filter (Logika persentase Anda SAMA, tidak diubah)
   useEffect(() => {
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
 
@@ -266,18 +217,15 @@ export const useActivityData = () => {
       filterCategory === "ALL"
         ? timeFilteredData
         : timeFilteredData.filter((item) => {
-            // Klasifikasi berdasarkan X, Y, Z
             const categoryInfo = categorizeActivity(item.x, item.y, item.z);
             return categoryInfo.value === filterCategory;
           });
-
-    console.log("📊 Filtered data:", categoryFilteredData.length, "records");
 
     setFilteredHistory(categoryFilteredData);
     setTotalPages(Math.ceil(categoryFilteredData.length / ITEMS_PER_PAGE));
 
     if (categoryFilteredData.length > 0) {
-      // ✅ Hitung persentase untuk 4 kategori
+      // ✅ Logika persentase Anda sudah benar dan dipertahankan
       const categoryCounts = categoryFilteredData.reduce(
         (acc, item) => {
           const category = categorizeActivity(item.x, item.y, item.z).value;
@@ -307,10 +255,14 @@ export const useActivityData = () => {
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
+
+  // ... (Sisa hook Anda dari baris 336 ke 422 SAMA) ...
+  // useEffect untuk reset offset
   useEffect(() => {
     setDataOffset(0);
   }, [cowId, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
+  // useEffect untuk data display pagination
   useEffect(() => {
     if (filteredHistory.length > 0) {
       const startIndex = dataOffset;
@@ -324,6 +276,7 @@ export const useActivityData = () => {
     }
   }, [filteredHistory, dataOffset]);
 
+  // Fungsi handle pagination
   const handlePrevPage = () => {
     if (dataOffset > 0) setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
   };
@@ -335,6 +288,7 @@ export const useActivityData = () => {
 
   const handlePageSelect = (val) => setDataOffset(Number(val));
 
+  // Fungsi helper
   const getCowCondition = () => {
     if (!selectedCow || avgData.avg_activity == null) return "Normal";
     let abnormalSensors = 0;
@@ -364,15 +318,16 @@ export const useActivityData = () => {
     return styles[condition] || styles["Normal"];
   };
 
+
   return {
-    cows,
+    cows, // <-- dari store
     cowId,
     setCowId,
     selectedCow,
-    loading,
+    loading, // <-- dari store
     sensorStatus,
     avgData,
-    activityPercentages,
+    activityPercentages, // <-- Anda punya ini
     filteredHistory,
     displayedData,
     dateRange,
@@ -392,6 +347,7 @@ export const useActivityData = () => {
     getCowCondition,
     getCowConditionStyle,
     ITEMS_PER_PAGE,
-    setCows,
+    // --- PERUBAHAN: setCows dihapus ---
+    // setCows, 
   };
 };

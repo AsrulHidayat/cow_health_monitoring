@@ -2,26 +2,40 @@ import { useState, useEffect, useRef } from "react";
 import {
   getHistory,
   getSensorStatus,
-  getAllCows,
   getTemperatureStats,
+  getLatestTemperature, // <-- PASTIKAN ANDA MEMBUAT FUNGSI INI DI SERVICE
 } from "../../../services/temperatureService";
 import {
   TIME_FILTERS,
   filterDataByTimePeriod,
   categorizeTemperature,
 } from "../utils/SuhuUtils";
+// --- PERUBAHAN: Impor store global ---
+import { useCowStore } from "../../../store/cowStore"; // <-- Sesuaikan path ke store Anda
 
 const ITEMS_PER_PAGE = 25;
 
+// --- FUNGSI HELPER: Untuk memformat data (agar tidak duplikat kode) ---
+const formatDataPoint = (data) => ({
+  time: new Date(data.created_at).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }),
+  temperature: parseFloat(data.temperature.toFixed(1)),
+  fullDate: data.created_at,
+});
+
 export const useTemperatureData = () => {
-  const [cows, setCows] = useState([]);
+  // --- PERUBAHAN: State 'cows' dan 'loading' diambil dari global store ---
+  const { cows, loading } = useCowStore();
+
   const [cowId, setCowId] = useState(null);
   const [rawHistory, setRawHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [displayedData, setDisplayedData] = useState([]);
   const [avgData, setAvgData] = useState({ avg_temp: null });
   const [sensorStatus, setSensorStatus] = useState("checking");
-  const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState(TIME_FILTERS.MINUTE.value);
   const [dataOffset, setDataOffset] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -40,23 +54,16 @@ export const useTemperatureData = () => {
   const pollingRef = useRef(null);
   const selectedCow = cows.find((cow) => cow.id === cowId);
 
+  // --- PERUBAHAN: useEffect ini diganti untuk MENGGUNAKAN data dari store ---
+  // (useEffect yang lama dihapus)
   useEffect(() => {
-    const fetchCows = async () => {
-      try {
-        setLoading(true);
-        const allCows = await getAllCows();
-        setCows(allCows);
-        if (allCows.length > 0) setCowId(allCows[0].id);
-      } catch (err) {
-        console.error("Gagal mengambil data sapi:", err);
-        setCows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCows();
-  }, []);
+    // Atur cowId awal HANYA JIKA data sapi sudah dimuat dari store
+    if (!loading && cows.length > 0 && !cowId) {
+      setCowId(cows[0].id);
+    }
+  }, [cows, loading, cowId]); // Bergantung pada store
 
+  // useEffect untuk mengambil stats (tidak berubah)
   useEffect(() => {
     if (!cowId) return;
 
@@ -71,6 +78,8 @@ export const useTemperatureData = () => {
     fetchStats();
   }, [cowId]);
 
+  // --- PERUBAHAN: useEffect ini HANYA untuk memuat RIWAYAT (dijalankan sekali) ---
+  // (Interval polling dihapus dari sini)
   useEffect(() => {
     if (!cowId) {
       setRawHistory([]);
@@ -81,23 +90,13 @@ export const useTemperatureData = () => {
     }
 
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
-    const currentPollId = Date.now();
-    pollingRef.current = currentPollId;
+    const currentFetchId = Date.now(); // Ganti nama ref
+    pollingRef.current = currentFetchId;
 
-    const pollData = async () => {
+    // Ganti nama fungsi 'pollData' menjadi 'fetchHistoryData'
+    const fetchHistoryData = async () => {
       try {
-        if (pollingRef.current !== currentPollId) return;
-
-        const statusResult = await getSensorStatus(cowId);
-        if (pollingRef.current !== currentPollId) return;
-        setSensorStatus(statusResult.status);
-
-        if (statusResult.status !== "online" && !isDateRangeMode) {
-          setRawHistory([]);
-          setFilteredHistory([]);
-          setAvgData({ avg_temp: null });
-          return;
-        }
+        if (pollingRef.current !== currentFetchId) return;
 
         const limit = isDateRangeMode
           ? 10000
@@ -112,47 +111,28 @@ export const useTemperatureData = () => {
         let formatted = [];
 
         if (!start || !end) {
+          // Mode non-rentang tanggal (realtime)
           const histResponse = await getHistory(cowId, limit, 0);
-          if (pollingRef.current !== currentPollId) return;
-
-          formatted = histResponse.data.map((h) => ({
-            time: new Date(h.created_at).toLocaleTimeString("id-ID", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            }),
-            temperature: parseFloat(h.temperature.toFixed(1)),
-            fullDate: h.created_at,
-          }));
-
-          setRawHistory(formatted);
-          return;
+          if (pollingRef.current !== currentFetchId) return;
+          formatted = histResponse.data.map(formatDataPoint);
+        } else {
+          // Mode rentang tanggal
+          if (start === end) {
+            const endDateObj = new Date(end);
+            endDateObj.setDate(endDateObj.getDate() + 1);
+            end = endDateObj.toISOString().split("T")[0];
+          }
+          const histResponse = await getHistory(cowId, limit, 0, start, end);
+          if (pollingRef.current !== currentFetchId) return;
+          formatted = histResponse.data.map(formatDataPoint);
         }
-
-        if (start === end) {
-          const endDateObj = new Date(end);
-          endDateObj.setDate(endDateObj.getDate() + 1);
-          end = endDateObj.toISOString().split("T")[0];
-        }
-
-        const histResponse = await getHistory(cowId, limit, 0, start, end);
-        if (pollingRef.current !== currentPollId) return;
-
-        formatted = histResponse.data.map((h) => ({
-          time: new Date(h.created_at).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          temperature: parseFloat(h.temperature.toFixed(1)),
-          fullDate: h.created_at,
-        }));
-
+        
         setRawHistory(formatted);
+
       } catch (err) {
-        if (pollingRef.current === currentPollId) {
-          console.error("Gagal melakukan polling data:", err);
-          setSensorStatus("offline");
+        if (pollingRef.current === currentFetchId) {
+          console.error("Gagal memuat data riwayat:", err);
+          // Hapus setSensorStatus dari sini
           setRawHistory([]);
           setFilteredHistory([]);
           setAvgData({ avg_temp: null });
@@ -160,14 +140,55 @@ export const useTemperatureData = () => {
       }
     };
 
-    pollData();
+    fetchHistoryData(); // Panggil sekali
 
-    if (!isDateRangeMode) {
-      const interval = setInterval(pollData, 5000);
-      return () => clearInterval(interval);
+  }, [cowId, timePeriod, dateRange]); // Tetap re-fetch jika filter ini berubah
+
+
+  // --- PERUBAHAN: useEffect BARU untuk POLLING REALTIME (data terbaru & status) ---
+  useEffect(() => {
+    if (!cowId || (dateRange.startDate && dateRange.endDate)) {
+      // Jangan polling jika tidak ada cowId atau jika dalam mode rentang tanggal
+      setSensorStatus("offline"); // Set status offline jika dalam mode rentang tanggal
+      return;
     }
-  }, [cowId, timePeriod, dateRange]);
 
+    const pollLatestData = async () => {
+      try {
+        // 1. Selalu cek status sensor
+        const statusResult = await getSensorStatus(cowId);
+        setSensorStatus(statusResult.status);
+
+        // 2. Jika online, ambil data TERBARU
+        if (statusResult.status === "online") {
+          const latestData = await getLatestTemperature(cowId);
+          if (latestData) {
+            const formattedData = formatDataPoint(latestData);
+            
+            // 3. Tambahkan data terbaru ke 'rawHistory'
+            setRawHistory((prevHistory) => {
+              // Cek duplikat berdasarkan fullDate (timestamp)
+              if (prevHistory.length > 0 && prevHistory[0].fullDate === formattedData.fullDate) {
+                return prevHistory;
+              }
+              return [formattedData, ...prevHistory];
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Gagal polling data terbaru:", err);
+        setSensorStatus("offline");
+      }
+    };
+
+    pollLatestData(); // Panggil sekali saat dimuat
+    const interval = setInterval(pollLatestData, 5000); // Set interval polling
+
+    return () => clearInterval(interval); // Bersihkan interval
+  }, [cowId, dateRange.startDate, dateRange.endDate]); // Bergantung pada cowId & mode rentang tanggal
+
+
+  // useEffect untuk filter (tidak berubah)
   useEffect(() => {
     const isDateRangeMode = dateRange.startDate && dateRange.endDate;
 
@@ -216,10 +237,12 @@ export const useTemperatureData = () => {
     }
   }, [rawHistory, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
+  // useEffect untuk reset offset (tidak berubah)
   useEffect(() => {
     setDataOffset(0);
   }, [cowId, timePeriod, dateRange, filterCategory, appliedTimeRange]);
 
+  // useEffect untuk data display pagination (tidak berubah)
   useEffect(() => {
     if (filteredHistory.length > 0) {
       const startIndex = dataOffset;
@@ -233,6 +256,7 @@ export const useTemperatureData = () => {
     }
   }, [filteredHistory, dataOffset]);
 
+  // Fungsi handle pagination (tidak berubah)
   const handlePrevPage = () => {
     if (dataOffset > 0) setDataOffset(Math.max(0, dataOffset - ITEMS_PER_PAGE));
   };
@@ -244,6 +268,7 @@ export const useTemperatureData = () => {
 
   const handlePageSelect = (val) => setDataOffset(Number(val));
 
+  // Fungsi helper (tidak berubah)
   const getCowCondition = () => {
     if (!selectedCow || avgData.avg_temp == null) return "Normal";
     let abnormalSensors = 0;
@@ -275,11 +300,11 @@ export const useTemperatureData = () => {
   };
 
   return {
-    cows,
+    cows, // <-- dari store
     cowId,
     setCowId,
     selectedCow,
-    loading,
+    loading, // <-- dari store
     sensorStatus,
     avgData,
     filteredHistory,
@@ -301,6 +326,7 @@ export const useTemperatureData = () => {
     getCowCondition,
     getCowConditionStyle,
     ITEMS_PER_PAGE,
-    setCows,
+    // --- PERUBAHAN: setCows dihapus ---
+    // setCows, 
   };
 };

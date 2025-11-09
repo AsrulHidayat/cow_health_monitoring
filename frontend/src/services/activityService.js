@@ -42,8 +42,10 @@ export const getHistoryActivity = async (
       params,
       headers: getAuthHeaders(),
     });
-    
-    console.log(`✅ Activity history fetched: ${res.data.data?.length || 0} records`);
+
+    console.log(
+      `✅ Activity history fetched: ${res.data.data?.length || 0} records`
+    );
     return res.data;
   } catch (err) {
     console.error("Error fetching history activity:", err);
@@ -57,10 +59,13 @@ export const getActivitySensorStatus = async (cowId) => {
     const res = await activityApi.get(`/${cowId}/status`, {
       headers: getAuthHeaders(),
     });
-    
-    console.log(`✅ Activity sensor status for cow ${cowId}:`, res.data.status, 
-      `(${res.data.seconds_ago || '?'}s ago)`);
-    
+
+    console.log(
+      `✅ Activity sensor status for cow ${cowId}:`,
+      res.data.status,
+      `(${res.data.seconds_ago || "?"}s ago)`
+    );
+
     return res.data;
   } catch (err) {
     console.error("Error fetching activity sensor status:", err);
@@ -71,20 +76,13 @@ export const getActivitySensorStatus = async (cowId) => {
 // Get activity statistics
 export const getActivityStats = async (cowId, startDate = null, endDate = null) => {
   try {
-    let url = `/${cowId}/stats`;
-    
-    const params = [];
-    if (startDate) params.push(`startDate=${startDate}`);
-    if (endDate) params.push(`endDate=${endDate}`);
-    
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
-    
-    const res = await activityApi.get(url, { 
-      headers: getAuthHeaders() 
-    });
-    
+    // Siapkan params
+    const params = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    const res = await activityApi.get(`/${cowId}/stats`, { params, headers: getAuthHeaders(),});
+
     console.log(`✅ Activity stats fetched for cow ${cowId}:`, res.data);
     return res.data;
   } catch (err) {

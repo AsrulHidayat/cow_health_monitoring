@@ -6,6 +6,8 @@ import {
   Outlet,
   useNavigate,
 } from "react-router-dom";
+import { useCowStore } from "./store/cowStore"; 
+import { useEffect } from "react"; 
 
 // Pages
 import Login from "./pages/Login";
@@ -28,6 +30,7 @@ const ProtectedRoute = ({ children }) => {
 /* MainLayout: layout utama dengan sidebar dan konten utama */
 const MainLayout = () => {
   const navigate = useNavigate();
+  const fetchCows = useCowStore((state) => state.fetchCows);
 
   // Fungsi navigasi halaman
   const handleSelect = (menuKey) => {
@@ -48,6 +51,11 @@ const MainLayout = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
+
+  // Ambil data sapi sekali saat layout dimuat
+  useEffect(() => {
+    fetchCows();
+  }, [fetchCows]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
