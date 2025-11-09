@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { checkConnection } from "./config/db.js";
+import db, { checkConnection } from "./config/db.js"; 
 import authRoutes from "./routes/authRoutes.js";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
 import cowRoutes from "./routes/cowRoutes.js"; 
 import activityRoutes from "./routes/activityRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js"
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/temperature", temperatureRoutes);
 app.use("/api/cows", cowRoutes); 
 app.use("/api/activity", activityRoutes);
+app.use("/api/notifications", notificationRoutes); 
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -44,10 +46,17 @@ app.use((err, req, res, next) => {
 // Jalankan server setelah DB terhubung
 const startServer = async () => {
   try {
-    await checkConnection(); // ✅ menggunakan Sequelize.authenticate()
+    await checkConnection(); 
+    console.log("✅ Koneksi database berhasil.");
+
+    // Sinkronisasi model (buat tabel jika belum ada)
+    await db.sync(); 
+    console.log("✅ Model & tabel database tersinkronisasi.");
+    
+    // Jalankan server
     app.listen(PORT, () => console.log(`✅ API running on port ${PORT}`));
   } catch (error) {
-    console.error("❌ Gagal koneksi ke database:", error);
+    console.error("❌ Gagal memulai server:", error);
     process.exit(1);
   }
 };

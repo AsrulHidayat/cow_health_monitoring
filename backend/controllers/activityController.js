@@ -1,257 +1,365 @@
-import activity from "../models/activityModel.js";
+// --- MODIFIKASI: Impor model Activity (uppercase)
+import Activity from "../models/activityModel.js"; 
 import { Op } from "sequelize";
 
-// ✅ Tambah data gerakan baru (dari sensor_gerakan.ino)
-export const addactivity = async (req, res) => {
-  try {
-    console.log("📩 Data gerakan masuk:", req.body);
-    const { cow_id, accel_x, accel_y, accel_z } = req.body;
+// --- TAMBAHAN: Impor model lain yang diperlukan untuk notifikasi
+import Cow from "../models/cowModel.js";
+import Notification from "../models/notificationModel.js";
 
-    if (
-      !cow_id ||
-      typeof accel_x !== "number" ||
-      typeof accel_y !== "number" ||
-      typeof accel_z !== "number"
-    ) {
-      return res
-        .status(400)
-        .json({ error: "cow_id dan data akselerometer (x, y, z) wajib diisi" });
-    }
-
-    const newactivity = await activity.create({
-      cow_id,
-      accel_x,
-      accel_y,
-      accel_z,
-      created_at: new Date(),
-    });
-
-    console.log("✅ Insert gerakan berhasil:", newactivity.toJSON());
-    res.status(201).json({ ok: true, insertedId: newactivity.id });
-  } catch (err) {
-    console.error("❌ Error addactivity:", err);
-    res.status(500).json({ error: "internal error" });
+// ========================================
+// 🔔 HELPER NOTIFIKASI
+// ========================================
+const categorizeActivity = (x, y, z) => {
+  if ([x, y, z].some(v => v == null || isNaN(v))) {
+    // Peringatan jika data N/A
+    return { status: 'unknown', severity: 2 }; 
   }
+
+  x = parseFloat(Number(x).toFixed(2));
+  y = parseFloat(Number(y).toFixed(2));
+  z = parseFloat(Number(z).toFixed(2));
+
+  // Berdiri (Normal)
+  if (x >= -1.2 && x <= 0.1 && y >= -3.0 && y <= 0.0 && z >= 10.5 && z <= 12.0) {
+    return { status: 'berdiri', severity: 0 };
+  }
+  // Berbaring (Normal)
+  if ((x >= -0.6 && x <= 0.2 && y >= 4.0 && y <= 7.2 && z >= 7.3 && z <= 11.2) ||
+      (x >= 0.0 && x <= 0.4 && y >= 9.8 && y <= 10.8 && z >= 2.8 && z <= 4.3) ||
+      (x >= -0.6 && x <= 0.2 && y >= -10.2 && y <= -6.3 && z >= 5.3 && z <= 8.7) ||
+      (x >= 0.2 && x <= 0.8 && y >= -10.8 && y <= -9.6 && z >= -0.1 && z <= 2.7)) {
+    return { status: 'berbaring', severity: 0 };
+  }
+  // Posisi tidak normal (Warning)
+  return { status: 'abnormal', severity: 2 };
+};
+
+const generateMessage = (activity, status, params) => {
+  if (status.status === 'abnormal') {
+    return `Posisi tubuh sapi abnormal terdeteksi. Sapi mungkin terjatuh atau kesulitan berdiri.`;
+  }
+   if (status.status === 'unknown') {
+    return `Data sensor gerakan tidak valid (N/A). Perlu pengecekan sensor.`;
+  }
+  return `Parameter ${params.join(', ')} di luar batas normal.`;
+};
+
+// ========================================
+// 🔔 FUNGSI PEMBUAT NOTIFIKASI (BARU)
+// ========================================
+/**
+ * Menganalisis data aktivitas baru dan membuat notifikasi jika abnormal.
+ * Dijalankan di background (tanpa 'await') agar tidak memblokir respon API.
+ * @param {object} activityData - Data aktivitas yang baru saja disimpan
+ */
+const createNotificationOnAbnormalActivity = async (activityData) => {
+  try {
+    const activityCategory = categorizeActivity(
+      activityData.accel_x,
+      activityData.accel_y,
+      activityData.accel_z
+    );
+
+    // 1. Hanya buat notifikasi jika abnormal (severity > 0)
+    if (activityCategory.severity > 0) {
+      const cow = await Cow.findByPk(activityData.cow_id);
+      if (!cow) return; // Sapi tidak ditemukan, hentikan
+
+      // 2. Tentukan tipe notifikasi
+      let type, severity;
+      if (activityCategory.severity >= 3) {
+        type = 'urgent';
+        severity = 'Segera Tindaki';
+      } else {
+        type = 'warning';
+        severity = 'Harus Diperhatikan';
+      }
+
+      const parameters = ['gerakan'];
+      const message = generateMessage(activityData, activityCategory, parameters);
+
+      // 3. Simpan notifikasi ke database
+      await Notification.create({
+        sapiId: cow.id,
+        userId: cow.user_id, // Ambil dari data Sapi
+        sapiName: cow.tag,    // Ambil dari data Sapi
+        type: type,
+        parameters: parameters,
+        severity: severity,
+        message: message,
+        isRead: false
+      });
+      console.log(`🔔 Notifikasi GERAKAN dibuat untuk Sapi ${cow.tag}`);
+    }
+  } catch (error) {
+    // Tangkap error agar tidak crash
+    console.error("Gagal membuat notifikasi gerakan:", error);
+  }
+};
+
+
+// ========================================
+// ⬇️ KODE ANDA YANG SUDAH ADA (DENGAN MODIFIKASI) ⬇️
+// ========================================
+
+// ✅ Tambah data gerakan baru (dari sensor_gerakan.ino)
+// --- MODIFIKASI: Nama fungsi diubah menjadi 'createActivity' agar konsisten
+export const createActivity = async (req, res) => {
+  try {
+    console.log("📩 Data gerakan masuk:", req.body);
+    const { cow_id, accel_x, accel_y, accel_z } = req.body;
+
+    if (
+      !cow_id ||
+      accel_x === undefined || // Cek 'undefined' lebih aman
+      accel_y === undefined ||
+      accel_z === undefined
+    ) {
+      return res
+        .status(400)
+        .json({ error: "cow_id dan data akselerometer (x, y, z) wajib diisi" });
+    }
+
+    // --- MODIFIKASI: Menggunakan 'Activity' (uppercase)
+    const newActivity = await Activity.create({ 
+      cow_id,
+      accel_x,
+      accel_y,
+      accel_z,
+      // 'created_at' di-handle otomatis oleh Sequelize (jika timestamps: true)
+      // Jika Anda ingin override, gunakan:
+      // created_at: req.body.created_at || new Date() 
+    });
+
+    // ----------------------------------------------------
+    // 🔹 MODIFIKASI UTAMA 🔹
+    // Panggil fungsi notifikasi setelah data disimpan
+    // TIDAK PAKAI 'await' agar respon API ke sensor tetap cepat
+    createNotificationOnAbnormalActivity(newActivity);
+    // ----------------------------------------------------
+
+    console.log("✅ Insert gerakan berhasil:", newActivity.toJSON());
+    // --- MODIFIKASI: Kirim data lengkap, bukan cuma 'ok'
+    res.status(201).json(newActivity); 
+  } catch (err) {
+    console.error("❌ Error createActivity:", err);
+    res.status(500).json({ error: "internal error" });
+  }
 };
 
 // ✅ Ambil data gerakan terbaru
-export const getLatestactivity = async (req, res) => {
-  try {
-    const cowId = Number(req.params.cowId);
-    const latest = await activity.findOne({
-      where: { cow_id: cowId },
-      order: [["created_at", "DESC"]],
-    });
+// --- MODIFIKASI: Nama fungsi & model
+export const getLatestActivity = async (req, res) => { 
+  try {
+    const cowId = Number(req.params.cowId);
+    const latest = await Activity.findOne({ // <-- Model Activity
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+    });
 
-    if (!latest) {
-      return res.json(null);
-    }
+    if (!latest) {
+      return res.json(null);
+    }
 
-    // Hitung magnitude dari accelerometer
-    const magnitude = Math.sqrt(
-      Math.pow(latest.accel_x, 2) +
-        Math.pow(latest.accel_y, 2) +
-        Math.pow(latest.accel_z, 2)
-    );
-    res.json({
-      id: latest.id,
-      cow_id: latest.cow_id,
-      x: latest.accel_x,
-      y: latest.accel_y,
-      z: latest.accel_z,
-      magnitude: magnitude,
-      timestamp: latest.created_at,
-    });
-  } catch (err) {
-    console.error("❌ getLatestactivity error:", err);
-    res.status(500).json({ error: "internal error" });
-  }
+    // Hitung magnitude dari accelerometer
+    const magnitude = Math.sqrt(
+      Math.pow(latest.accel_x, 2) +
+        Math.pow(latest.accel_y, 2) +
+        Math.pow(latest.accel_z, 2)
+    );
+    res.json({
+      id: latest.id,
+      cow_id: latest.cow_id,
+      x: latest.accel_x,
+      y: latest.accel_y,
+      z: latest.accel_z,
+      magnitude: magnitude,
+      timestamp: latest.created_at,
+    });
+  } catch (err) {
+    console.error("❌ getLatestActivity error:", err);
+    res.status(500).json({ error: "internal error" });
+  }
 };
 
 // ✅ Ambil riwayat gerakan dengan pagination dan filter tanggal
-export const getHistoryactivity = async (req, res) => {
-  try {
-    const cowId = Number(req.params.cowId);
-    const limit = Math.min(10000, Number(req.query.limit) || 500);
-    const offset = Number(req.query.offset) || 0;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+// --- MODIFIKASI: Nama fungsi & model
+export const getHistoryActivity = async (req, res) => {
+  try {
+    const cowId = Number(req.params.cowId);
+    const limit = Math.min(10000, Number(req.query.limit) || 500);
+    const offset = Number(req.query.offset) || 0;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
 
-    // Build where clause
-    const whereClause = { cow_id: cowId };
+    const whereClause = { cow_id: cowId };
 
-    // Jika ada filter tanggal
-    if (startDate && endDate) {
-      whereClause.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate)],
-      };
-    } else if (startDate) {
-      whereClause.created_at = {
-        [Op.gte]: new Date(startDate),
-      };
-    } else if (endDate) {
-      whereClause.created_at = {
-        [Op.lte]: new Date(endDate),
-      };
-    }
+    if (startDate && endDate) {
+      whereClause.created_at = {
+        [Op.between]: [new Date(startDate), new Date(endDate)],
+      };
+    } else if (startDate) {
+      whereClause.created_at = {
+        [Op.gte]: new Date(startDate),
+      };
+    } else if (endDate) {
+      whereClause.created_at = {
+        [Op.lte]: new Date(endDate),
+      };
+    }
 
-    // Get total count
-    const totalCount = await activity.count({ where: whereClause });
+    const totalCount = await Activity.count({ where: whereClause }); // <-- Model Activity
 
-    // Get paginated data
-    const history = await activity.findAll({
-      where: whereClause,
-      order: [["created_at", "DESC"]],
-      limit,
-      offset,
-    });
+    const history = await Activity.findAll({ // <-- Model Activity
+      where: whereClause,
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
 
-    // Transform data: hitung magnitude untuk setiap record
-    const transformedData = history.map((item) => {
-      const magnitude = Math.sqrt(
-        Math.pow(item.accel_x, 2) +
-          Math.pow(item.accel_y, 2) +
-          Math.pow(item.accel_z, 2)
-      );
+    const transformedData = history.map((item) => {
+      const magnitude = Math.sqrt(
+        Math.pow(item.accel_x, 2) +
+          Math.pow(item.accel_y, 2) +
+          Math.pow(item.accel_z, 2)
+      );
 
-      return {
-        id: item.id,
-        cow_id: item.cow_id,
-        x: item.accel_x, 
-        y: item.accel_y, 
-        z: item.accel_z, 
-        magnitude: magnitude, 
-        timestamp: item.created_at,
-      };
-    });
+      return {
+        id: item.id,
+        cow_id: item.cow_id,
+        x: item.accel_x, 
+        y: item.accel_y, 
+        z: item.accel_z, 
+        magnitude: magnitude, 
+        timestamp: item.created_at,
+      };
+    });
 
-    res.json({
-      data: transformedData,
-      pagination: {
-        total: totalCount,
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount,
-      },
-    });
-  } catch (err) {
-    console.error("❌ getHistoryactivity error:", err);
-    res.status(500).json({ error: "internal error" });
-  }
+    res.json({
+      data: transformedData,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount,
+      },
+    });
+  } catch (err) {
+    console.error("❌ getHistoryActivity error:", err);
+    res.status(500).json({ error: "internal error" });
+  }
 };
 
 // ✅ Cek status sensor gerakan
 export const getSensorStatus = async (req, res) => {
-  try {
-    const cowId = Number(req.params.cowId);
-    console.log("Cek status sensor gerakan untuk cowId:", cowId);
+  try {
+    const cowId = Number(req.params.cowId);
+    console.log("Cek status sensor gerakan untuk cowId:", cowId);
 
-    const lastData = await activity.findOne({
-      where: { cow_id: cowId },
-      order: [["created_at", "DESC"]],
-    });
+    const lastData = await Activity.findOne({ // <-- Model Activity
+      where: { cow_id: cowId },
+      order: [["created_at", "DESC"]],
+    });
 
-    if (!lastData) {
-      return res.json({
-        status: "offline",
-        message: "Belum ada data dari sensor",
-      });
-    }
+    if (!lastData) {
+      return res.json({
+        status: "offline",
+        message: "Belum ada data dari sensor",
+      });
+    }
 
-    const lastUpdate = new Date(lastData.created_at);
-    // Sensor gerakan mengirim data tiap 5 detik (delay 5000 di .ino)
-    // Kita beri toleransi 30 detik untuk lebih aman
-    const diffSeconds = (Date.now() - lastUpdate.getTime()) / 1000;
+    const lastUpdate = new Date(lastData.created_at);
+    const diffSeconds = (Date.now() - lastUpdate.getTime()) / 1000;
+    const status = diffSeconds <= 30 ? "online" : "offline";
+    const message =
+      status === "online"
+        ? "Sensor aktif"
+        : "Sensor tidak aktif / tidak terhubung";
 
-    const status = diffSeconds <= 30 ? "online" : "offline";
-    const message =
-      status === "online"
-        ? "Sensor aktif"
-        : "Sensor tidak aktif / tidak terhubung";
-
-    res.json({
-      status,
-      message,
-      last_update: lastUpdate,
-      seconds_ago: Math.floor(diffSeconds),
-    });
-  } catch (err) {
-    console.error("❌ getSensorStatus (gerakan) error:", err);
-    res.status(500).json({ error: "internal error" });
-  }
+    res.json({
+      status,
+      message,
+      last_update: lastUpdate,
+      seconds_ago: Math.floor(diffSeconds),
+    });
+  } catch (err) {
+    console.error("❌ getSensorStatus (gerakan) error:", err);
+    res.status(500).json({ error: "internal error" });
+  }
 };
 
 // ✅ Get activity statistics
-export const getactivityStats = async (req, res) => {
-  try {
-    const cowId = Number(req.params.cowId);
-    const { startDate, endDate } = req.query;
+// --- MODIFIKASI: Nama fungsi & model
+export const getActivityStats = async (req, res) => {
+  try {
+    const cowId = Number(req.params.cowId);
+    const { startDate, endDate } = req.query;
 
-    const whereClause = { cow_id: cowId };
+    const whereClause = { cow_id: cowId };
 
-    if (startDate && endDate) {
-      whereClause.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate)],
-      };
-    }
+    if (startDate && endDate) {
+      whereClause.created_at = {
+        [Op.between]: [new Date(startDate), new Date(endDate)],
+      };
+    }
 
-    const activitys = await activity.findAll({
-      where: whereClause,
-      order: [["created_at", "ASC"]],
-    });
+    const activities = await Activity.findAll({ // <-- Model Activity
+      where: whereClause,
+      order: [["created_at", "ASC"]],
+    });
 
-    if (activitys.length === 0) {
-      return res.json({
-        count: 0,
-        min: null,
-        max: null,
-        average: null,
-        firstRecord: null,
-        lastRecord: null,
-      });
-    }
+   if (activities.length === 0) { // <-- Nama variabel diubah
+      return res.json({
+        count: 0,
+        min: null,
+        max: null,
+        average: null,
+        firstRecord: null,
+        lastRecord: null,
+      });
+    }
 
-    // Hitung magnitude untuk setiap data
-    const magnitudes = activitys.map((m) =>
-      Math.sqrt(
-        Math.pow(m.accel_x, 2) + Math.pow(m.accel_y, 2) + Math.pow(m.accel_z, 2)
-      )
-    );
+    const magnitudes = activities.map((m) => // <-- Nama variabel diubah
+      Math.sqrt(
+        Math.pow(m.accel_x, 2) + Math.pow(m.accel_y, 2) + Math.pow(m.accel_z, 2)
+      )
+    );
 
-    const min = Math.min(...magnitudes);
-    const max = Math.max(...magnitudes);
-    const avg =
-      magnitudes.reduce((sum, val) => sum + val, 0) / magnitudes.length;
+    const min = Math.min(...magnitudes);
+    const max = Math.max(...magnitudes);
+    const avg =
+      magnitudes.reduce((sum, val) => sum + val, 0) / magnitudes.length;
 
-    res.json({
-      count: activitys.length,
-      min: parseFloat(min.toFixed(1)),
-      max: parseFloat(max.toFixed(1)),
-      average: parseFloat(avg.toFixed(1)),
-      firstRecord: activitys[0].created_at,
-      lastRecord: activitys[activitys.length - 1].created_at,
-    });
-  } catch (err) {
-    console.error("❌ getactivityStats error:", err);
-    res.status(500).json({ error: "internal error" });
-  }
+    res.json({
+      count: activities.length, // <-- Nama variabel diubah
+      min: parseFloat(min.toFixed(1)),
+      max: parseFloat(max.toFixed(1)),
+      average: parseFloat(avg.toFixed(1)),
+      firstRecord: activities[0].created_at, // <-- Nama variabel diubah
+      lastRecord: activities[activities.length - 1].created_at, // <-- Nama variabel diubah
+    });
+  } catch (err) {
+    console.error("❌ getActivityStats error:", err);
+    res.status(500).json({ error: "internal error" });
+  }
 };
 
 // ✅ Hapus semua data gerakan untuk sapi tertentu
-export const deleteAllactivity = async (req, res) => {
-  try {
-    const cowId = Number(req.params.cowId);
+// --- MODIFIKASI: Nama fungsi & model
+export const deleteAllActivity = async (req, res) => {
+  try {
+    const cowId = Number(req.params.cowId);
 
-    const deleted = await activity.destroy({
-      where: { cow_id: cowId },
-    });
+    const deleted = await Activity.destroy({ // <-- Model Activity
+      where: { cow_id: cowId },
+    });
 
-    res.json({
-      message: `Berhasil menghapus ${deleted} data gerakan`,
-      deletedCount: deleted,
-    });
-  } catch (err) {
-    console.error("Error deleting activity data:", err);
-    res.status(500).json({ error: "Internal error" });
-  }
+    res.json({
+      message: `Berhasil menghapus ${deleted} data gerakan`,
+      deletedCount: deleted,
+    });
+  } catch (err) {
+    console.error("Error deleting activity data:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
 };
