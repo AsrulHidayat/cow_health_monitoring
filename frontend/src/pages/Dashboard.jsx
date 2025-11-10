@@ -3,13 +3,20 @@ import axios from "axios";
 import Navbar from "../components/layout/Navbar";
 import AddCowModal from "../components/dashboard/AddCowModal";
 import cowIcon from "../assets/cow.png";
-import notifIcon from "../assets/notif-cow.png";
 import plusIcon from "../assets/plus-icon.svg";
+
+// 🔔 1. IMPORT KOMPONEN NOTIFIKASI
+import NotificationPreview from "../components/notifications/NotificationPreview";
+import NotificationPanel from "../components/notifications/NotificationPanel";
 
 export default function Dashboard() {
   const [cows, setCows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+
+  // 🔔 2. TAMBAHKAN STATE NOTIFIKASI
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const fetchCows = async () => {
@@ -40,6 +47,65 @@ export default function Dashboard() {
     fetchCows();
   }, []);
 
+  // 🔔 3. TAMBAHKAN USEEFFECT UNTUK FETCH NOTIFIKASI
+  useEffect(() => {
+    // Simulasi fetch notifikasi dari API untuk SEMUA sapi
+    const fetchNotifications = async () => {
+      try {
+        // TODO: Ganti dengan API call sebenarnya (misal: /api/notifications/all)
+        // const res = await axios.get(`http://localhost:5001/api/notifications`);
+        // setNotifications(res.data);
+
+        // Mock data untuk demo (menampilkan notif dari berbagai sapi)
+        const mockNotifications = [
+          {
+            id: 1,
+            sapiId: 1, // Asumsi ID sapi
+            sapiName: "SAPI-001", // Asumsi nama
+            type: 'urgent',
+            parameters: ['suhu', 'detak jantung'],
+            severity: 'Segera Tindaki',
+            message: 'Suhu tubuh SAPI-001 mencapai 40.5°C',
+            timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 menit lalu
+            isRead: false
+          },
+          {
+            id: 2,
+            sapiId: 2, // Asumsi ID sapi
+            sapiName: "SAPI-002", // Asumsi nama
+            type: 'warning',
+            parameters: ['gerakan'],
+            severity: 'Harus Diperhatikan',
+            message: 'Aktivitas gerakan SAPI-002 menurun drastis',
+            timestamp: new Date(Date.now() - 1000 * 60 * 120), // 2 jam lalu
+            isRead: false
+          },
+          {
+            id: 3,
+            sapiId: 1, // Asumsi ID sapi
+            sapiName: "SAPI-001", // Asumsi nama
+            type: 'urgent',
+            parameters: ['suhu'],
+            severity: 'Segera Tindaki',
+            message: 'Suhu tubuh SAPI-001 tidak stabil',
+            timestamp: new Date(Date.now() - 1000 * 60 * 180), // 3 jam lalu
+            isRead: true
+          }
+        ];
+        
+        setNotifications(mockNotifications);
+      } catch (error) {
+        console.error("❌ Gagal memuat notifikasi:", error);
+      }
+    };
+
+    fetchNotifications();
+    
+    // Auto-refresh setiap 30 detik
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []); // Array dependensi kosong, fetch saat komponen mount
+
   const handleAddCow = async (newCow) => {
     try {
       const token = localStorage.getItem("token");
@@ -57,7 +123,6 @@ export default function Dashboard() {
       }
 
       // 🔢 Cari ID yang kosong (gap filling)
-      // Ambil semua nomor ID yang sudah ada
       const existingNumbers = cows
         .map(cow => {
           const match = cow.tag.match(/SAPI-(\d+)/);
@@ -65,7 +130,6 @@ export default function Dashboard() {
         })
         .sort((a, b) => a - b);
 
-      // Cari nomor terkecil yang belum terpakai
       let nextNumber = 1;
       for (const num of existingNumbers) {
         if (num === nextNumber) {
@@ -106,6 +170,36 @@ export default function Dashboard() {
       const errorMsg = error.response?.data?.message || "Gagal menambahkan sapi. Coba lagi.";
       alert(errorMsg);
     }
+  };
+
+  // 🔔 4. TAMBAHKAN FUNGSI HANDLER NOTIFIKASI
+  const handleMarkAsRead = (notifId) => {
+    setNotifications(prev =>
+      prev.map(notif =>
+        notif.id === notifId ? { ...notif, isRead: true } : notif
+      )
+    );
+    // TODO: Panggil API untuk update status
+    // axios.patch(`http://localhost:5001/api/notifications/${notifId}/read`);
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notif => ({ ...notif, isRead: true }))
+    );
+    // TODO: Panggil API untuk update semua status
+  };
+
+  const handleDeleteNotification = (notifId) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notifId));
+    // TODO: Panggil API untuk hapus notifikasi
+    // axios.delete(`http://localhost:5001/api/notifications/${notifId}`);
+  };
+
+  const handleViewDetail = () => {
+    // Di dashboard utama, kita hanya tutup panelnya.
+    // Navigasi ke halaman sapi spesifik bisa ditambahkan di sini jika perlu.
+    setIsNotificationOpen(false);
   };
 
   // Tampilkan ID sapi pertama jika ada data
@@ -188,25 +282,12 @@ export default function Dashboard() {
           {/* ========================== */}
           {/* KOLOM 2: Notifikasi */}
           {/* ========================== */}
-          <div className="lg:col-span-2 bg-green-50 rounded-xl p-6 flex flex-col border border-green-100 h-full">
-            <div className="flex justify-between mb-2">
-              <h3 className="text-gray-800 font-semibold">Notifikasi</h3>
-              <span className="text-sm text-gray-500 cursor-pointer hover:text-green-600 transition">
-                Mark as read
-              </span>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <img
-                src={notifIcon}
-                alt="Notif"
-                className="w-64 h-64 opacity-70 mb-4"
-              />
-              <h3 className="text-green-600 font-semibold text-sm">
-                BELUM ADA NOTIF
-              </h3>
-            </div>
-          </div>
+          {/* 🔔 5. GANTI UI STATIS DENGAN KOMPONEN PREVIEW */}
+          <NotificationPreview 
+            notifications={notifications}
+            onOpenPanel={() => setIsNotificationOpen(true)}
+            onMarkAsRead={handleMarkAsRead}
+          />
         </div>
       </main>
 
@@ -214,9 +295,21 @@ export default function Dashboard() {
         <AddCowModal
           onClose={() => setShowModal(false)}
           onAdd={handleAddCow}
-          cows={cows}
+          cows={cows} // Tetap gunakan 'cows' sesuai kode asli Anda
         />
       )}
+
+      {/* 🔔 6. TAMBAHKAN PANEL NOTIFIKASI DI AKHIR */}
+      <NotificationPanel 
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        sapiName="Semua Sapi" // Judul generik untuk dashboard
+        notifications={notifications}
+        onMarkAsRead={handleMarkAsRead}
+        onDelete={handleDeleteNotification}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onViewDetail={handleViewDetail}
+      />
     </div>
   );
 }
