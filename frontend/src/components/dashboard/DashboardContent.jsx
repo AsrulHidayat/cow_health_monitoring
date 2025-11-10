@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { Heart, AlertTriangle, Activity, Plus, TrendingUp, Thermometer, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, AlertTriangle, Activity, Plus, TrendingUp, Thermometer, Zap, LineChart as LucideLineChart } from 'lucide-react';
+import HealthTrendChart from './HealthTrendChart';
 
 // Komponen Dashboard Content yang sudah diperkecil
 export function DashboardContent({ cows, onAddCow }) {
     const [showAddModal, setShowAddModal] = useState(false);
+    // State baru untuk filter waktu grafik
+    const [timeRange, setTimeRange] = useState('day'); // 'day', 'week', 'month', 'year'
+    const [healthHistory, setHealthHistory] = useState([]);
+    const [chartLoading, setChartLoading] = useState(true);
 
     // Hitung statistik berdasarkan data cows yang diterima
     const totalCows = cows?.length || 0;
@@ -33,21 +38,41 @@ export function DashboardContent({ cows, onAddCow }) {
 
     const getHealthColor = (health) => {
         switch (health) {
-            case 'critical': return 'bg-red-100 border-red-300 text-red-800';
-            case 'warning': return 'bg-orange-100 border-orange-300 text-orange-800';
-            case 'caution': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
-            case 'healthy': return 'bg-green-100 border-green-300 text-green-800';
-            default: return 'bg-gray-100 border-gray-300 text-gray-800';
+            case 'critical': {
+                return 'bg-red-100 border-red-300 text-red-800';
+            }
+            case 'warning': {
+                return 'bg-orange-100 border-orange-300 text-orange-800';
+            }
+            case 'caution': {
+                return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+            }
+            case 'healthy': {
+                return 'bg-green-100 border-green-300 text-green-800';
+            }
+            default: {
+                return 'bg-gray-100 border-gray-300 text-gray-800';
+            }
         }
     };
 
     const getHealthLabel = (health) => {
         switch (health) {
-            case 'critical': return 'Segera Tindaki';
-            case 'warning': return 'Harus Diperhatikan';
-            case 'caution': return 'Perlu Diperhatikan';
-            case 'healthy': return 'Sapi Sehat';
-            default: return 'Tidak Diketahui';
+            case 'critical': {
+                return 'Segera Tindaki';
+            }
+            case 'warning': {
+                return 'Harus Diperhatikan';
+            }
+            case 'caution': {
+                return 'Perlu Diperhatikan';
+            }
+            case 'healthy': {
+                return 'Sapi Sehat';
+            }
+            default: {
+                return 'Tidak Diketahui';
+            }
         }
     };
 
@@ -57,6 +82,56 @@ export function DashboardContent({ cows, onAddCow }) {
             setShowAddModal(false);
         }
     };
+
+    useEffect(() => {
+        const fetchHealthHistory = () => {
+            setChartLoading(true);
+            // Mock data fetching
+            setTimeout(() => {
+                let data = [];
+                if (timeRange === 'day') {
+                    data = [
+                        { name: '00:00', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: '04:00', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: '08:00', healthy: 9, caution: 3, warning: 1, critical: 0 },
+                        { name: '12:00', healthy: 8, caution: 3, warning: 2, critical: 0 },
+                        { name: '16:00', healthy: 9, caution: 2, warning: 2, critical: 0 },
+                        { name: '20:00', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                    ];
+                } else if (timeRange === 'week') {
+                    data = [
+                        { name: 'Senin', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Selasa', healthy: 9, caution: 3, warning: 1, critical: 0 },
+                        { name: 'Rabu', healthy: 8, caution: 3, warning: 2, critical: 0 },
+                        { name: 'Kamis', healthy: 9, caution: 2, warning: 2, critical: 0 },
+                        { name: 'Jumat', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Sabtu', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Minggu', healthy: 9, caution: 3, warning: 1, critical: 0 },
+                    ];
+                } else if (timeRange === 'month') {
+                    data = [
+                        { name: 'Minggu 1', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Minggu 2', healthy: 9, caution: 3, warning: 1, critical: 0 },
+                        { name: 'Minggu 3', healthy: 8, caution: 3, warning: 2, critical: 0 },
+                        { name: 'Minggu 4', healthy: 9, caution: 2, warning: 2, critical: 0 },
+                    ];
+                } else if (timeRange === 'year') {
+                    data = [
+                        { name: 'Jan', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Feb', healthy: 9, caution: 3, warning: 1, critical: 0 },
+                        { name: 'Mar', healthy: 8, caution: 3, warning: 2, critical: 0 },
+                        { name: 'Apr', healthy: 9, caution: 2, warning: 2, critical: 0 },
+                        { name: 'Mei', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                        { name: 'Jun', healthy: 10, caution: 2, warning: 1, critical: 0 },
+                    ];
+                }
+                setHealthHistory(data);
+                setChartLoading(false);
+            }, 1000);
+        };
+
+        fetchHealthHistory();
+    }, [timeRange]);
 
     return (
         <div className="space-y-4">
@@ -196,6 +271,50 @@ export function DashboardContent({ cows, onAddCow }) {
                 </div>
             </div>
 
+            {/* Grafik Kondisi Ternak */}
+            <div className="bg-white rounded-xl shadow-md p-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+                    {/* Judul */}
+                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <LucideLineChart className="w-5 h-5 text-blue-600" />
+                        Grafik Tren Kesehatan Ternak
+                    </h2>
+
+                    {/* Filter Waktu */}
+                    <div className="flex items-center gap-2">
+                        {['day', 'week', 'month', 'year'].map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeRange(range)}
+                                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all
+                                    ${timeRange === range
+                                        ? 'bg-green-600 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }
+                                `}
+                            >
+                                {range === 'day' && 'Hari'}
+                                {range === 'week' && 'Minggu'}
+                                {range === 'month' && 'Bulan'}
+                                {range === 'year' && 'Tahun'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Grafik */}
+                {chartLoading ? (
+                    <div className="w-full h-64 flex items-center justify-center text-gray-500">
+                        <div className="text-center">
+                            <p className="font-semibold">Memuat data grafik...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <HealthTrendChart data={healthHistory} />
+                )}
+            </div>
+
+
             {/* Cow Cards - Daftar Sapi - Compact */}
             <div className="bg-white rounded-xl shadow-md p-4">
                 <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -206,7 +325,7 @@ export function DashboardContent({ cows, onAddCow }) {
                 {cows && cows.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
                         {cows
-                            .slice() 
+                            .slice()
                             .sort((a, b) => a.id - b.id) // urutkan dari ID terkecil ke terbesar
                             .map((cow) => {
                                 const health = getCowHealth(cow);
@@ -237,8 +356,8 @@ export function DashboardContent({ cows, onAddCow }) {
 
                                         {/* Status Pemeriksaan */}
                                         <div className={`rounded-md p-2 mb-2 border ${isChecked
-                                                ? 'bg-purple-50 border-purple-200'
-                                                : 'bg-orange-50 border-orange-200'
+                                            ? 'bg-purple-50 border-purple-200'
+                                            : 'bg-orange-50 border-orange-200'
                                             }`}>
                                             <div className="flex items-center gap-1 mb-1">
                                                 {isChecked ? (
