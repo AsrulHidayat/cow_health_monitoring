@@ -100,7 +100,7 @@ export default function DashboardPerSapi({ cow, sensorStatuses }) {
           }),
           temperature: parseFloat(item.temperature.toFixed(1)),
           fullDate: item.created_at,
-        })).reverse();
+        }))
 
         // Format data aktivitas dengan kategori
         const actFormatted = actJson.data.map((item) => {
@@ -118,7 +118,7 @@ export default function DashboardPerSapi({ cow, sensorStatuses }) {
             magnitude: item.magnitude,
             fullDate: item.timestamp,
           };
-        }).reverse();
+        })
 
         setTemperatureData(tempFormatted);
         setActivityData(actFormatted);

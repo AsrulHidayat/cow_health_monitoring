@@ -11,7 +11,6 @@ import plusIcon from "../assets/plus-icon.svg";
 import CowDropdown from "../components/layout/Dropdown";
 
 // 🔔 IMPORT KOMPONEN NOTIFIKASI BARU
-import NotificationBadge from "../components/notifications/NotificationBadge";
 import NotificationPanel from "../components/notifications/NotificationPanel";
 import NotificationPreview from "../components/notifications/NotificationPreview";
 
