@@ -1,4 +1,3 @@
-// backend/routes/activityRoutes.js
 import express from "express";
 import {
   createActivity,
