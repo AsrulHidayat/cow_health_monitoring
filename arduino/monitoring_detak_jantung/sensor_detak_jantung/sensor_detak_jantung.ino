@@ -11,7 +11,7 @@ const char* ssid = "KOST_PUTRA";
 const char* password = "1sampai8";
 
 // ===== API Server =====
-const char* serverUrl = "http://192.168.1.22:5001/api/temperature"; 
+const char* serverUrl = "http://192.168.1.25:5001/api/temperature"; 
 
 // ===== DS18B20 =====
 #define ONE_WIRE_BUS 4

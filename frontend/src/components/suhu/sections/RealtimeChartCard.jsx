@@ -60,7 +60,6 @@ const RealtimeChartCard = ({
   ITEMS_PER_PAGE,
   dateRange,
   setDateRange,
-  appliedTimeRange,
   setAppliedTimeRange,
   datePickerStats,
   timePeriod,
