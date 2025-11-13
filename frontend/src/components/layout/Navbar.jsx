@@ -5,43 +5,43 @@ import NotificationPanel from "../notifications/NotificationPanel";
 
 // Impor Anda yang sudah ada
 import React, { useState } from "react";
+// ⭐️ PERUBAHAN: Impor ikon dari lucide-react, hapus heroicons
 import {
-  ArrowUpTrayIcon,
-  ArrowDownTrayIcon,
-  ChevronDownIcon,
-  DocumentArrowDownIcon,
-  TableCellsIcon,
-} from "@heroicons/react/24/outline";
+  UploadCloud,
+  DownloadCloud,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  Loader2, // Ikon loading baru
+} from "lucide-react";
 import * as XLSX from "xlsx";
 
 export default function Navbar({ title, cowId, cowData }) {
   // =================
-  // 🔹 STATE NOTIFIKASI (BARU)
+  // 🔹 STATE NOTIFIKASI (BARU) - (Tidak Berubah)
   // =================
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // =================
-  // 🔹 HOOK NOTIFIKASI (BARU)
+  // 🔹 HOOK NOTIFIKASI (BARU) - (Tidak Berubah)
   // =================
-  // Memanggil hook TANPA cowId untuk mendapatkan notifikasi GLOBAL
-  // (Menggunakan alias agar tidak bentrok jika ada state 'notifications' lain)
   const {
     notifications: globalNotifications,
     unreadCount: globalUnreadCount,
     markAsRead: markGlobalAsRead,
     markAllAsRead: markAllGlobalAsRead,
     deleteNotification: deleteGlobalNotification,
-  } = useNotifications(); // <-- Dipanggil tanpa parameter
+  } = useNotifications();
 
   // =================
-  // 🔹 STATE (LAMA)
+  // 🔹 STATE (LAMA) - (Tidak Berubah)
   // =================
-  const [isExporting, setIsExporting] = useState(false); // Menandai proses export sedang berlangsung
-  const [isImporting, setIsImporting] = useState(false); // Menandai proses import sedang berlangsung
-  const [showExportMenu, setShowExportMenu] = useState(false); // Menampilkan/menyembunyikan dropdown export
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // =================
-  // 🔹 HANDLE EXPORT (LAMA)
+  // 🔹 HANDLE EXPORT (LAMA) - (Tidak Berubah)
   // =================
   const handleExport = async (format) => {
     if (!cowId) {
@@ -49,11 +49,10 @@ export default function Navbar({ title, cowId, cowData }) {
       return;
     }
 
-    setIsExporting(true); // Menandai sedang mengekspor
-    setShowExportMenu(false); // Menutup dropdown export
+    setIsExporting(true);
+    setShowExportMenu(false);
 
     try {
-      // Ambil data history suhu sapi dari API
       const response = await fetch(
         `http://localhost:5001/api/temperature/${cowId}/history?limit=10000`
       );
@@ -64,7 +63,6 @@ export default function Navbar({ title, cowId, cowData }) {
         return;
       }
 
-      // Mapping data agar sesuai format Excel / CSV
       const excelData = result.data.map((item, index) => ({
         No: index + 1,
         "ID Sapi": cowData?.tag || `Sapi ${cowId}`,
@@ -79,7 +77,6 @@ export default function Navbar({ title, cowId, cowData }) {
         }_${timestamp}`;
 
       if (format === "excel") {
-        // 🔹 Buat file Excel
         const ws = XLSX.utils.json_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Data Suhu");
@@ -96,7 +93,6 @@ export default function Navbar({ title, cowId, cowData }) {
       }
 
       if (format === "csv") {
-        // 🔹 Buat file CSV
         const csv = XLSX.utils.sheet_to_csv(
           XLSX.utils.json_to_sheet(excelData)
         );
@@ -111,18 +107,17 @@ export default function Navbar({ title, cowId, cowData }) {
       console.error("Error exporting data:", error);
       alert("❌ Gagal mengekspor data. Silakan coba lagi.");
     } finally {
-      setIsExporting(false); // Selesai proses export
+      setIsExporting(false);
     }
   };
 
   // =================
-  // 🔹 HANDLE IMPORT (LAMA)
+  // 🔹 HANDLE IMPORT (LAMA) - (Tidak Berubah)
   // =================
   const handleImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // 🔸 Cek apakah file Excel atau CSV
     const isExcel =
       file.type ===
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
@@ -138,7 +133,7 @@ export default function Navbar({ title, cowId, cowData }) {
       return;
     }
 
-    setIsImporting(true); // Menandai proses import
+    setIsImporting(true);
 
     try {
       const reader = new FileReader();
@@ -146,13 +141,11 @@ export default function Navbar({ title, cowId, cowData }) {
         try {
           let jsonData = [];
           if (isCSV) {
-            // 🔸 Parsing CSV ke JSON
             const text = e.target.result;
             const workbook = XLSX.read(text, { type: "string" });
             const sheetName = workbook.SheetNames[0];
             jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
           } else {
-            // 🔸 Parsing Excel ke JSON
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: "array" });
             const sheetName = workbook.SheetNames[0];
@@ -164,7 +157,6 @@ export default function Navbar({ title, cowId, cowData }) {
             return;
           }
 
-          // 🔸 Validasi kolom wajib
           const requiredColumns = ["ID Sapi", "Tanggal", "Waktu", "Suhu (°C)"];
           const firstRow = jsonData[0];
           const hasRequiredColumns = requiredColumns.every(
@@ -180,7 +172,6 @@ export default function Navbar({ title, cowId, cowData }) {
             return;
           }
 
-          // 🔸 Simpan data ke database
           let successCount = 0;
           let errorCount = 0;
           const errors = [];
@@ -223,7 +214,6 @@ export default function Navbar({ title, cowId, cowData }) {
             }
           }
 
-          // 🔸 Tampilkan summary import
           let message = `✅ Import selesai!\n\nBerhasil: ${successCount} data\n`;
           if (errorCount > 0) {
             message += `Gagal: ${errorCount} data\n\nError pertama:\n${errors
@@ -232,7 +222,7 @@ export default function Navbar({ title, cowId, cowData }) {
           }
 
           alert(message);
-          if (successCount > 0) window.location.reload(); // Reload halaman jika ada data berhasil
+          if (successCount > 0) window.location.reload();
         } catch (error) {
           console.error("Error processing file:", error);
           alert("❌ Gagal memproses file. Pastikan format file sesuai.");
@@ -249,11 +239,11 @@ export default function Navbar({ title, cowId, cowData }) {
       setIsImporting(false);
     }
 
-    event.target.value = ""; // Reset input file
+    event.target.value = "";
   };
 
   // ========================
-  // 🔹 CATEGORIZE TEMPERATURE (LAMA)
+  // 🔹 CATEGORIZE TEMPERATURE (LAMA) - (Tidak Berubah)
   // ========================
   const categorizeTemperature = (temp) => {
     if (temp < 37.5) return "Hipotermia";
@@ -264,57 +254,65 @@ export default function Navbar({ title, cowId, cowData }) {
   };
 
   // =================
-  // 🔹 JSX NAVBAR
+  // 🔹 JSX NAVBAR (⭐️ DIPERBARUI)
   // =================
   return (
     <>
-      <div className="w-full border-b border-gray-200 bg-white px-8 py-5 flex justify-between items-center relative">
-        {/* TITLE */}
-        <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+      {/* ⭐️ PERUBAHAN: Layout responsif baru, padding disesuaikan */}
+      <div className="w-full border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+
+        {/* Kiri: Judul dan Subjudul */}
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">{title}</h1>
+        </div>
 
         {/* --- AREA KANAN --- */}
-        <div className="flex items-center gap-4">
+        {/* ⭐️ PERUBAHAN: Penataan responsif untuk tombol */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
 
-          {/* ================= KONTROL EKSPOR/IMPOR (LAMA) ================= */}
-          {/* Kontrol ini tetap kondisional berdasarkan cowId */}
+          {/* ================= KONTROL EKSPOR/IMPOR ================= */}
           {cowId && (
-            <div className="flex gap-3 items-center">
+            <>
               {/* ================= EXPORT DROPDOWN ================= */}
               <div className="relative">
+                {/* ⭐️ PERUBAHAN: Tombol distyle ulang, teks responsif, ikon lucide */}
                 <button
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   disabled={isExporting}
-                  className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-medium px-4 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200"
                 >
                   {isExporting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Exporting...</span>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {/* ⭐️ Teks disembunyikan di layar kecil */}
+                      <span className="hidden sm:inline">Mengekspor...</span>
                     </>
                   ) : (
                     <>
-                      <ArrowUpTrayIcon className="w-5 h-5" />
-                      <span>Export</span>
-                      <ChevronDownIcon className="w-4 h-4" />
+                      <UploadCloud className="w-5 h-5" />
+                      <span className="hidden sm:inline">Export</span>
+                      <ChevronDown className="w-4 h-4" />
                     </>
                   )}
                 </button>
 
                 {/* ================= EXPORT MENU ================= */}
                 {showExportMenu && !isExporting && (
-                  <div className="absolute right-0 mt-2 bg-white shadow-md border border-gray-200 rounded-lg z-50 w-44 py-1 animate-fadeIn">
+                  // ⭐️ PERUBAHAN: Shadow & border lebih halus
+                  <div className="absolute right-0 mt-2 bg-white shadow-lg border border-gray-100 rounded-lg z-50 w-44 py-1 animate-fadeIn">
+                    {/* ⭐️ PERUBAHAN: Ikon & style hover */}
                     <button
                       onClick={() => handleExport("excel")}
-                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                     >
-                      <TableCellsIcon className="w-5 h-5 text-green-500" />
+                      <FileSpreadsheet className="w-5 h-5 text-green-500" />
                       <span>Excel (.xlsx)</span>
                     </button>
                     <button
                       onClick={() => handleExport("csv")}
-                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
                     >
-                      <DocumentArrowDownIcon className="w-5 h-5 text-orange-500" />
+                      <FileText className="w-5 h-5 text-blue-500" />
                       <span>CSV (.csv)</span>
                     </button>
                   </div>
@@ -322,16 +320,17 @@ export default function Navbar({ title, cowId, cowData }) {
               </div>
 
               {/* ================= IMPORT BUTTON ================= */}
-              <label className="flex items-center gap-2 border border-blue-400 text-blue-500 hover:bg-blue-50 text-sm font-medium px-4 py-2.5 rounded-lg transition-all cursor-pointer">
+              {/* ⭐️ PERUBAHAN: Tombol distyle ulang, teks responsif, ikon lucide */}
+              <label className="flex items-center gap-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-medium px-4 py-2.5 rounded-lg transition-all cursor-pointer border border-gray-200">
                 {isImporting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Importing...</span>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="hidden sm:inline">Mengimpor...</span>
                   </>
                 ) : (
                   <>
-                    <ArrowDownTrayIcon className="w-5 h-5" />
-                    <span>Import</span>
+                    <DownloadCloud className="w-5 h-5" />
+                    <span className="hidden sm:inline">Import</span>
                   </>
                 )}
                 <input
@@ -342,10 +341,10 @@ export default function Navbar({ title, cowId, cowData }) {
                   className="hidden"
                 />
               </label>
-            </div>
+            </>
           )}
 
-          {/* ================= NOTIFIKASI GLOBAL (BARU) ================= */}
+          {/* ================= NOTIFIKASI GLOBAL ================= */}
           <div className="relative">
             <NotificationBadge
               count={globalUnreadCount}
@@ -356,7 +355,7 @@ export default function Navbar({ title, cowId, cowData }) {
       </div>
 
       {/* ================= PANEL NOTIFIKASI (BARU) ================= */}
-      {/* Ditempatkan di luar div utama untuk overlay yang benar */}
+      {/* (Tidak Berubah) */}
       <NotificationPanel
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
