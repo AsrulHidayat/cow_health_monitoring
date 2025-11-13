@@ -19,7 +19,7 @@ const HeaderSection = ({
   if (!cows || cows.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap md:flex-nowrap items-center justify-between px-6 py-4 bg-white border-b border-gray-100 gap-y-4">
+    <div className="flex flex-wrap md:flex-nowrap items-center justify-between px-6 py-4 bg-white border-b border-gray-200 gap-y-4">
 
       {/* Bagian kiri header */}
       <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-center md:justify-start">
