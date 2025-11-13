@@ -48,7 +48,7 @@ export default function DetakJantung() {
   const selectedCow = cows.find((c) => c.id === cowId);
 
   return (
-    <div className="flex flex-col w-full bg-gray-50">
+    <div className="flex flex-col w-full bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar title="Detak Jantung" cowId={cowId} cowData={selectedCow} />
 
       <div className="px-8 lg:px-12 py-8 flex-1 flex items-center justify-center">

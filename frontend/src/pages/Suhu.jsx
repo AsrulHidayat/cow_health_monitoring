@@ -226,7 +226,7 @@ export default function Suhu() {
   const avgCategory = avgData.avg_temp ? categorizeTemperature(avgData.avg_temp) : null;
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-gray-50">
+    <div className="flex flex-col w-full min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       {/* 🔹 Navigasi utama halaman */}
       <Navbar title="Suhu" cowId={cowId} cowData={selectedCow} />
 

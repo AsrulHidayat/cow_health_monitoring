@@ -7,7 +7,8 @@ import Navbar from "../components/layout/Navbar";
 import AddCowModal from "../components/dashboard/AddCowModal";
 import DashboardPerSapi from "../components/dashboard/DashboardPerSapi";
 import cowIcon from "../assets/cow.png";
-import plusIcon from "../assets/plus-icon.svg";
+// 🔹 Impor icon 'Plus' dari lucide-react, hapus 'plusIcon' lama
+import { Plus } from "lucide-react";
 import CowDropdown from "../components/layout/Dropdown";
 
 // 🔔 IMPORT KOMPONEN NOTIFIKASI BARU
@@ -139,7 +140,7 @@ export default function Sapi({ onNavigate }) {
         const filteredNotifications = mockNotifications.filter(
           n => n.sapiId === selectedCow.id
         );
-        
+
         setNotifications(filteredNotifications);
       } catch (error) {
         console.error("❌ Gagal memuat notifikasi:", error);
@@ -147,7 +148,7 @@ export default function Sapi({ onNavigate }) {
     };
 
     fetchNotifications();
-    
+
     // Auto-refresh setiap 30 detik
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
@@ -160,7 +161,7 @@ export default function Sapi({ onNavigate }) {
         notif.id === notifId ? { ...notif, isRead: true } : notif
       )
     );
-    
+
     // TODO: Panggil API untuk update status
     // axios.patch(`http://localhost:5001/api/notifications/${notifId}/read`);
   };
@@ -169,13 +170,13 @@ export default function Sapi({ onNavigate }) {
     setNotifications(prev =>
       prev.map(notif => ({ ...notif, isRead: true }))
     );
-    
+
     // TODO: Panggil API untuk update semua status
   };
 
   const handleDeleteNotification = (notifId) => {
     setNotifications(prev => prev.filter(notif => notif.id !== notifId));
-    
+
     // TODO: Panggil API untuk hapus notifikasi
     // axios.delete(`http://localhost:5001/api/notifications/${notifId}`);
   };
@@ -300,35 +301,35 @@ export default function Sapi({ onNavigate }) {
     }
   };
 
-  // 🔹 UI utama halaman dashboard sapi
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar title="Dashboard Persapi" />
 
       <main className="flex-1 p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 h-[calc(100vh-126px)]">
-          {/* KOLOM 1: Tambah + Grafik */}
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 px-4 py-3 mb-2 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition"
-              >
-                <img src={plusIcon} alt="Tambah Sapi" className="w-5 h-5" />
-                <span className="text-blue-600 font-medium">Tambah Sapi</span>
-              </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              {/* Judul dan Subjudul */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 mb-1">
+                  {selectedCow ? `Monitoring: ${selectedCow.tag}` : "Dashboard Persapi"}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {selectedCow ? "Pantau kesehatan dan kondisi sapi ini secara real-time" : "Pilih sapi untuk melihat detail atau tambah sapi baru"}
+                </p>
+              </div>
 
-              {cows.length > 0 && (
-                <div className="flex items-center gap-6">
-                  <CowDropdown
-                    value={cowId}
-                    onChange={(val) => setCowId(Number(val))}
-                    options={cows
-                      .sort((a, b) => a.tag.localeCompare(b.tag))
-                      .map((c) => ({ id: c.id, name: c.tag }))}
-                  />
-                </div>
-              )}
+              {/* Dropdown dan Tombol Tambah */}
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                {/* Tombol Tambah Sapi - Style dari DashboardContent.jsx */}
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm flex-shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Sapi</span>
+                </button>
+              </div>
             </div>
 
             {/* Status Sensor */}
@@ -336,8 +337,8 @@ export default function Sapi({ onNavigate }) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Sensor Suhu */}
                 <div className={`rounded-xl p-4 border-l-4 ${sensorStatuses.temperature === "online"
-                    ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
-                    : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                  ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
+                  : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
                   }`}>
                   <div className="flex items-center justify-between">
                     <div>
@@ -361,8 +362,8 @@ export default function Sapi({ onNavigate }) {
 
                 {/* Sensor Gerakan */}
                 <div className={`rounded-xl p-4 border-l-4 ${sensorStatuses.activity === "online"
-                    ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
-                    : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                  ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
+                  : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
                   }`}>
                   <div className="flex items-center justify-between">
                     <div>
@@ -404,13 +405,23 @@ export default function Sapi({ onNavigate }) {
 
             {/* CARD REALTIME GRAPHICS */}
             <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-100 flex-1 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 rounded-t-xl">
+              <div className="flex items-center justify-between px-6 py-4 bg-white border border-gray-200 rounded-t-xl">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-semibold text-gray-800">Realtime Monitoring</h2>
                   <span className="text-gray-400 cursor-help text-sm">ℹ︎</span>
                 </div>
+                {cows.length > 0 && (
+                  <div className="flex-1 md:flex-none">
+                    <CowDropdown
+                      value={cowId}
+                      onChange={(val) => setCowId(Number(val))}
+                      options={cows
+                        .sort((a, b) => a.tag.localeCompare(b.tag))
+                        .map((c) => ({ id: c.id, name: c.tag }))}
+                    />
+                  </div>
+                )}
               </div>
-
               <div className="flex-1 flex items-center justify-center text-center rounded-b-xl bg-gray-50 overflow-auto">
                 {loading ? (
                   <div className="text-gray-400">Memuat data sapi...</div>
@@ -423,8 +434,8 @@ export default function Sapi({ onNavigate }) {
                     </p>
                   </div>
                 ) : (
-                  <DashboardPerSapi 
-                    cow={selectedCow} 
+                  <DashboardPerSapi
+                    cow={selectedCow}
                     sensorStatuses={sensorStatuses}
                     onNavigate={handleNavigateToSensor}
                   />
@@ -434,11 +445,13 @@ export default function Sapi({ onNavigate }) {
           </div>
 
           {/* KOLOM 2: Notifikasi - GUNAKAN KOMPONEN PREVIEW */}
-          <NotificationPreview 
-            notifications={notifications}
-            onOpenPanel={() => setIsNotificationOpen(true)}
-            onMarkAsRead={handleMarkAsRead}
-          />
+          <div className="lg:col-span-2">
+            <NotificationPreview
+              notifications={notifications}
+              onOpenPanel={() => setIsNotificationOpen(true)}
+              onMarkAsRead={handleMarkAsRead}
+            />
+          </div>
         </div>
       </main>
 
@@ -452,7 +465,7 @@ export default function Sapi({ onNavigate }) {
       )}
 
       {/* 🔔 NOTIFICATION PANEL - OVERLAY PENUH */}
-      <NotificationPanel 
+      <NotificationPanel
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
         sapiName={selectedCow?.tag || 'Sapi'}

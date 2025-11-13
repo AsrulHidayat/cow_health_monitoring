@@ -234,7 +234,7 @@ export default function Gerakan() {
 
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-gray-50">
+    <div className="flex flex-col w-full min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Navbar title="Gerakan" cowId={cowId} cowData={selectedCow} />
 
       <HeaderSection
