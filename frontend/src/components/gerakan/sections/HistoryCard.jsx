@@ -6,7 +6,7 @@ const HistoryCard = ({ filteredHistory, displayedData, dataOffset, getTimePeriod
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       {/* HEADER - Diubah Sesuai Referensi */}
-      <div className="flex items-center gap-3 p-6 bg-gradient-to-r from-purple-600 to-blue-500">
+      <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-600 to-blue-500">
         <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
