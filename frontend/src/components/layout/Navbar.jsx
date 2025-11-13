@@ -5,7 +5,6 @@ import NotificationPanel from "../notifications/NotificationPanel";
 
 // Impor Anda yang sudah ada
 import React, { useState } from "react";
-// ⭐️ PERUBAHAN: Impor ikon dari lucide-react, hapus heroicons
 import {
   UploadCloud,
   DownloadCloud,
@@ -254,20 +253,17 @@ export default function Navbar({ title, cowId, cowData }) {
   };
 
   // =================
-  // 🔹 JSX NAVBAR (⭐️ DIPERBARUI)
+  // 🔹 JSX NAVBAR 
   // =================
   return (
     <>
-      {/* ⭐️ PERUBAHAN: Layout responsif baru, padding disesuaikan */}
       <div className="w-full border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
-
         {/* Kiri: Judul dan Subjudul */}
         <div>
           <h1 className="text-xl font-bold text-gray-800">{title}</h1>
         </div>
 
         {/* --- AREA KANAN --- */}
-        {/* ⭐️ PERUBAHAN: Penataan responsif untuk tombol */}
         <div className="flex items-center gap-3 w-full md:w-auto">
 
           {/* ================= KONTROL EKSPOR/IMPOR ================= */}
@@ -275,7 +271,6 @@ export default function Navbar({ title, cowId, cowData }) {
             <>
               {/* ================= EXPORT DROPDOWN ================= */}
               <div className="relative">
-                {/* ⭐️ PERUBAHAN: Tombol distyle ulang, teks responsif, ikon lucide */}
                 <button
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   disabled={isExporting}
@@ -284,7 +279,6 @@ export default function Navbar({ title, cowId, cowData }) {
                   {isExporting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      {/* ⭐️ Teks disembunyikan di layar kecil */}
                       <span className="hidden sm:inline">Mengekspor...</span>
                     </>
                   ) : (
@@ -298,9 +292,7 @@ export default function Navbar({ title, cowId, cowData }) {
 
                 {/* ================= EXPORT MENU ================= */}
                 {showExportMenu && !isExporting && (
-                  // ⭐️ PERUBAHAN: Shadow & border lebih halus
                   <div className="absolute right-0 mt-2 bg-white shadow-lg border border-gray-100 rounded-lg z-50 w-44 py-1 animate-fadeIn">
-                    {/* ⭐️ PERUBAHAN: Ikon & style hover */}
                     <button
                       onClick={() => handleExport("excel")}
                       className="flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
@@ -320,7 +312,6 @@ export default function Navbar({ title, cowId, cowData }) {
               </div>
 
               {/* ================= IMPORT BUTTON ================= */}
-              {/* ⭐️ PERUBAHAN: Tombol distyle ulang, teks responsif, ikon lucide */}
               <label className="flex items-center gap-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-medium px-4 py-2.5 rounded-lg transition-all cursor-pointer border border-gray-200">
                 {isImporting ? (
                   <>
@@ -355,7 +346,6 @@ export default function Navbar({ title, cowId, cowData }) {
       </div>
 
       {/* ================= PANEL NOTIFIKASI (BARU) ================= */}
-      {/* (Tidak Berubah) */}
       <NotificationPanel
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}

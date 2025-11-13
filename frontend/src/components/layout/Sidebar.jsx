@@ -1,6 +1,14 @@
 import { useState } from "react";
 import logo from "../../assets/logo.png";
-import { LayoutDashboard, Home, Thermometer, HeartPulse, Activity, LogOut, XCircle } from "lucide-react";
+import {
+  LayoutDashboard,
+  Home,
+  Thermometer,
+  HeartPulse,
+  Activity,
+  LogOut,
+  XCircle,
+} from "lucide-react";
 
 const menus = [
   { name: "Dashboard", icon: <LayoutDashboard size={20} />, key: "dashboard" },
@@ -44,8 +52,10 @@ export default function Sidebar({ onSelect, onExit }) {
       >
         {/* Logo */}
         <div className="w-full flex items-center justify-start gap-4 py-2 pl-3 mb-4 rounded-xl bg-green-100 transition-all duration-300">
-          <img src={logo} alt="Logo sapi" className="w-10 h-10" />
-          {isOpen && <h2 className="text-green-800 font-bold text-base">Cow Health</h2>}
+          <img src={logo} alt="Logo sapi" className="w-8 h-8" />
+          {isOpen && (
+            <h2 className="text-green-800 font-bold text-base">Cow Health</h2>
+          )}
         </div>
 
         {/* Menu */}
@@ -55,8 +65,16 @@ export default function Sidebar({ onSelect, onExit }) {
               key={menu.key}
               onClick={() => handleMenuClick(menu.key)}
               className={`flex items-center rounded-xl transition-all duration-300
-                ${active === menu.key ? "bg-white shadow-md text-black" : "text-gray-500 hover:bg-green-200"}
-                ${isOpen ? "gap-3 px-3 py-3 mx-1" : "justify-start py-3 px-3 mx-1"}`}
+                ${
+                  active === menu.key
+                    ? "bg-white shadow-md text-black"
+                    : "text-gray-500 hover:bg-green-200"
+                }
+                ${
+                  isOpen
+                    ? "gap-3 px-3 py-3 mx-1"
+                    : "justify-start py-3 px-3 mx-1"
+                }`}
             >
               {menu.icon}
               {isOpen && <span className="text-sm font-medium">{menu.name}</span>}
@@ -71,7 +89,11 @@ export default function Sidebar({ onSelect, onExit }) {
               onClick={handleExitClick}
               className={`flex items-center w-full text-red-600 transition-all duration-300 
                 rounded-lg hover:bg-red-200
-                ${isOpen ? "gap-3 px-3 py-3" : "justify-start py-3 px-3"}`}
+                ${
+                  isOpen
+                    ? "gap-3 px-3 py-3"
+                    : "justify-start py-3 px-3"
+                }`}
             >
               <LogOut size={20} />
               {isOpen && <span className="text-sm font-medium">Keluar</span>}
@@ -86,7 +108,9 @@ export default function Sidebar({ onSelect, onExit }) {
           <div className="bg-white rounded-2xl shadow-xl p-6 w-[90%] max-w-sm animate-fadeIn">
             <div className="flex flex-col items-center text-center gap-3">
               <XCircle className="text-red-500 w-12 h-12" />
-              <h2 className="text-lg font-semibold text-gray-800">Keluar dari Aplikasi?</h2>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Keluar dari Aplikasi?
+              </h2>
               <p className="text-sm text-gray-500">
                 Anda yakin ingin keluar dari akun ini?
               </p>
