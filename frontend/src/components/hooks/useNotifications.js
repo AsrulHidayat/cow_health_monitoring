@@ -1,6 +1,14 @@
 // src/hooks/useNotifications.js
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+
+// --- PERBAIKAN ---
+// Hapus 'axios'
+// Impor fungsi-fungsi dari service Anda
+import {
+  getAllUserNotifications,
+  markNotificationAsRead,
+  deleteNotificationById
+} from '../../services/notificationService'; 
 
 /**
  * Custom hook untuk mengelola notifikasi sapi
@@ -18,25 +26,14 @@ export const useNotifications = (cowId = null) => {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
+      // --- PERBAIKAN: Gunakan Service ---
+      // Panggil fungsi service, tidak perlu token atau URL di sini
+      const response = await getAllUserNotifications();
 
-      // --- PERBAIKAN 1 ---
-      // SELALU gunakan endpoint global /user. Endpoint ?cowId=... sudah deprecated.
-      const endpoint = `http://localhost:5001/api/notifications/user`;
-
-      const response = await axios.get(
-        endpoint,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      // --- PERBAIKAN 2 ---
       // Backend mengirim { total, limit, offset, data: [...] }
-      // Jadi, kita perlu mengakses response.data.data untuk mendapatkan array
-      let allUserNotifications = Array.isArray(response.data.data) ? response.data.data : [];
+      // Akses response.data untuk mendapatkan array
+      let allUserNotifications = Array.isArray(response.data) ? response.data : [];
 
-      // --- PERBAIKAN 3 ---
       // Terapkan filter di sisi klien (frontend) jika cowId diberikan
       if (cowId) {
         allUserNotifications = allUserNotifications.filter(
@@ -49,30 +46,20 @@ export const useNotifications = (cowId = null) => {
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
-
-      // --- PERBAIKAN 4 ---
-      // Jangan pernah fallback ke mock data saat terjadi error.
       // Tampilkan array kosong agar UI menampilkan "Tidak ada notifikasi"
       setNotifications([]);
 
     } finally {
       setIsLoading(false);
     }
-  }, [cowId]); // cowId tetap di dependency array untuk memicu filter ulang saat berubah
+  }, [cowId]); // cowId tetap di dependency array untuk memicu filter ulang
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      const token = localStorage.getItem('token');
-
+      // --- PERBAIKAN: Gunakan Service ---
       // Update di backend
-      await axios.patch(
-        `http://localhost:5001/api/notifications/${notificationId}/read`,
-        { isRead: true },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      await markNotificationAsRead(notificationId);
 
       // Update state lokal
       setNotifications(prev =>
@@ -82,7 +69,7 @@ export const useNotifications = (cowId = null) => {
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
-      // Update lokal saja jika API gagal
+      // Update lokal saja jika API gagal (opsional, tapi baik untuk UX)
       setNotifications(prev =>
         prev.map(notif =>
           notif.id === notificationId ? { ...notif, isRead: true } : notif
@@ -94,22 +81,15 @@ export const useNotifications = (cowId = null) => {
   // Mark all as read
   const markAllAsRead = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
       const unreadIds = notifications
         .filter(n => !n.isRead)
         .map(n => n.id);
 
+      // --- PERBAIKAN: Gunakan Service di dalam loop ---
       // Update di backend
       await Promise.all(
-        unreadIds.map(id =>
-          axios.patch(
-            `http://localhost:5001/api/notifications/${id}/read`,
-            { isRead: true },
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            }
-          )
-        )
+        // Panggil service markAsRead untuk setiap ID
+        unreadIds.map(id => markNotificationAsRead(id))
       );
 
       // Update state lokal
@@ -123,20 +103,14 @@ export const useNotifications = (cowId = null) => {
         prev.map(notif => ({ ...notif, isRead: true }))
       );
     }
-  }, [notifications]);
+  }, [notifications]); // Tetap gunakan 'notifications' sebagai dependency
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
     try {
-      const token = localStorage.getItem('token');
-
+      // --- PERBAIKAN: Gunakan Service ---
       // Hapus di backend
-      await axios.delete(
-        `http://localhost:5001/api/notifications/${notificationId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      await deleteNotificationById(notificationId);
 
       // Update state lokal
       setNotifications(prev =>
@@ -144,7 +118,7 @@ export const useNotifications = (cowId = null) => {
       );
     } catch (err) {
       console.error('Error deleting notification:', err);
-      // Hapus lokal saja jika API gagal
+      // Hapus lokal saja jika API gagal (opsional)
       setNotifications(prev =>
         prev.filter(notif => notif.id !== notificationId)
       );
