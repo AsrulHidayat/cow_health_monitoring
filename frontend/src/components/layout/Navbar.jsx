@@ -1,5 +1,6 @@
-// Ganti path-path ini agar sesuai dengan struktur folder Anda
-import { useNotifications } from "../hooks/useNotifications";
+// --- PERUBAHAN ---
+// Hapus useNotifications, tambahkan useUnreadCount
+import { useUnreadCount } from "../hooks/useUnreadCount"; 
 import NotificationBadge from "../notifications/NotificationBadge";
 import NotificationPanel from "../notifications/NotificationPanel";
 
@@ -22,25 +23,21 @@ export default function Navbar({ title, cowId, cowData }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // =================
-  // 🔹 HOOK NOTIFIKASI (BARU) - (Tidak Berubah)
+  // 🔹 HOOK NOTIFIKASI (BARU)
+  // --- PERUBAHAN ---
+  // Ganti hook 'useNotifications' yang berat dengan 'useUnreadCount' yang ringan
+  const { count: globalUnreadCount } = useUnreadCount();
   // =================
-  const {
-    notifications: globalNotifications,
-    unreadCount: globalUnreadCount,
-    markAsRead: markGlobalAsRead,
-    markAllAsRead: markAllGlobalAsRead,
-    deleteNotification: deleteGlobalNotification,
-  } = useNotifications();
 
   // =================
-  // 🔹 STATE (LAMA) - (Tidak Berubah)
+  // 🔹 STATE 
   // =================
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   // =================
-  // 🔹 HANDLE EXPORT (LAMA) - (Tidak Berubah)
+  // 🔹 HANDLE EXPORT 
   // =================
   const handleExport = async (format) => {
     if (!cowId) {
@@ -111,7 +108,7 @@ export default function Navbar({ title, cowId, cowData }) {
   };
 
   // =================
-  // 🔹 HANDLE IMPORT (LAMA) - (Tidak Berubah)
+  // 🔹 HANDLE IMPORT 
   // =================
   const handleImport = async (event) => {
     const file = event.target.files[0];
@@ -242,7 +239,7 @@ export default function Navbar({ title, cowId, cowData }) {
   };
 
   // ========================
-  // 🔹 CATEGORIZE TEMPERATURE (LAMA) - (Tidak Berubah)
+  // 🔹 CATEGORIZE TEMPERATURE 
   // ========================
   const categorizeTemperature = (temp) => {
     if (temp < 37.5) return "Hipotermia";
@@ -338,21 +335,21 @@ export default function Navbar({ title, cowId, cowData }) {
           {/* ================= NOTIFIKASI GLOBAL ================= */}
           <div className="relative">
             <NotificationBadge
-              count={globalUnreadCount}
+              // --- PERUBAHAN ---
+              // Ganti prop dari 'globalUnreadCount' menjadi 'count'
+              count={globalUnreadCount} 
               onClick={() => setIsPanelOpen(true)}
             />
           </div>
         </div>
       </div>
 
-      {/* ================= PANEL NOTIFIKASI (BARU) ================= */}
+      {/* ================= PANEL NOTIFIKASI  ================= */}
+      {/* --- PERUBAHAN --- */}
+      {/* Hapus semua props data. Panel akan mengambil datanya sendiri */}
       <NotificationPanel
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
-        notifications={globalNotifications}
-        onMarkAsRead={markGlobalAsRead}
-        onMarkAllAsRead={markAllGlobalAsRead}
-        onDelete={deleteGlobalNotification}
       />
     </>
   );

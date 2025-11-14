@@ -1,8 +1,12 @@
 // src/components/notifications/NotificationPanel.jsx
 import React, { useState } from 'react';
+// --- PERUBAHAN ---
+// Impor hook useNotifications di sini
+import { useNotifications } from '../hooks/useNotifications'; 
 
 // Helper function untuk format waktu
 const formatTimeAgo = (timestamp) => {
+  // ... (fungsi ini tidak berubah) ...
   const now = new Date();
   const time = new Date(timestamp);
   const diffInMinutes = Math.floor((now - time) / (1000 * 60));
@@ -16,7 +20,9 @@ const formatTimeAgo = (timestamp) => {
 };
 
 // Komponen untuk single notification item - IMPROVED UI
+// (Komponen NotificationItem tidak berubah sama sekali)
 const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }) => {
+  // ... (Tidak ada perubahan di dalam NotificationItem) ...
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getIcon = () => {
@@ -242,22 +248,40 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
   );
 };
 
-// Komponen utama NotificationPanel - IMPROVED UI
+
+// Komponen utama NotificationPanel
 const NotificationPanel = ({
   isOpen,
   onClose,
-  sapiName,
-  notifications,
-  onMarkAsRead,
-  onDelete,
-  onMarkAllAsRead,
-  onViewDetail,
+  sapiName, // SapiName masih bisa diterima jika diperlukan untuk judul
+  // --- PERUBAHAN ---
+  // Hapus props notifikasi, ganti dengan 'onViewDetail' jika belum ada
+  // notifications,
+  // onMarkAsRead,
+  // onDelete,
+  // onMarkAllAsRead,
+  onViewDetail, // Pastikan prop ini diteruskan dari Navbar
 }) => {
   const [filter, setFilter] = useState('all');
+
+  // --- PERUBAHAN ---
+  // Panggil hook 'useNotifications' DI DALAM panel ini
+  // Kita tidak meneruskan cowId, jadi ini akan mengambil SEMUA notifikasi user
+  const {
+    notifications,
+    isLoading, // Tambahkan state loading
+    error,     // Tambahkan state error
+    markAsRead: onMarkAsRead,
+    markAllAsRead: onMarkAllAsRead,
+    deleteNotification: onDelete,
+  } = useNotifications(null); // 'null' untuk notifikasi global
+
+  
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const urgentCount = notifications.filter(n => n.type === 'urgent' && !n.isRead).length;
+  
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notif.isRead;
@@ -266,18 +290,15 @@ const NotificationPanel = ({
 
   return (
     <div
-      // 🔧 FIXED: ubah latar agar tidak terlalu hitam, lebih buram dan lembut
       className="fixed inset-0 bg-gray-900/30 backdrop-blur-md z-50 flex justify-end animate-fade-in"
       onClick={onClose}
     >
       <div
-        // 🔧 FIXED: lebar diperbesar dari max-w-lg → max-w-xl
         className="bg-gradient-to-b from-white/90 to-gray-50/90 backdrop-blur-xl w-full max-w-xl h-full flex flex-col shadow-2xl animate-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          // 🔧 FIXED: gradient header dibuat lebih lembut dan teks kontras lebih baik
           className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 p-6 shadow-lg"
         >
           <div className="flex items-center justify-between mb-4">
@@ -289,7 +310,8 @@ const NotificationPanel = ({
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Notifikasi</h3>
-                <p className="text-blue-100 text-sm">{sapiName}</p>
+                {/* Judul 'sapiName' bisa diganti menjadi 'Semua Sapi' atau dihapus */}
+                <p className="text-blue-100 text-sm">{sapiName || 'Semua Sapi'}</p>
               </div>
             </div>
             <button
@@ -305,7 +327,6 @@ const NotificationPanel = ({
           {/* Stats & Actions */}
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
-              {/* 🔧 FIXED: ubah latar agar tidak terlalu putih, sedikit transparan */}
               <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-2">
                 <div className="text-2xl font-bold text-white">{notifications.length}</div>
                 <div className="text-xs text-blue-100">Total</div>
@@ -366,8 +387,19 @@ const NotificationPanel = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {filteredNotifications.length === 0 ? (
+          {/* --- PERUBAHAN --- */}
+          {/* Tambahkan penanganan state Loading dan Error */}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-600">Memuat notifikasi...</p>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-red-600">Gagal memuat notifikasi.</p>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              {/* ... (Tampilan 'empty state' tidak berubah) ... */}
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6 shadow-lg">
                 <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -378,19 +410,21 @@ const NotificationPanel = ({
               </h3>
               <p className="text-sm text-gray-600 max-w-xs leading-relaxed">
                 {filter === 'all'
-                  ? `${sapiName} dalam kondisi baik.`
+                  ? `${sapiName || 'Semua sapi'} dalam kondisi baik.`
                   : `Tidak ada notifikasi untuk filter ini.`}
               </p>
             </div>
           ) : (
             <div>
+              {/* --- PERUBAHAN --- */}
+              {/* Pastikan 'onViewDetail' diteruskan ke NotificationItem */}
               {filteredNotifications.map(notification => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={onMarkAsRead}
                   onDelete={onDelete}
-                  onViewDetail={onViewDetail}
+                  onViewDetail={onViewDetail} // Pastikan ini diteruskan
                 />
               ))}
             </div>
