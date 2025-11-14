@@ -11,7 +11,7 @@ import cowIcon from "../assets/cow.png";
 import { Plus } from "lucide-react";
 import CowDropdown from "../components/layout/Dropdown";
 
-// 🔔 IMPORT KOMPONEN NOTIFIKASI BARU
+// IMPORT KOMPONEN NOTIFIKASI BARU
 import NotificationPanel from "../components/notifications/NotificationPanel";
 import NotificationPreview from "../components/notifications/NotificationPreview";
 
@@ -30,11 +30,11 @@ export default function Sapi({ onNavigate }) {
     heartbeat: "loading"
   });
 
-  // 🔔 STATE NOTIFIKASI
+  // STATE NOTIFIKASI
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
-  // 🔔 CUSTOM HOOK UNTUK NOTIFIKASI (opsional, atau pakai state biasa)
+  // CUSTOM HOOK UNTUK NOTIFIKASI (opsional, atau pakai state biasa)
   // const { notifications, unreadCount, handleMarkAsRead, handleDelete } = useNotifications(userId);
 
   // 🔹 Ambil data sapi dari backend saat halaman pertama kali dibuka
@@ -85,7 +85,7 @@ export default function Sapi({ onNavigate }) {
     return () => controller.abort();
   }, []);
 
-  // 🔔 FETCH NOTIFIKASI UNTUK SAPI YANG DIPILIH
+  // FETCH NOTIFIKASI 
   useEffect(() => {
     if (!selectedCow) {
       setNotifications([]);
@@ -95,11 +95,7 @@ export default function Sapi({ onNavigate }) {
     // Simulasi fetch notifikasi dari API
     const fetchNotifications = async () => {
       try {
-        // TODO: Ganti dengan API call sebenarnya
-        // const res = await axios.get(`http://localhost:5001/api/notifications?cowId=${selectedCow.id}`);
-        // setNotifications(res.data);
-
-        // Mock data untuk demo
+         // Mock data untuk demo
         const mockNotifications = [
           {
             id: 1,
@@ -154,16 +150,13 @@ export default function Sapi({ onNavigate }) {
     return () => clearInterval(interval);
   }, [selectedCow]);
 
-  // 🔔 HANDLER NOTIFIKASI
+  // HANDLER NOTIFIKASI
   const handleMarkAsRead = (notifId) => {
     setNotifications(prev =>
       prev.map(notif =>
         notif.id === notifId ? { ...notif, isRead: true } : notif
       )
     );
-
-    // TODO: Panggil API untuk update status
-    // axios.patch(`http://localhost:5001/api/notifications/${notifId}/read`);
   };
 
   const handleMarkAllAsRead = () => {
@@ -176,9 +169,6 @@ export default function Sapi({ onNavigate }) {
 
   const handleDeleteNotification = (notifId) => {
     setNotifications(prev => prev.filter(notif => notif.id !== notifId));
-
-    // TODO: Panggil API untuk hapus notifikasi
-    // axios.delete(`http://localhost:5001/api/notifications/${notifId}`);
   };
 
   const handleViewDetail = () => {
@@ -443,8 +433,6 @@ export default function Sapi({ onNavigate }) {
               </div>
             </div>
           </div>
-
-          {/* KOLOM 2: Notifikasi - GUNAKAN KOMPONEN PREVIEW */}
           <div className="lg:col-span-2">
             <NotificationPreview
               notifications={notifications}
@@ -464,7 +452,7 @@ export default function Sapi({ onNavigate }) {
         />
       )}
 
-      {/* 🔔 NOTIFICATION PANEL - OVERLAY PENUH */}
+      {/*  NOTIFICATION PANEL */}
       <NotificationPanel
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}

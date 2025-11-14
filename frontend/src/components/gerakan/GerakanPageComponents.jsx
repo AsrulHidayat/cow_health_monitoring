@@ -1,9 +1,25 @@
-
 // Dummy Icons
 export const CowIcon = () => (
-  <svg className="w-20 h-20 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-  </svg>
+  <div className="flex items-center justify-center">
+    <svg
+      width="80"
+      height="80"
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Background circle */}
+      <circle cx="40" cy="40" r="40" fill="#F3F4F6" />
+
+      {/* X icon */}
+      <path
+        d="M30 30 L50 50 M50 30 L30 50"
+        stroke="#9CA3AF"
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+    </svg>
+  </div>
 );
 
 export const PlusIcon = () => (
