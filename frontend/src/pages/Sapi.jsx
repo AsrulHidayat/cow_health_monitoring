@@ -95,7 +95,7 @@ export default function Sapi({ onNavigate }) {
     // Simulasi fetch notifikasi dari API
     const fetchNotifications = async () => {
       try {
-         // Mock data untuk demo
+        // Mock data untuk demo
         const mockNotifications = [
           {
             id: 1,
@@ -309,7 +309,7 @@ export default function Sapi({ onNavigate }) {
                 </p>
               </div>
 
-              {/* Dropdown dan Tombol Tambah */}
+              {/* Tombol Tambah */}
               <div className="flex items-center gap-3 w-full md:w-auto">
                 {/* Tombol Tambah Sapi - Style dari DashboardContent.jsx */}
                 <button
@@ -326,57 +326,155 @@ export default function Sapi({ onNavigate }) {
             {cows.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Sensor Suhu */}
-                <div className={`rounded-xl p-4 border-l-4 ${sensorStatuses.temperature === "online"
-                  ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
-                  : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
-                  }`}>
+                <div
+                  className={`rounded-xl p-4 border-l-4
+        ${sensorStatuses.temperature === "online"
+                      ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
+                      : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                    }
+        shadow-md hover:shadow-xl transition-all duration-300
+      `}
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${sensorStatuses.temperature === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
-                          }`}></div>
-                        <h3 className={`text-sm font-bold ${sensorStatuses.temperature === "online" ? "text-green-700" : "text-red-700"
-                          }`}>Sensor Suhu</h3>
+                        <div
+                          className={`
+                w-2 h-2 rounded-full 
+                ${sensorStatuses.temperature === "online"
+                              ? "bg-green-500 animate-pulse"
+                              : "bg-red-500"
+                            }
+              `}
+                        ></div>
+                        <h3
+                          className={`
+                text-sm font-bold 
+                ${sensorStatuses.temperature === "online"
+                              ? "text-green-700"
+                              : "text-red-700"
+                            }
+              `}
+                        >
+                          Sensor Suhu
+                        </h3>
                       </div>
-                      <p className={`text-xs ${sensorStatuses.temperature === "online" ? "text-green-600" : "text-red-600"
-                        }`}>
+
+                      <p
+                        className={`
+              text-xs 
+              ${sensorStatuses.temperature === "online"
+                            ? "text-green-600"
+                            : "text-red-600"
+                          }
+            `}
+                      >
                         {sensorStatuses.temperature === "online" ? "Aktif" : "Tidak Aktif"}
                       </p>
                     </div>
-                    <svg className={`w-8 h-8 ${sensorStatuses.temperature === "online" ? "text-green-500" : "text-red-500"
-                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+
+                    <svg
+                      className={`
+            w-8 h-8 
+            ${sensorStatuses.temperature === "online"
+                          ? "text-green-500"
+                          : "text-red-500"
+                        }
+          `}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
                     </svg>
                   </div>
                 </div>
 
                 {/* Sensor Gerakan */}
-                <div className={`rounded-xl p-4 border-l-4 ${sensorStatuses.activity === "online"
-                  ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
-                  : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
-                  }`}>
+                <div
+                  className={`
+        rounded-xl p-4 border-l-4
+        ${sensorStatuses.activity === "online"
+                      ? "bg-gradient-to-r from-green-50 to-green-100 border-green-500"
+                      : "bg-gradient-to-r from-red-50 to-red-100 border-red-500"
+                    }
+        shadow-md hover:shadow-xl transition-all duration-300
+      `}
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${sensorStatuses.activity === "online" ? "bg-green-500 animate-pulse" : "bg-red-500"
-                          }`}></div>
-                        <h3 className={`text-sm font-bold ${sensorStatuses.activity === "online" ? "text-green-700" : "text-red-700"
-                          }`}>Sensor Gerakan</h3>
+                        <div
+                          className={`
+                w-2 h-2 rounded-full 
+                ${sensorStatuses.activity === "online"
+                              ? "bg-green-500 animate-pulse"
+                              : "bg-red-500"
+                            }
+              `}
+                        ></div>
+                        <h3
+                          className={`
+                text-sm font-bold 
+                ${sensorStatuses.activity === "online"
+                              ? "text-green-700"
+                              : "text-red-700"
+                            }
+              `}
+                        >
+                          Sensor Gerakan
+                        </h3>
                       </div>
-                      <p className={`text-xs ${sensorStatuses.activity === "online" ? "text-green-600" : "text-red-600"
-                        }`}>
+
+                      <p
+                        className={`
+              text-xs 
+              ${sensorStatuses.activity === "online"
+                            ? "text-green-600"
+                            : "text-red-600"
+                          }
+            `}
+                      >
                         {sensorStatuses.activity === "online" ? "Aktif" : "Tidak Aktif"}
                       </p>
                     </div>
-                    <svg className={`w-8 h-8 ${sensorStatuses.activity === "online" ? "text-green-500" : "text-red-500"
-                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+
+                    <svg
+                      className={`
+            w-8 h-8 
+            ${sensorStatuses.activity === "online"
+                          ? "text-green-500"
+                          : "text-red-500"
+                        }
+          `}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
                     </svg>
                   </div>
                 </div>
 
                 {/* Sensor Detak Jantung */}
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-xl p-4">
+                <div
+                  className="
+        bg-gradient-to-r from-yellow-50 to-yellow-100 
+        border-l-4 border-yellow-500 
+        rounded-xl p-4
+        shadow-md hover:shadow-xl transition-all duration-300
+      "
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -385,11 +483,23 @@ export default function Sapi({ onNavigate }) {
                       </div>
                       <p className="text-xs text-yellow-600">Tahap Pengembangan</p>
                     </div>
-                    <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+
+                    <svg
+                      className="w-8 h-8 text-yellow-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
                     </svg>
                   </div>
                 </div>
+
               </div>
             )}
 
