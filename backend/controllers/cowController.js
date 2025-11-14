@@ -387,8 +387,8 @@ export const updateCheckupStatus = async (req, res) => {
 
     cow.checkupStatus = checkupStatus;
 
-    // Jika status diubah ke "Telah diperiksa", simpan tanggal pemeriksaan
-    if (checkupStatus === "Telah diperiksa") {
+    // Jika status diubah ke "Sudah diperiksa", simpan tanggal pemeriksaan
+    if (checkupStatus === "Sudah diperiksa") {
       cow.checkupDate = new Date();
     } else {
       // Jika diubah ke "Belum diperiksa", hapus tanggal pemeriksaan
@@ -413,7 +413,7 @@ export const checkAndResetExpiredCheckups = async (req, res, next) => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    // Update semua sapi yang statusnya "Telah diperiksa" dan sudah lebih dari 1 minggu
+    // Update semua sapi yang statusnya "Sudah diperiksa" dan sudah lebih dari 1 minggu
     await Cow.update(
       {
         checkupStatus: "Belum diperiksa",
@@ -421,7 +421,7 @@ export const checkAndResetExpiredCheckups = async (req, res, next) => {
       },
       {
         where: {
-          checkupStatus: "Telah diperiksa",
+          checkupStatus: "Sudah diperiksa",
           checkupDate: {
             [Op.lte]: oneWeekAgo,
           },

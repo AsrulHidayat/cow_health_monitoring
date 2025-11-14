@@ -178,11 +178,11 @@ export function DashboardContent({ cows, onAddCow }) {
                     </div>
                 </div>
 
-                {/* Sudah Diperiksa */}
+                {/* Sudah diperiksa */}
                 <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
                     <div className="flex items-center justify-between">
                         <div className="flex-1">
-                            <p className="text-xs text-gray-600 font-medium mb-1">Sudah Diperiksa</p>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Sudah diperiksa</p>
                             <h3 className="text-2xl font-bold text-purple-600">{checked}</h3>
                         </div>
                         <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">

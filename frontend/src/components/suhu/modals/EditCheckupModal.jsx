@@ -71,7 +71,7 @@ export default function EditCheckupModal({ show, onClose, onConfirm, selectedCow
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-green-700">Sudah Diperiksa</p>
+                  <p className="font-semibold text-green-700">Sudah diperiksa</p>
                   <p className="text-xs text-green-600">Berlaku selama 7 hari</p>
                 </div>
               </div>
