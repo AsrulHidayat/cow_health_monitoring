@@ -7,8 +7,6 @@ import axios from 'axios';
  * @param {string | null} cowId - ID sapi yang dipilih, atau null untuk notifikasi global
  * @returns {Object} - State dan functions untuk notifikasi
  */
-// --- MODIFIKASI ---
-// Beri nilai default null pada cowId
 export const useNotifications = (cowId = null) => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,43 +20,47 @@ export const useNotifications = (cowId = null) => {
 
       const token = localStorage.getItem('token');
 
-      // --- MODIFIKASI ---
-      // Tentukan endpoint secara dinamis
-      // Jika cowId ada, pakai endpoint LAMA (spesifik per sapi)
-      // Jika cowId null, pakai endpoint BARU (global untuk user)
-      const endpoint = cowId
-        ? `http://localhost:5001/api/notifications?cowId=${cowId}`
-        : `http://localhost:5001/api/notifications/user`; // <-- Ganti ini jika endpoint global Anda berbeda
+      // --- PERBAIKAN 1 ---
+      // SELALU gunakan endpoint global /user. Endpoint ?cowId=... sudah deprecated.
+      const endpoint = `http://localhost:5001/api/notifications/user`;
 
       const response = await axios.get(
-        endpoint, // <-- Gunakan endpoint dinamis
+        endpoint,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      setNotifications(Array.isArray(response.data) ? response.data : []);
+      // --- PERBAIKAN 2 ---
+      // Backend mengirim { total, limit, offset, data: [...] }
+      // Jadi, kita perlu mengakses response.data.data untuk mendapatkan array
+      let allUserNotifications = Array.isArray(response.data.data) ? response.data.data : [];
+
+      // --- PERBAIKAN 3 ---
+      // Terapkan filter di sisi klien (frontend) jika cowId diberikan
+      if (cowId) {
+        allUserNotifications = allUserNotifications.filter(
+          (notif) => notif.sapiId == cowId
+        );
+      }
+      
+      setNotifications(allUserNotifications);
+
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
 
-      // --- MODIFIKASI ---
-      // Hanya gunakan mock data jika kita BERADA di halaman DashboardPerSapi (ada cowId)
-      if (cowId) {
-        // Fallback ke mock data untuk development
-        setNotifications(getMockNotifications(cowId));
-      } else {
-        // Jika gagal di Navbar (global), jangan tampilkan mock data,
-        // biarkan array kosong.
-        setNotifications([]);
-      }
+      // --- PERBAIKAN 4 ---
+      // Jangan pernah fallback ke mock data saat terjadi error.
+      // Tampilkan array kosong agar UI menampilkan "Tidak ada notifikasi"
+      setNotifications([]);
+
     } finally {
       setIsLoading(false);
     }
-  }, [cowId]);
+  }, [cowId]); // cowId tetap di dependency array untuk memicu filter ulang saat berubah
 
   // Mark notification as read
-  // (Tidak perlu diubah, sudah bekerja berdasarkan notificationId)
   const markAsRead = useCallback(async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
@@ -90,7 +92,6 @@ export const useNotifications = (cowId = null) => {
   }, []);
 
   // Mark all as read
-  // (Tidak perlu diubah)
   const markAllAsRead = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -125,7 +126,6 @@ export const useNotifications = (cowId = null) => {
   }, [notifications]);
 
   // Delete notification
-  // (Tidak perlu diubah)
   const deleteNotification = useCallback(async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
@@ -175,43 +175,4 @@ export const useNotifications = (cowId = null) => {
     deleteNotification,
     refetch: fetchNotifications
   };
-};
-
-// Mock data untuk development/testing
-const getMockNotifications = (cowId) => {
-  return [
-    {
-      id: 1,
-      sapiId: cowId,
-      sapiName: 'Sapi #4',
-      type: 'urgent',
-      parameters: ['suhu', 'detak jantung'],
-      severity: 'Segera Tindaki',
-      message: 'Suhu tubuh mencapai 40.5°C dan detak jantung 110 bpm (abnormal)',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15),
-      isRead: false
-    },
-    {
-      id: 2,
-      sapiId: cowId,
-      sapiName: 'Sapi #4',
-      type: 'warning',
-      parameters: ['gerakan'],
-      severity: 'Harus Diperhatikan',
-      message: 'Aktivitas gerakan menurun drastis dalam 2 jam terakhir',
-      timestamp: new Date(Date.now() - 1000 * 60 * 120),
-      isRead: false
-    },
-    {
-      id: 3,
-      sapiId: cowId,
-      sapiName: 'Sapi #4',
-      type: 'urgent',
-      parameters: ['suhu'],
-      severity: 'Segera Tindaki',
-      message: 'Suhu tubuh tidak stabil, variasi 38-41°C dalam 1 jam',
-      timestamp: new Date(Date.now() - 1000 * 60 * 180),
-      isRead: true
-    }
-  ];
 };
