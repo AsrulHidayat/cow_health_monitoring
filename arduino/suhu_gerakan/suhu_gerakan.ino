@@ -18,8 +18,8 @@ const char* password = "1sampai8";
 // ========================================================
 // 🔹 URL Server API
 // ========================================================
-const char* serverTempUrl = "http://192.168.1.25:5001/api/temperature";  // Endpoint suhu
-const char* serverActUrl  = "http://192.168.1.25:5001/api/activity";     // Endpoint aktivitas
+const char* serverTempUrl = "http://192.168.1.19:5001/api/temperature";  // Endpoint suhu
+const char* serverActUrl  = "http://192.168.1.19:5001/api/activity";     // Endpoint aktivitas
 
 // ========================================================
 // 🔹 Konfigurasi Sensor DS18B20 (Suhu)

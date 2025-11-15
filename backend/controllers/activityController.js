@@ -10,91 +10,110 @@ import Notification from "../models/notificationModel.js";
 // 🔔 HELPER NOTIFIKASI
 // ========================================
 const categorizeActivity = (x, y, z) => {
-  if ([x, y, z].some(v => v == null || isNaN(v))) {
-    // Peringatan jika data N/A
-    return { status: 'unknown', severity: 2 }; 
-  }
+  if ([x, y, z].some(v => v == null || isNaN(v))) {
+    // Peringatan jika data N/A
+    return { status: 'unknown', severity: 2 }; 
+  }
 
-  x = parseFloat(Number(x).toFixed(2));
-  y = parseFloat(Number(y).toFixed(2));
-  z = parseFloat(Number(z).toFixed(2));
+  x = parseFloat(Number(x).toFixed(2));
+  y = parseFloat(Number(y).toFixed(2));
+  z = parseFloat(Number(z).toFixed(2));
 
-  // Berdiri (Normal)
-  if (x >= -1.2 && x <= 0.1 && y >= -3.0 && y <= 0.0 && z >= 10.5 && z <= 12.0) {
-    return { status: 'berdiri', severity: 0 };
-  }
-  // Berbaring (Normal)
-  if ((x >= -0.6 && x <= 0.2 && y >= 4.0 && y <= 7.2 && z >= 7.3 && z <= 11.2) ||
-      (x >= 0.0 && x <= 0.4 && y >= 9.8 && y <= 10.8 && z >= 2.8 && z <= 4.3) ||
-      (x >= -0.6 && x <= 0.2 && y >= -10.2 && y <= -6.3 && z >= 5.3 && z <= 8.7) ||
-      (x >= 0.2 && x <= 0.8 && y >= -10.8 && y <= -9.6 && z >= -0.1 && z <= 2.7)) {
-    return { status: 'berbaring', severity: 0 };
-  }
-  // Posisi tidak normal (Warning)
-  return { status: 'abnormal', severity: 2 };
+  // Berdiri (Normal)
+  if (x >= -1.2 && x <= 0.1 && y >= -3.0 && y <= 0.0 && z >= 10.5 && z <= 12.0) {
+    return { status: 'berdiri', severity: 0 };
+  }
+  // Berbaring (Normal)
+  if ((x >= -0.6 && x <= 0.2 && y >= 4.0 && y <= 7.2 && z >= 7.3 && z <= 11.2) ||
+      (x >= 0.0 && x <= 0.4 && y >= 9.8 && y <= 10.8 && z >= 2.8 && z <= 4.3) ||
+      (x >= -0.6 && x <= 0.2 && y >= -10.2 && y <= -6.3 && z >= 5.3 && z <= 8.7) ||
+      (x >= 0.2 && x <= 0.8 && y >= -10.8 && y <= -9.6 && z >= -0.1 && z <= 2.7)) {
+    return { status: 'berbaring', severity: 0 };
+  }
+  // Posisi tidak normal (Warning)
+  return { status: 'abnormal', severity: 2 };
 };
 
 const generateMessage = (activity, status, params) => {
-  if (status.status === 'abnormal') {
-    return `Posisi tubuh sapi abnormal terdeteksi. Sapi mungkin terjatuh atau kesulitan berdiri.`;
-  }
-   if (status.status === 'unknown') {
-    return `Data sensor gerakan tidak valid (N/A). Perlu pengecekan sensor.`;
-  }
-  return `Parameter ${params.join(', ')} di luar batas normal.`;
+  if (status.status === 'abnormal') {
+    return `Posisi tubuh sapi abnormal terdeteksi. Sapi mungkin terjatuh atau kesulitan berdiri.`;
+  }
+   if (status.status === 'unknown') {
+    return `Data sensor gerakan tidak valid (N/A). Perlu pengecekan sensor.`;
+  }
+  return `Parameter ${params.join(', ')} di luar batas normal.`;
 };
 
 // ========================================
 // 🔔 FUNGSI PEMBUAT NOTIFIKASI (BARU)
 // ========================================
 /**
- * Menganalisis data aktivitas baru dan membuat notifikasi jika abnormal.
- * Dijalankan di background (tanpa 'await') agar tidak memblokir respon API.
- * @param {object} activityData - Data aktivitas yang baru saja disimpan
- */
+ * Menganalisis data aktivitas baru dan membuat notifikasi jika abnormal.
+ * Dijalankan di background (tanpa 'await') agar tidak memblokir respon API.
+*
+* --- PERUBAHAN: DITAMBAHKAN LOGIKA DE-BOUNCING ---
+*
+ * @param {object} activityData - Data aktivitas yang baru saja disimpan
+ */
 const createNotificationOnAbnormalActivity = async (activityData) => {
-  try {
-    const activityCategory = categorizeActivity(
-      activityData.accel_x,
-      activityData.accel_y,
-      activityData.accel_z
-    );
+  try {
+    const activityCategory = categorizeActivity(
+      activityData.accel_x,
+      activityData.accel_y,
+      activityData.accel_z
+    );
 
-    // 1. Hanya buat notifikasi jika abnormal (severity > 0)
-    if (activityCategory.severity > 0) {
-      const cow = await Cow.findByPk(activityData.cow_id);
-      if (!cow) return; // Sapi tidak ditemukan, hentikan
+    // 1. Hanya buat notifikasi jika abnormal (severity > 0)
+    if (activityCategory.severity > 0) {
+      const cow = await Cow.findByPk(activityData.cow_id);
+      if (!cow) return; // Sapi tidak ditemukan, hentikan
 
-      // 2. Tentukan tipe notifikasi
-      let type, severity;
-      if (activityCategory.severity >= 3) {
-        type = 'urgent';
-        severity = 'Segera Tindaki';
-      } else {
-        type = 'warning';
-        severity = 'Harus Diperhatikan';
-      }
+      // 2. Tentukan tipe notifikasi
+      let type, severity;
+      if (activityCategory.severity >= 3) {
+        type = 'urgent';
+        severity = 'Segera Tindaki';
+      } else {
+        type = 'warning';
+        severity = 'Harus Diperhatikan';
+      }
 
-      const parameters = ['gerakan'];
-      const message = generateMessage(activityData, activityCategory, parameters);
-
-      // 3. Simpan notifikasi ke database
-      await Notification.create({
-        sapiId: cow.id,
-        userId: cow.user_id, // Ambil dari data Sapi
-        sapiName: cow.tag,    // Ambil dari data Sapi
-        type: type,
-        parameters: parameters,
-        severity: severity,
-        message: message,
-        isRead: false
+      // --- 3. PERBAIKAN: Tambahkan Pengecekan De-bouncing ---
+      const existingUnreadNotif = await Notification.findOne({
+        where: {
+          sapiId: cow.id,
+          isRead: false,
+          type: type // Cek berdasarkan tipe (urgent/warning)
+        }
       });
-      console.log(`🔔 Notifikasi GERAKAN dibuat untuk Sapi ${cow.tag}`);
-    }
-  } catch (error) {
-    // Tangkap error agar tidak crash
-    console.error("Gagal membuat notifikasi gerakan:", error);
-  }
+
+      // 4. Jika SUDAH ADA notifikasi yang belum dibaca, JANGAN BUAT LAGI.
+      if (existingUnreadNotif) {
+        console.log(`(Notifikasi GERAKAN untuk Sapi ${cow.tag} ditahan, notif ${existingUnreadNotif.id} belum dibaca)`);
+        return; // Hentikan
+      }
+      // --- BATAS PERBAIKAN ---
+
+      const parameters = ['gerakan'];
+      const message = generateMessage(activityData, activityCategory, parameters);
+
+      // 5. Simpan notifikasi ke database (Hanya jika lolos pengecekan)
+      await Notification.create({
+        sapiId: cow.id,
+        userId: cow.user_id, // Ambil dari data Sapi
+        sapiName: cow.tag,    // Ambil dari data Sapi
+        type: type,
+        parameters: parameters,
+        severity: severity,
+        message: message,
+        isRead: false
+      });
+      console.log(`🔔 Notifikasi GERAKAN dibuat untuk Sapi ${cow.tag}`);
+    }
+  } catch (error) {
+    // Tangkap error agar tidak crash
+    console.error("Gagal membuat notifikasi gerakan:", error);
+  }
 };
 
 
@@ -102,7 +121,7 @@ const createNotificationOnAbnormalActivity = async (activityData) => {
 // ⬇️ KODE ANDA YANG SUDAH ADA (DENGAN MODIFIKASI) ⬇️
 // ========================================
 
-// ✅ Tambah data gerakan baru (dari sensor_gerakan.ino)
+// 🔹 Tambah data gerakan baru (dari sensor_gerakan.ino)
 // --- MODIFIKASI: Nama fungsi diubah menjadi 'createActivity' agar konsisten
 export const createActivity = async (req, res) => {
   try {
@@ -120,26 +139,24 @@ export const createActivity = async (req, res) => {
         .json({ error: "cow_id dan data akselerometer (x, y, z) wajib diisi" });
     }
 
-    // --- MODIFIKASI: Menggunakan 'Activity' (uppercase)
+    // --- MODIFIKASI: Menggunakan 'Activity' (uppercase)
     const newActivity = await Activity.create({ 
       cow_id,
       accel_x,
       accel_y,
       accel_z,
-      // 'created_at' di-handle otomatis oleh Sequelize (jika timestamps: true)
-      // Jika Anda ingin override, gunakan:
-      // created_at: req.body.created_at || new Date() 
+      // 'created_at' di-handle otomatis oleh Sequelize (jika timestamps: true)
     });
 
-    // ----------------------------------------------------
-    // 🔹 MODIFIKASI UTAMA 🔹
-    // Panggil fungsi notifikasi setelah data disimpan
-    // TIDAK PAKAI 'await' agar respon API ke sensor tetap cepat
-    createNotificationOnAbnormalActivity(newActivity);
-    // ----------------------------------------------------
+    // ----------------------------------------------------
+    // 🔹 MODIFIKASI UTAMA 🔹
+    // Panggil fungsi notifikasi setelah data disimpan
+    // TIDAK PAKAI 'await' agar respon API ke sensor tetap cepat
+    createNotificationOnAbnormalActivity(newActivity);
+    // ----------------------------------------------------
 
     console.log("✅ Insert gerakan berhasil:", newActivity.toJSON());
-    // --- MODIFIKASI: Kirim data lengkap, bukan cuma 'ok'
+    // --- MODIFIKASI: Kirim data lengkap, bukan cuma 'ok'
     res.status(201).json(newActivity); 
   } catch (err) {
     console.error("❌ Error createActivity:", err);
@@ -147,7 +164,7 @@ export const createActivity = async (req, res) => {
   }
 };
 
-// ✅ Ambil data gerakan terbaru
+// 🔹 Ambil data gerakan terbaru
 // --- MODIFIKASI: Nama fungsi & model
 export const getLatestActivity = async (req, res) => { 
   try {
@@ -182,8 +199,7 @@ export const getLatestActivity = async (req, res) => {
   }
 };
 
-// ✅ Ambil riwayat gerakan dengan pagination dan filter tanggal
-// --- MODIFIKASI: Nama fungsi & model
+// 🔹 Ambil riwayat gerakan dengan pagination dan filter tanggal
 export const getHistoryActivity = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
@@ -250,7 +266,7 @@ export const getHistoryActivity = async (req, res) => {
   }
 };
 
-// ✅ Cek status sensor gerakan
+// 🔹 Cek status sensor gerakan
 export const getSensorStatus = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
@@ -288,8 +304,7 @@ export const getSensorStatus = async (req, res) => {
   }
 };
 
-// ✅ Get activity statistics
-// --- MODIFIKASI: Nama fungsi & model
+// 🔹 Get activity statistics
 export const getActivityStats = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
@@ -308,7 +323,7 @@ export const getActivityStats = async (req, res) => {
       order: [["created_at", "ASC"]],
     });
 
-   if (activities.length === 0) { // <-- Nama variabel diubah
+   if (activities.length === 0) { // <-- Nama variabel diubah
       return res.json({
         count: 0,
         min: null,
@@ -339,13 +354,12 @@ export const getActivityStats = async (req, res) => {
       lastRecord: activities[activities.length - 1].created_at, // <-- Nama variabel diubah
     });
   } catch (err) {
-    console.error("❌ getActivityStats error:", err);
+    console.error("❌ getActivityStats error:", err);
     res.status(500).json({ error: "internal error" });
   }
 };
 
-// ✅ Hapus semua data gerakan untuk sapi tertentu
-// --- MODIFIKASI: Nama fungsi & model
+// 🔹 Hapus semua data gerakan untuk sapi tertentu
 export const deleteAllActivity = async (req, res) => {
   try {
     const cowId = Number(req.params.cowId);
@@ -363,3 +377,6 @@ export const deleteAllActivity = async (req, res) => {
     res.status(500).json({ error: "Internal error" });
   }
 };
+
+// --- PERBAIKAN: Fungsi receiveActivityData DIHAPUS ---
+// Fungsi ini duplikat dengan createActivity dan menyebabkan konflik.

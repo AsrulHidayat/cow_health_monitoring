@@ -1,67 +1,100 @@
 // src/hooks/useNotifications.js
 import { useState, useEffect, useCallback } from 'react';
-
-// --- PERBAIKAN ---
-// Hapus 'axios'
-// Impor fungsi-fungsi dari service Anda
 import {
   getAllUserNotifications,
   markNotificationAsRead,
-  deleteNotificationById
-} from '../../services/notificationService'; 
+  deleteNotificationById,
+  markAllAsRead as markAllAsReadService // Impor service "Tandai Semua"
+} from '../../services/notificationService'; // Sesuaikan path
 
-/**
- * Custom hook untuk mengelola notifikasi sapi
- * @param {string | null} cowId - ID sapi yang dipilih, atau null untuk notifikasi global
- * @returns {Object} - State dan functions untuk notifikasi
- */
+// Tentukan berapa banyak notifikasi yang diambil per halaman
+const NOTIFICATIONS_PER_PAGE = 10; 
+
 export const useNotifications = (cowId = null) => {
   const [notifications, setNotifications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true); // Loading untuk halaman pertama
+  const [isLoadingMore, setIsLoadingMore] = useState(false); // Loading untuk "load more"
   const [error, setError] = useState(null);
 
-  // Fetch notifikasi dari API
-  const fetchNotifications = useCallback(async () => {
-    try {
+  // Fungsi internal untuk mengambil data
+  const fetchData = useCallback(async (pageToFetch) => {
+    // Tentukan state loading yang sesuai
+    if (pageToFetch === 1) {
       setIsLoading(true);
-      setError(null);
+    } else {
+      setIsLoadingMore(true);
+    }
+    setError(null);
 
-      // --- PERBAIKAN: Gunakan Service ---
-      // Panggil fungsi service, tidak perlu token atau URL di sini
-      const response = await getAllUserNotifications();
+    try {
+      const response = await getAllUserNotifications({
+        page: pageToFetch,
+        limit: NOTIFICATIONS_PER_PAGE
+      });
 
-      // Backend mengirim { total, limit, offset, data: [...] }
-      // Akses response.data untuk mendapatkan array
-      let allUserNotifications = Array.isArray(response.data) ? response.data : [];
+      let newNotifications = Array.isArray(response.data) ? response.data : [];
 
-      // Terapkan filter di sisi klien (frontend) jika cowId diberikan
+      // Filter sisi klien (HANYA jika cowId diberikan)
       if (cowId) {
-        allUserNotifications = allUserNotifications.filter(
+        newNotifications = newNotifications.filter(
           (notif) => notif.sapiId == cowId
         );
       }
-      
-      setNotifications(allUserNotifications);
+
+      // Gabungkan data lama dan baru (jika load more) atau set data baru (jika halaman 1)
+      setNotifications(prev =>
+        pageToFetch === 1 ? newNotifications : [...prev, ...newNotifications]
+      );
+      // Simpan total jumlah notifikasi dari API
+      setTotal(response.total);
 
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
-      // Tampilkan array kosong agar UI menampilkan "Tidak ada notifikasi"
-      setNotifications([]);
-
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [cowId]); // cowId tetap di dependency array untuk memicu filter ulang
+  }, [cowId]); // Hanya bergantung pada cowId
 
-  // Mark notification as read
+  // Fungsi untuk me-reset dan mengambil data dari awal
+  const refetch = useCallback(() => {
+    setPage(1); // Set halaman kembali ke 1
+    fetchData(1); // Panggil fetch manual untuk halaman 1
+  }, [fetchData]);
+
+
+  // --- PERBAIKAN INFINITE LOOP ---
+  // useEffect ini sekarang HANYA akan berjalan saat 'fetchData' berubah
+  // atau 'page' di-set ke 1 (saat refetch).
+  useEffect(() => {
+    // Hanya ambil data jika kita berada di halaman 1 (pemuatan awal)
+    if (page === 1) {
+        fetchData(1);
+    }
+  }, [fetchData, page]); // <-- ARRAY DEPENDENSI INI MEMPERBAIKI LOOP
+
+
+  // Fungsi untuk memuat halaman berikutnya
+  const loadMore = () => {
+    // Jangan muat jika sedang memuat atau tidak ada data lagi
+    if (isLoading || isLoadingMore || notifications.length >= total) return; 
+    
+    const nextPage = page + 1;
+    setPage(nextPage); // Mengubah 'page' akan memicu fetch data untuk halaman berikutnya
+    fetchData(nextPage);
+  };
+
+  // Hitung apakah masih ada data untuk dimuat
+  const hasMore = notifications.length < total;
+
+  // --- Fungsi Aksi (Mark/Delete) ---
+
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      // --- PERBAIKAN: Gunakan Service ---
-      // Update di backend
       await markNotificationAsRead(notificationId);
-
-      // Update state lokal
       setNotifications(prev =>
         prev.map(notif =>
           notif.id === notificationId ? { ...notif, isRead: true } : notif
@@ -69,84 +102,42 @@ export const useNotifications = (cowId = null) => {
       );
     } catch (err) {
       console.error('Error marking notification as read:', err);
-      // Update lokal saja jika API gagal (opsional, tapi baik untuk UX)
-      setNotifications(prev =>
-        prev.map(notif =>
-          notif.id === notificationId ? { ...notif, isRead: true } : notif
-        )
-      );
     }
   }, []);
 
-  // Mark all as read
+  // Logika "Tandai Semua"
   const markAllAsRead = useCallback(async () => {
     try {
-      const unreadIds = notifications
-        .filter(n => !n.isRead)
-        .map(n => n.id);
-
-      // --- PERBAIKAN: Gunakan Service di dalam loop ---
-      // Update di backend
-      await Promise.all(
-        // Panggil service markAsRead untuk setiap ID
-        unreadIds.map(id => markNotificationAsRead(id))
-      );
-
-      // Update state lokal
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
+      // Panggil service baru yang efisien
+      await markAllAsReadService(); 
+      // Panggil refetch() untuk memuat ulang data dari halaman 1
+      refetch(); 
     } catch (err) {
       console.error('Error marking all as read:', err);
-      // Update lokal saja jika API gagal
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
     }
-  }, [notifications]); // Tetap gunakan 'notifications' sebagai dependency
+  }, [refetch]); // Dependensi ke refetch
 
-  // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
     try {
-      // --- PERBAIKAN: Gunakan Service ---
-      // Hapus di backend
       await deleteNotificationById(notificationId);
-
-      // Update state lokal
       setNotifications(prev =>
         prev.filter(notif => notif.id !== notificationId)
       );
     } catch (err) {
       console.error('Error deleting notification:', err);
-      // Hapus lokal saja jika API gagal (opsional)
-      setNotifications(prev =>
-        prev.filter(notif => notif.id !== notificationId)
-      );
     }
   }, []);
 
-  // Auto-refresh notifications setiap 30 detik
-  useEffect(() => {
-    fetchNotifications();
-
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000); // 30 detik
-
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
-
-  // Hitung unread count
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   return {
     notifications,
-    isLoading,
+    isLoading, // Untuk loading awal
+    isLoadingMore, // Untuk tombol "Load More"
     error,
-    unreadCount,
+    hasMore, // boolean (true jika masih ada data)
+    loadMore, // fungsi
+    refetch, // fungsi
     markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refetch: fetchNotifications
+    markAllAsRead, // <-- Sekarang sudah benar
+    deleteNotification
   };
 };

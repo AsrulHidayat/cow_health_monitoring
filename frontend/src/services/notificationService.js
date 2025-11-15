@@ -14,17 +14,22 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Ambil SEMUA notifikasi user
+ * Ambil SEMUA notifikasi user dengan pagination
  * (GET /api/notifications/user)
  */
-export const getAllUserNotifications = async () => {
+export const getAllUserNotifications = async ({ page = 1, limit = 10 }) => {
   try {
+    const offset = (page - 1) * limit;
     const res = await axios.get(`${API_URL}/user`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
+      params: { limit, offset }, // Kirim limit dan offset
     });
     return res.data; // Mengembalikan: { total, limit, offset, data: [...] }
   } catch (error) {
-    console.error("Error fetching all user notifications:", error.response?.data || error.message);
+    console.error(
+      "Error fetching all user notifications:",
+      error.response?.data || error.message
+    );
     throw error; // Lempar error agar ditangkap oleh hook
   }
 };
@@ -36,11 +41,14 @@ export const getAllUserNotifications = async () => {
 export const getUnreadCount = async () => {
   try {
     const res = await axios.get(`${API_URL}/unread-count`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     return res.data; // Mengembalikan: { count: X }
   } catch (error) {
-    console.error("Error fetching unread count:", error.response?.data || error.message);
+    console.error(
+      "Error fetching unread count:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };
@@ -64,8 +72,19 @@ export const markNotificationAsRead = (notificationId) => {
  */
 export const deleteNotificationById = (notificationId) => {
   // Biarkan hook/komponen menangani try/catch
-  return axios.delete(
-    `${API_URL}/${notificationId}`,
+  return axios.delete(`${API_URL}/${notificationId}`, {
+    headers: getAuthHeaders(),
+  });
+};
+
+/**
+ * Tandai SEMUA notifikasi sebagai sudah dibaca
+ * (PATCH /api/notifications/mark-all-as-read)
+ */
+export const markAllAsRead = () => {
+  return axios.patch(
+    `${API_URL}/mark-all-as-read`,
+    {}, // Body kosong
     { headers: getAuthHeaders() }
   );
 };

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 // --- PERUBAHAN ---
 // Impor hook useNotifications di sini
-import { useNotifications } from '../hooks/useNotifications'; 
+import { useNotifications } from '../hooks/useNotifications';
 
 // Helper function untuk format waktu
 const formatTimeAgo = (timestamp) => {
@@ -56,8 +56,8 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
 
   const getBgColor = () => {
     if (!notification.isRead) {
-      return notification.type === 'urgent' 
-        ? 'bg-gradient-to-r from-red-50 via-red-50 to-white' 
+      return notification.type === 'urgent'
+        ? 'bg-gradient-to-r from-red-50 via-red-50 to-white'
         : 'bg-gradient-to-r from-yellow-50 via-yellow-50 to-white';
     }
     return 'bg-white';
@@ -68,7 +68,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
   };
 
   return (
-    <div 
+    <div
       className={`relative rounded-xl p-4 mb-4 border-l-4 ${getBorderColor()} ${getBgColor()} shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group`}
       onClick={() => {
         if (!notification.isRead) {
@@ -92,7 +92,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
         <div className="flex-shrink-0">
           {getIcon()}
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Header */}
@@ -111,23 +111,22 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
               </div>
             </div>
           </div>
-          
+
           {/* Message */}
           <p className="text-sm text-gray-700 leading-relaxed mb-3">
             {notification.message}
           </p>
-          
+
           {/* Parameters */}
           {notification.parameters && notification.parameters.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {notification.parameters.map((param, idx) => (
-                <span 
+                <span
                   key={idx}
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                    notification.type === 'urgent'
-                      ? 'bg-red-100 text-red-700 border border-red-200'
-                      : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                  }`}
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${notification.type === 'urgent'
+                    ? 'bg-red-100 text-red-700 border border-red-200'
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                    }`}
                 >
                   {param === 'suhu' && '🌡️'}
                   {param === 'detak jantung' && '❤️'}
@@ -137,25 +136,23 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
               ))}
             </div>
           )}
-          
+
           {/* Expanded Actions */}
-          <div 
-            className={`transition-all duration-300 overflow-hidden ${
-              isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-            }`}
+          <div
+            className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+              }`}
           >
             <div className="border-t border-gray-200 pt-4 mt-2 space-y-3">
               {/* Primary Action */}
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewDetail(notification.sapiId);
                 }}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white transition-all transform hover:scale-105 ${
-                  notification.type === 'urgent'
-                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-red-500/50'
-                    : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-lg shadow-yellow-500/50'
-                }`}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white transition-all transform hover:scale-105 ${notification.type === 'urgent'
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg shadow-red-500/50'
+                  : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-lg shadow-yellow-500/50'
+                  }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -163,10 +160,10 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
                 </svg>
                 Periksa Kondisi Sapi Sekarang
               </button>
-              
+
               {/* Secondary Actions Grid */}
               <div className="grid grid-cols-3 gap-2">
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     alert('Menghubungi petugas untuk ' + notification.sapiName);
@@ -179,8 +176,8 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
                   </svg>
                   <span className="text-xs font-medium text-gray-700">Hubungi</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log('Viewing sensor graph for', notification.sapiId);
@@ -193,8 +190,8 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
                   </svg>
                   <span className="text-xs font-medium text-gray-700">Grafik</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     if (window.confirm('Hapus notifikasi ini?')) {
@@ -215,7 +212,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
 
           {/* Expand/Collapse Indicator */}
           <div className="flex justify-center mt-3">
-            <button 
+            <button
               className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
@@ -253,35 +250,30 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewDetail }
 const NotificationPanel = ({
   isOpen,
   onClose,
-  sapiName, // SapiName masih bisa diterima jika diperlukan untuk judul
-  // --- PERUBAHAN ---
-  // Hapus props notifikasi, ganti dengan 'onViewDetail' jika belum ada
-  // notifications,
-  // onMarkAsRead,
-  // onDelete,
-  // onMarkAllAsRead,
-  onViewDetail, // Pastikan prop ini diteruskan dari Navbar
+  sapiName,
+  onViewDetail,
 }) => {
   const [filter, setFilter] = useState('all');
 
-  // --- PERUBAHAN ---
-  // Panggil hook 'useNotifications' DI DALAM panel ini
-  // Kita tidak meneruskan cowId, jadi ini akan mengambil SEMUA notifikasi user
+
   const {
     notifications,
-    isLoading, // Tambahkan state loading
-    error,     // Tambahkan state error
+    isLoading,
+    error,
     markAsRead: onMarkAsRead,
     markAllAsRead: onMarkAllAsRead,
     deleteNotification: onDelete,
-  } = useNotifications(null); // 'null' untuk notifikasi global
+    loadMore, 
+    hasMore,
+    isLoadingMore 
+  } = useNotifications(null);
 
-  
+
   if (!isOpen) return null;
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const urgentCount = notifications.filter(n => n.type === 'urgent' && !n.isRead).length;
-  
+
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notif.isRead;
@@ -366,17 +358,15 @@ const NotificationPanel = ({
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                  filter === tab.key
-                    ? 'bg-blue-100 text-blue-700 shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${filter === tab.key
+                  ? 'bg-blue-100 text-blue-700 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 {tab.label}
                 {tab.count > 0 && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
-                    filter === tab.key ? 'bg-blue-200' : 'bg-gray-200'
-                  }`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${filter === tab.key ? 'bg-blue-200' : 'bg-gray-200'
+                    }`}>
                     {tab.count}
                   </span>
                 )}
@@ -429,6 +419,19 @@ const NotificationPanel = ({
               ))}
             </div>
           )}
+
+          {hasMore && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="px-6 py-2 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingMore ? "Memuat..." : "Muat Lebih Banyak"}
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
 
