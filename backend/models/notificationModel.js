@@ -35,8 +35,7 @@ const Notification = db.define('Notification', {
         allowNull: false
     },
     parameters: { // ['suhu', 'gerakan']
-        type: DataTypes.JSON, // Gunakan JSON jika database Anda (misal: PostgreSQL) mendukung
-        // atau DataTypes.STRING jika Anda ingin menyimpan sebagai string "suhu,gerakan"
+        type: DataTypes.JSON, 
         allowNull: true
     },
     severity: { // 'Segera Tindaki', 'Harus Diperhatikan'
@@ -52,10 +51,27 @@ const Notification = db.define('Notification', {
         defaultValue: false,
         allowNull: false
     }
-    // timestamp (created_at dan updated_at) akan ditambahkan otomatis oleh Sequelize
+    // timestamp (created_at dan updated_at) akan ditambahkan otomatis
 }, {
     tableName: 'notifications',
-    timestamps: true 
+    timestamps: true,
+
+    // --- PERBAIKAN: TAMBAHKAN BLOK INI ---
+    // Menambahkan indeks untuk mempercepat query database secara drastis
+    indexes: [
+        // Indeks komposit untuk mempercepat pencarian "belum dibaca" per user
+        // Digunakan oleh getUnreadCount dan getAllUserNotifications
+        {
+            name: 'idx_notifications_user_read',
+            fields: ['userId', 'isRead']
+        },
+        // Indeks untuk mempercepat join ke tabel Sapi
+        {
+            name: 'idx_notifications_sapiId',
+            fields: ['sapiId']
+        }
+    ]
+    // --- BATAS BLOK TAMBAHAN ---
 });
 
 // Definisikan relasi

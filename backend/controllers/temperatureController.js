@@ -10,8 +10,10 @@ const categorizeTemperature = (temp) => {
   if (temp == null) return { status: "unknown", severity: 0 };
   if (temp < 37.5) return { status: "hipotermia", severity: 2 }; // Warning
   if (temp >= 37.5 && temp <= 39.5) return { status: "normal", severity: 0 };
-  if (temp > 39.5 && temp <= 40.5) return { status: "demam-ringan", severity: 1 }; // Info/Warning
-  if (temp > 40.5 && temp <= 41.5) return { status: "demam-tinggi", severity: 2 }; // Warning
+  if (temp > 39.5 && temp <= 40.5)
+    return { status: "demam-ringan", severity: 1 }; // Info/Warning
+  if (temp > 40.5 && temp <= 41.5)
+    return { status: "demam-tinggi", severity: 2 }; // Warning
   return { status: "kritis", severity: 3 }; // Urgent
 };
 
@@ -36,11 +38,13 @@ const generateMessage = (tempData, status, params) => {
 // Fungsi untuk membuat notifikasi (JANGAN di-await, biarkan berjalan di background)
 const createNotificationOnAbnormalTemp = async (tempData) => {
   try {
-    const tempCategory = categorizeTemperature(tempData.temperature); // Hanya buat notifikasi jika abnormal (severity > 0)
+    const tempCategory = categorizeTemperature(tempData.temperature);
+    // Hanya buat notifikasi jika abnormal (severity > 0)
     if (tempCategory.severity > 0) {
       const cow = await Cow.findByPk(tempData.cow_id);
-      if (!cow) return; // Sapi tidak ditemukan // Tentukan tipe notifikasi
+      if (!cow) return; // Sapi tidak ditemukan
 
+      // Tentukan tipe notifikasi
       let type, severity;
       if (tempCategory.severity >= 3) {
         type = "urgent";
@@ -53,7 +57,7 @@ const createNotificationOnAbnormalTemp = async (tempData) => {
         severity = "Perlu Diperhatikan";
       }
 
-      // --- PERBAIKAN: Tambahkan Pengecekan De-bouncing ---
+      // --- PERBAIKAN: Tambahkan Pengecekan De-bouncing (Anti-Spam) ---
       const existingUnreadNotif = await Notification.findOne({
         where: {
           sapiId: cow.id,
@@ -72,11 +76,12 @@ const createNotificationOnAbnormalTemp = async (tempData) => {
       // --- BATAS PERBAIKAN ---
 
       const parameters = ["suhu"];
-      const message = generateMessage(tempData, tempCategory, parameters); // Simpan notifikasi ke database
+      const message = generateMessage(tempData, tempCategory, parameters);
 
+      // Simpan notifikasi ke database
       await Notification.create({
         sapiId: cow.id,
-        userId: cow.user_id, // Pastikan ini benar (user_id vs UserId)
+        userId: cow.user_id, // Pastikan kolom 'user_id' ada di model 'Cow'
         sapiName: cow.tag,
         type: type,
         parameters: parameters,
@@ -106,7 +111,8 @@ export const addTemperature = async (req, res) => {
     const newTemp = await Temperature.create({
       cow_id,
       temperature,
-      created_at: new Date(),
+      // Hapus 'created_at: new Date()' agar ditangani Sequelize (jika timestamps: true)
+      // Jika model 'Temperature' Anda tidak 'timestamps: true', biarkan.
     });
 
     // Panggil helper notifikasi (tanpa await)
@@ -143,7 +149,8 @@ export const getHistoryTemperature = async (req, res) => {
     const offset = Number(req.query.offset) || 0;
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
-    const whereClause = { cow_id: cowId }; // Jika ada filter tanggal
+
+    const whereClause = { cow_id: cowId };
 
     if (startDate && endDate) {
       whereClause.created_at = {
@@ -157,9 +164,9 @@ export const getHistoryTemperature = async (req, res) => {
       whereClause.created_at = {
         [Op.lte]: new Date(endDate),
       };
-    } // Get total count
+    }
 
-    const totalCount = await Temperature.count({ where: whereClause }); // Get paginated data
+    const totalCount = await Temperature.count({ where: whereClause });
 
     const history = await Temperature.findAll({
       where: whereClause,
@@ -195,17 +202,15 @@ export const getTemperatureByDateRange = async (req, res) => {
       });
     }
 
-    const history = await Temperature.findAll(
-      {
-        where: {
-          cow_id: cowId,
-          created_at: {
-            [Op.between]: [new Date(startDate), new Date(endDate)],
-          },
+    const history = await Temperature.findAll({
+      where: {
+        cow_id: cowId,
+        created_at: {
+          [Op.between]: [new Date(startDate), new Date(endDate)],
         },
       },
-      order[["created_at", "ASC"]]
-    );
+      order: [["created_at", "ASC"]],
+    });
 
     res.json({
       data: history,
@@ -215,7 +220,6 @@ export const getTemperatureByDateRange = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getTemperatureByDateRange error:", err);
-    nbsp;
     res.status(500).json({ error: "internal error" });
   }
 };
@@ -288,7 +292,6 @@ export const getSensorStatus = async (req, res) => {
   } catch (err) {
     console.error("❌ getSensorStatus error:", err);
     res.status(500).json({ error: "internal error" });
-    end;
   }
 };
 
@@ -342,9 +345,6 @@ export const getTemperatureStats = async (req, res) => {
   }
 };
 
-// --- PERBAIKAN: Fungsi receiveTemperatureData DIHAPUS ---
-// Fungsi ini duplikat dengan addTemperature dan menyebabkan konflik.
-
 // 🔹 Hapus semua data suhu untuk sapi tertentu
 export const deleteAllTemperature = async (req, res) => {
   try {
@@ -359,6 +359,5 @@ export const deleteAllTemperature = async (req, res) => {
   } catch (err) {
     console.error("Error deleting temperature data:", err);
     res.status(500).json({ error: "Internal error" });
-    S;
   }
 };
